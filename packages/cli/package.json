@@ -14,14 +14,14 @@
     "plumloom",
     "autoeval"
   ],
-  "homepage": "https://github.com/plumloom-org/plumloom-autoeval/tree/main/packages/cli#readme",
+  "homepage": "https://github.com/AlchemyInCode/plumloom-autoeval-oss/tree/main/packages/cli#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/plumloom-org/plumloom-autoeval.git",
+    "url": "git+https://github.com/AlchemyInCode/plumloom-autoeval-oss.git",
     "directory": "packages/cli"
   },
   "bugs": {
-    "url": "https://github.com/plumloom-org/plumloom-autoeval/issues"
+    "url": "https://github.com/AlchemyInCode/plumloom-autoeval-oss/issues"
   },
   "author": "Plumloom",
   "publishConfig": {
