@@ -1,0 +1,114 @@
+name: Autoeval release gate
+description: Evaluate an existing Autoeval run/result and fail the workflow when results miss the configured thresholds. A completed run may be reused.
+
+inputs:
+  evaluation-id:
+    description: UUID of an already-configured Autoeval evaluation.
+    required: true
+  api-key:
+    description: Plumloom CLI key (pl_sk_...). Pass it from a repository secret; it is never logged or placed on the command line.
+    required: true
+  base-url:
+    description: Autoeval API origin (https, no path).
+    required: true
+  min-overall:
+    description: Minimum overall score.
+    required: false
+    default: ''
+  min-scenario:
+    description: Minimum score for every scenario and model.
+    required: false
+    default: ''
+  min-judge-agreement:
+    description: Minimum judge agreement ratio between 0 and 1.
+    required: false
+    default: ''
+  metrics:
+    description: |
+      Newline-separated per-metric minimums for conversation and agent-trace evals,
+      each as name=score. These are the only release evidence for those contexts.
+    required: false
+    default: ''
+  thresholds-file:
+    description: Path to a JSON thresholds file. Individual inputs take precedence over the file.
+    required: false
+    default: ''
+  fail-on-timeout:
+    description: Set to "false" to treat a polling timeout as neutral instead of failing the job.
+    required: false
+    default: 'true'
+  node-version:
+    description: Node.js version used to build and run the CLI.
+    required: false
+    default: '22'
+  working-directory:
+    description: Directory containing the Autoeval CLI checkout.
+    required: false
+    default: '.'
+
+outputs:
+  passed:
+    description: '"true" when every configured threshold was met.'
+    value: ${{ steps.summary.outputs.passed }}
+  run-id:
+    description: UUID of the evaluation run evaluated by the gate; it may identify a reused completed run.
+    value: ${{ steps.summary.outputs.run-id }}
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+
+    - name: Install pnpm
+      uses: pnpm/action-setup@v4
+
+    - name: Install dependencies and build the CLI
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        pnpm install --frozen-lockfile
+        pnpm build
+
+    - name: Run the release gate
+      id: gate
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        AUTOEVAL_API_KEY: ${{ inputs.api-key }}
+        AUTOEVAL_API_BASE_URL: ${{ inputs.base-url }}
+        EVALUATION_ID: ${{ inputs.evaluation-id }}
+        MIN_OVERALL: ${{ inputs.min-overall }}
+        MIN_SCENARIO: ${{ inputs.min-scenario }}
+        MIN_JUDGE_AGREEMENT: ${{ inputs.min-judge-agreement }}
+        METRICS: ${{ inputs.metrics }}
+        THRESHOLDS_FILE: ${{ inputs.thresholds-file }}
+      run: |
+        set -o pipefail
+        args=(--json gate "$EVALUATION_ID")
+        [ -n "$MIN_OVERALL" ] && args+=(--min-overall "$MIN_OVERALL")
+        [ -n "$MIN_SCENARIO" ] && args+=(--min-scenario "$MIN_SCENARIO")
+        [ -n "$MIN_JUDGE_AGREEMENT" ] && args+=(--min-judge-agreement "$MIN_JUDGE_AGREEMENT")
+        while IFS= read -r metric; do
+          [ -n "$metric" ] && args+=(--metric "$metric")
+        done <<<"$METRICS"
+        [ -n "$THRESHOLDS_FILE" ] && args+=(--thresholds "$THRESHOLDS_FILE")
+
+        exit_code=0
+        node packages/cli/dist/cli.js "${args[@]}" >"${RUNNER_TEMP}/autoeval-gate.json" 2>"${RUNNER_TEMP}/autoeval-gate.err" || exit_code=$?
+        echo "exit-code=${exit_code}" >>"$GITHUB_OUTPUT"
+        exit 0
+
+    - name: Write the job summary
+      id: summary
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        GATE_EXIT_CODE: ${{ steps.gate.outputs.exit-code }}
+        GATE_RESULT_FILE: ${{ runner.temp }}/autoeval-gate.json
+        GATE_ERROR_FILE: ${{ runner.temp }}/autoeval-gate.err
+        FAIL_ON_TIMEOUT: ${{ inputs.fail-on-timeout }}
+        EVALUATION_ID: ${{ inputs.evaluation-id }}
+      run: node "${GITHUB_ACTION_PATH}/summary.mjs"

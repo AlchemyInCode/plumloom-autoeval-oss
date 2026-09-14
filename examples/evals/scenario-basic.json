@@ -1,0 +1,24 @@
+{
+  "methodology": {
+    "judgeModel": "GLM 5.2",
+    "judgeModelId": "11111111-1111-4111-8111-111111111111",
+    "evaluatorInstructions": "Score factual accuracy, relevance, and clarity. Penalize unsupported details."
+  },
+  "configuration": {
+    "contextName": "Basic factual questions",
+    "primaryModelId": "22222222-2222-4222-8222-222222222222",
+    "comparisonModelIds": [],
+    "promptText": "Answer the user's factual question directly in one or two sentences.",
+    "scenarios": [
+      {
+        "id": "basic-qa-1",
+        "name": "Freezing point",
+        "prompt": "At standard atmospheric pressure, what is the freezing point of pure water in degrees Celsius?",
+        "expected": "The answer states 0 degrees Celsius."
+      }
+    ],
+    "referenceDocuments": [],
+    "selectedMetrics": ["factuality", "relevance", "fluency"],
+    "temperatureContext": 0
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "methodology": {
+    "judgeModel": "GPT-5-mini",
+    "judgeModelId": "11111111-1111-4111-8111-111111111111",
+    "evaluatorInstructions": "Evaluate an assistant that reviews pull requests in a TypeScript codebase.\n\n1. Correctness of feedback\nFlagged issues must be real. No false positives on idiomatic code. Suggested fixes must compile and preserve behavior.\n\n2. Prioritization\nLead with blocking issues (bugs, security, data loss). Style nits go last and are clearly labeled as nits.\n\n3. Actionability\nEach comment should point to a specific line or symbol and propose a concrete change \u2014 not just \"consider refactoring this\".",
+    "changeLog": ""
+  },
+  "configuration": {
+    "primaryModelId": "22222222-2222-4222-8222-222222222222",
+    "comparisonModelIds": [],
+    "promptText": "You are an AI code reviewer for a TypeScript codebase (Node + React).\n\nHow to review:\n- Lead with blocking issues first: bugs, security, data loss, silent failure\n- Style nits go last and must be labeled \"nit:\" \u2014 never block a clean refactor on style\n- Every comment points to a specific line or symbol and proposes a concrete fix that compiles\n- Don't flag idiomatic code as a problem; no false positives\n- Flag null/undefined access on optional types, swallowed errors, and missing await on async calls\n\nKeep feedback short, direct, and actionable. Reviewers should be able to apply your suggestion without further clarification.",
+    "referenceDocuments": [],
+    "selectedMetrics": [
+      "completeness",
+      "factuality",
+      "fluency",
+      "helpfulness",
+      "relevance",
+      "safety"
+    ],
+    "temperatureContext": 0,
+    "scenarios": [
+      {
+        "id": "code-tc-1",
+        "name": "Optional array reduce",
+        "prompt": "PR adds:\n\nconst total = items.reduce((a, b) => a + b.price, 0);\n\nUpstream type for `items` is `Item[] | undefined`. Review this line."
+      },
+      {
+        "id": "code-tc-2",
+        "name": "Cosmetic rename PR",
+        "prompt": "PR renames a helper `getUser` to `fetchUser` across the codebase and updates all call sites. No behavior change. Review."
+      },
+      {
+        "id": "code-tc-3",
+        "name": "Swallowed error in route",
+        "prompt": "PR diff inside an Express async route handler:\n\ntry {\n  await processPayment(req.body);\n  res.json({ ok: true });\n} catch (err) {\n  console.error(err);\n}\n\nReview this handler."
+      }
+    ]
+  }
+}

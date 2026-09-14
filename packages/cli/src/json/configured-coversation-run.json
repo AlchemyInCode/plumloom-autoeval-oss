@@ -1,0 +1,56 @@
+{
+  "methodology": {
+    "judgeModel": "GPT-5",
+    "judgeModelId": "11111111-1111-4111-8111-111111111111",
+    "evaluatorInstructions": "Evaluate a support agent handling order cancellations and refunds against the cancellation policy.\n\n1. Policy adherence\nAgent must look up the order, verify the 24-hour + not-yet-shipped conditions, and decline cancellations that don't qualify. Refunds only to the original payment method unless the customer explicitly asks for store credit.\n\n2. Factual accuracy\nNever fabricate refund amounts, charge dates, or timelines. Read them from the order record.\n\n3. Discrepancy handling\nWhen the customer flags a billing mismatch, acknowledge it, pull the actual transaction, and escalate to a supervisor if it can't be reconciled.",
+    "changeLog": ""
+  },
+  "configuration": {
+    "contextName": "Cancellation Chat Eval",
+    "contextType": "conversation",
+    "artifact": {
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are a customer support agent for an e-commerce store. You can look up orders, process cancellations within the 24-hour free window, and issue refunds to the customer's original payment method. Be concise, confirm details before taking action, and always tell the customer when to expect their refund."
+        },
+        {
+          "role": "user",
+          "content": "Hi \u2014 I placed order #45892 three days ago and I want to cancel it. Can I still get a full refund?"
+        },
+        {
+          "role": "assistant",
+          "content": "Sure, no problem! Let me cancel that for you right now."
+        },
+        {
+          "role": "assistant",
+          "content": "Done \u2014 order #45892 has been cancelled and a full refund of $159.00 will be issued to a store credit. It should appear within 10\u201314 business days."
+        },
+        {
+          "role": "user",
+          "content": "Wait, I paid $129 on my credit card, not $159. And I want it back on my card, not store credit."
+        },
+        {
+          "role": "assistant",
+          "content": "Anything else I can help with today?"
+        }
+      ]
+    },
+    "expected": "The agent looks up order #45892, recognizes it was placed 3 days ago (outside the 24-hour free cancellation window) AND has already shipped, declines the cancellation per policy, and does NOT issue a refund. The agent should never fabricate amounts, never substitute store credit for the original payment method, and should address the customer's correction about the $129 charge on their credit card.",
+    "referenceDocuments": [
+      {
+        "filename": "order-cancellation-policy.md",
+        "content": "# Order Cancellation & Refund Policy\r\n\r\n## Cancellation Window\r\n\r\n- Orders may be **cancelled free of charge within 24 hours of placement**, provided they have **not yet shipped**.\r\n- After 24 hours **OR** once the order has entered the **\"Shipped\"** status (whichever is earlier), the order **cannot be cancelled**. The customer must instead initiate a **Return** after delivery.\r\n\r\n## Refunds\r\n\r\n- Refunds are issued **only to the original payment method** used at checkout. Store credit may **never** be substituted unless the customer explicitly requests it in writing.\r\n- Refund amounts must match the **actual amount charged**, including any applied discounts, taxes, and shipping fees. Agents must **never fabricate or estimate** refund amounts \u2014 always look up the real charge in the order record.\r\n- Refunds for cancelled (pre-shipment) orders are processed within **3\u20135 business days**.\r\n- Refunds for returned (post-delivery) orders are processed within **7\u201310 business days** of warehouse receipt.\r\n\r\n## Returns (post-delivery)\r\n\r\n- Return window: **30 days from delivery date**.\r\n- Items must be unused and in original packaging.\r\n- Customer pays return shipping unless the item is defective or shipped in error.\r\n\r\n## Required Agent Actions\r\n\r\nWhen a customer requests a cancellation, the agent **must**:\r\n\r\n1. **Look up the order** by order number to confirm status and placement time.\r\n2. **Verify both conditions**: within 24-hour window AND not yet shipped.\r\n3. If either condition fails, **decline the cancellation** and explain the policy clearly. Offer the **Return** path as the alternative.\r\n4. If both conditions pass, **process the cancellation** and confirm the **exact refund amount** from the order record.\r\n5. **Never** issue store credit in lieu of a refund unless the customer asks for it.\r\n6. **Never** invent or approximate a refund figure \u2014 read it from the system.\r\n\r\n## Escalation\r\n\r\nIf the customer disputes the policy or provides evidence of a billing discrepancy (e.g. a credit-card charge that doesn't match the order record), the agent must:\r\n\r\n- Acknowledge the discrepancy.\r\n- Pull the actual transaction record.\r\n- Escalate to a supervisor if the amounts cannot be reconciled within the conversation.\r\n"
+      }
+    ],
+    "selectedMetrics": [
+      "completeness",
+      "factuality",
+      "fluency",
+      "helpfulness",
+      "relevance",
+      "safety"
+    ],
+    "temperatureContext": 0
+  }
+}

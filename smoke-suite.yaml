@@ -1,0 +1,7 @@
+# Synthetic placeholder: replace with a workspace from `autoeval workspace list`.
+workspace: ffffffff-ffff-4fff-8fff-ffffffffffff
+
+evals:
+  - ./examples/smoke/fixtures/smoke-scenario.json
+  - ./examples/smoke/fixtures/smoke-conversation.json
+  - ./examples/smoke/fixtures/smoke-agent-trace.json

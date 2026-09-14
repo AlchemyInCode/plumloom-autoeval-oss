@@ -1,0 +1,5 @@
+{
+  "workspaceName": "EXAMPLE-WORKSPACE",
+  "workspaceId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+  "description": "Placeholder workspace record for the eval files in examples/evals. The ID is synthetic: pass a real --workspace value from `autoeval workspace list` when running autoeval eval create-from."
+}

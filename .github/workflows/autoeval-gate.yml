@@ -1,0 +1,35 @@
+name: Autoeval release gate
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+# The gate only reads evaluation results; no repository write access is needed.
+permissions:
+  contents: read
+
+jobs:
+  evaluate:
+    # Requires the API origin, evaluation ID, and API key to be configured.
+    # Forked pull requests do not receive repository secrets, so only run the
+    # credentialed gate for same-repository pull requests or manual dispatches.
+    if: >-
+      ${{ vars.AUTOEVAL_EVALUATION_ID != '' &&
+          vars.AUTOEVAL_API_BASE_URL != '' &&
+          (github.event_name == 'workflow_dispatch' ||
+           (github.event_name == 'pull_request' &&
+            github.event.pull_request.head.repo.full_name == github.repository)) }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/autoeval-gate
+        with:
+          evaluation-id: ${{ vars.AUTOEVAL_EVALUATION_ID }}
+          api-key: ${{ secrets.AUTOEVAL_API_KEY }}
+          base-url: ${{ vars.AUTOEVAL_API_BASE_URL }}
+          min-overall: '4.0'
+          min-scenario: '3.5'
+          min-judge-agreement: '0.66'
+          # Conversation / agent-trace evals instead use per-metric scores:
+          # metrics: |
+          #   factuality=4.0

@@ -1,0 +1,29 @@
+# Autoeval as an MCP server inside DeepSeek Harness (dsh-v0.1.x).
+#
+# Copy this row into the profile patch file, usually
+#   $DSH_HOME/profiles/<profile>/cordis.patch.yml
+# and replace the absolute path with your Autoeval checkout. Build first:
+#   pnpm install --frozen-lockfile && pnpm build
+#
+# NEVER put a real Plumloom CLI key in this file. The `!!js` expression reads
+# the key from the ambient environment at mount time. It is needed because the
+# Harness scrubs ambient names matching KEY|PASSWORD|SECRET|TOKEN before
+# spawning a stdio MCP server, so AUTOEVAL_API_KEY does not pass through on its
+# own. If the host has an OS credential-store entry from `autoeval login`, drop
+# the whole `env:` block instead.
+#
+# See docs/public/integration-deepseek-harness.md.
+
+- id: mcp-autoeval
+  name: '@deepseek-ai/dsh-mcp-client'
+  config:
+    serverName: autoeval
+    transport: stdio
+    command: node
+    args: ['/absolute/path/to/autoeval/packages/cli/dist/mcp.js']
+    env:
+      AUTOEVAL_API_BASE_URL: !!js process.env.AUTOEVAL_API_BASE_URL
+      AUTOEVAL_API_KEY: !!js process.env.AUTOEVAL_API_KEY
+    # Submitting a run returns immediately, but reading results can exceed the
+    # 60s default.
+    toolCallTimeoutMs: 120000

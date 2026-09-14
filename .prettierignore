@@ -1,0 +1,15 @@
+dist
+coverage
+node_modules
+pnpm-lock.yaml
+LICENSE
+NOTICE
+packages/cli/LICENSE
+packages/cli/NOTICE
+packages/cli/tests/fixtures/deepseek-harness/LICENSE
+docs/internal/architecture.md
+docs/internal/dev-spec.md
+docs/internal/user-flow.md
+src/json/configured-agent-run.json
+src/json/configured-coversation-run.json
+src/json/configured-scenario-run.json

@@ -1,0 +1,67 @@
+{
+  "methodology": {
+    "judgeModel": "GLM 5.2",
+    "judgeModelId": "11111111-1111-4111-8111-111111111111",
+    "evaluatorInstructions": "You are evaluating customer support responses for purchasing assistance, guest checkout, and shopping cart issues.\n\nContext & Policies:\n- Guest checkout available (no account required, but limited order tracking)\n- Account creation encouraged (order history, faster checkout, saved addresses)\n- Shopping cart saved for 90 days for account holders, 24 hours for guests\n- Quantity limits: 10 units per item per order (anti-scalping measure)\n- Cart items not reserved until checkout completed\n- Popular items may sell out while in cart\n- Multiple payment methods can be used in a single order (split payment)\n- Promo codes applied at checkout, one code per order\n- Order confirmation sent immediately via email\n- Cannot modify order after submission (must cancel and reorder)\n\nEvaluation Criteria \u2014 assess whether the response:\n- Explains guest checkout vs account creation benefits clearly\n- Troubleshoots cart issues (items disappearing, quantities changing, prices updating)\n- Guides through the checkout process step-by-step when needed\n- Clarifies why items sell out from cart and how to prevent it\n- Addresses promo code application issues and restrictions\n- Explains post-purchase modification limitations\n- Manages customer frustration when items are no longer available\n- Provides a clear path forward based on the customer's specific issue"
+  },
+  "configuration": {
+    "evaluationName": "Purchasing 2 Items - Guest Checkout and Cart",
+    "contextName": "Purchasing Items - Guest Checkout and Cart",
+    "primaryModelId": "22222222-2222-4222-8222-222222222222",
+    "comparisonModelIds": [],
+    "promptText": "You are a customer support agent helping with purchasing, checkout, and shopping cart issues.\n\nPurchasing policies:\n- Guest checkout available (limited tracking) vs account (order history, saved info)\n- Cart saved: 90 days (account), 24 hours (guest)\n- Quantity limit: 10 per item per order\n- Cart items not reserved until checkout\n- One promo code per order\n- Cannot modify order after submission\n\nExplain checkout options. Troubleshoot cart issues. Guide through checkout. Address sold-out items. Clarify promo code rules. Explain modification limitations. Manage frustration.",
+    "scenarios": [
+      {
+        "id": "purchasing-1",
+        "name": "Guest checkout question",
+        "prompt": "Do I need to create an account to buy something or can I just checkout as a guest?",
+        "expected": "The answer confirms guest checkout is available without an account and notes the trade-offs: limited order tracking as a guest, versus order history, saved addresses and faster checkout with an account."
+      },
+      {
+        "id": "purchasing-2",
+        "name": "Item disappeared from cart",
+        "prompt": "I added a jacket to my cart yesterday and now it's gone!! Where did it go? Order was ready and everything.",
+        "expected": "The answer acknowledges the frustration and explains that guest carts are only kept for 24 hours (90 days with an account) and that cart items are not reserved, then offers a clear next step such as re-adding the item or creating an account."
+      },
+      {
+        "id": "purchasing-3",
+        "name": "Promo code not working",
+        "prompt": "im trying to use code SAVE20 at checkout but it says invalid code. the email i got says its valid until today??",
+        "expected": "The answer explains that promo codes are applied at checkout and only one code per order is allowed, checks for another code already applied or unmet restrictions, and gives concrete troubleshooting steps without inventing a discount."
+      },
+      {
+        "id": "purchasing-4",
+        "name": "Item sold out during checkout",
+        "prompt": "This is so frustrating! I had the item in my cart, went through all the checkout steps, and when I hit 'place order' it said it's out of stock!! How is that fair?",
+        "expected": "The answer responds with empathy, explains that cart items are not reserved until checkout completes so popular items can sell out, and suggests how to avoid it next time plus a path forward such as restock alerts or alternatives."
+      },
+      {
+        "id": "purchasing-5",
+        "name": "Modify order after placing",
+        "prompt": "I just placed order #88234 but realized I need to change the quantity from 2 to 3. Can you update that for me?",
+        "expected": "The answer states that orders cannot be modified after submission and that the customer must cancel and reorder, and walks through that path clearly."
+      },
+      {
+        "id": "purchasing-6",
+        "name": "Split payment inquiry",
+        "prompt": "Can I pay with two different credit cards for one order? I want to use $100 from one card and the rest on another.",
+        "expected": "The answer confirms that multiple payment methods can be used on a single order (split payment) and explains how to apply them at checkout."
+      },
+      {
+        "id": "purchasing-7",
+        "name": "Cart quantity changed automatically",
+        "prompt": "Why did my cart change from 15 items to 10 items automatically?? I didn't remove anything!",
+        "expected": "The answer explains the 10-unit-per-item-per-order quantity limit as an anti-scalping measure, why the cart adjusted automatically, and options such as placing a second order."
+      }
+    ],
+    "referenceDocuments": [],
+    "selectedMetrics": [
+      "policy_adherence",
+      "completeness",
+      "empathy_tone_alignment",
+      "actionability",
+      "factuality"
+    ],
+    "temperatureContext": 0
+  }
+}

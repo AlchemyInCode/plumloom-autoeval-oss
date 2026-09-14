@@ -1,0 +1,44 @@
+{
+  "methodology": {
+    "judgeModel": "GLM 5.2",
+    "judgeModelId": "11111111-1111-4111-8111-111111111111",
+    "evaluatorInstructions": "Identify contradictions with the synthetic accessibility guide and missing follow-up steps."
+  },
+  "configuration": {
+    "contextName": "Failed accessibility request",
+    "contextType": "conversation",
+    "artifact": {
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are a support assistant for a fictional community event. Use the supplied accessibility guide."
+        },
+        {
+          "role": "user",
+          "content": "I use a wheelchair. Is the east entrance accessible, and can someone reserve a front-row space for me?"
+        },
+        {
+          "role": "assistant",
+          "content": "Yes, every entrance is wheelchair accessible, so you can use the east entrance."
+        },
+        {
+          "role": "user",
+          "content": "Great. Did you reserve the front-row space?"
+        },
+        {
+          "role": "assistant",
+          "content": "There is no need to reserve one. Just arrive when the doors open."
+        }
+      ]
+    },
+    "expected": "The assistant should state that the east entrance is not step-free, direct the user to the west entrance, collect the attendee name, and create a reservation request for a front-row wheelchair space. The shown assistant fails because it contradicts the guide and does not create the required request.",
+    "referenceDocuments": [
+      {
+        "filename": "synthetic-accessibility-guide.md",
+        "content": "# Example Accessibility Guide\n\nThe west entrance is step-free and has an automatic door. The east entrance has four stairs and is not wheelchair accessible. Front-row wheelchair spaces must be reserved by support; collect the attendee name and submit a reservation request."
+      }
+    ],
+    "selectedMetrics": ["factuality", "completeness", "helpfulness", "safety"],
+    "temperatureContext": 0
+  }
+}

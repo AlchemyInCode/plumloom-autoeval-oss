@@ -1,0 +1,19 @@
+# Smoke suite manifest — the CI unit of work for the sanitized smoke fixtures.
+#
+# The workspace below is a synthetic placeholder: public example files never
+# contain a real identifier. Point the suite at a real workspace without
+# editing this file by passing --workspace on the command line:
+#
+#   autoeval suite run --manifest examples/suite/autoeval.suite.yaml \
+#     --workspace "$WORKSPACE_ID" \
+#     --judge-model-id "$JUDGE_MODEL_ID" \
+#     --primary-model-id "$PRIMARY_MODEL_ID"
+#
+# The fixtures' judge and primary model IDs are synthetic placeholders too, so
+# --judge-model-id and --primary-model-id are required for a live run. Copy
+# enabled UUIDs from `autoeval models`.
+workspace: ffffffff-ffff-4fff-8fff-ffffffffffff
+evals:
+  - ../smoke/fixtures/smoke-scenario.json
+  - ../smoke/fixtures/smoke-conversation.json
+  - ../smoke/fixtures/smoke-agent-trace.json

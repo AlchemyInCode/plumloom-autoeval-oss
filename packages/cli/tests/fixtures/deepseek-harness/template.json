@@ -1,0 +1,17 @@
+{
+  "methodology": {
+    "judgeModel": "GPT-5-mini",
+    "judgeModelId": "11111111-1111-4111-8111-111111111111",
+    "evaluatorInstructions": "Evaluate whether the agent plans a relevant lookup, uses the returned value, and recovers from tool failures."
+  },
+  "configuration": {
+    "evaluationName": "[Agent Trace] Harness weather lookup",
+    "contextName": "Harness session import",
+    "contextType": "agent_trace",
+    "artifact": { "trace": { "resourceSpans": [] } },
+    "expected": "The agent looks up the temperature, uses the returned value of 18 degrees Celsius, and does not present the failed forecast call as a result.",
+    "referenceDocuments": [],
+    "selectedMetrics": ["factuality", "relevance", "helpfulness"],
+    "temperatureContext": 0
+  }
+}

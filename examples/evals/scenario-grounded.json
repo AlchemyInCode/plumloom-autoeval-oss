@@ -1,0 +1,35 @@
+{
+  "methodology": {
+    "judgeModel": "GLM 5.2",
+    "judgeModelId": "11111111-1111-4111-8111-111111111111",
+    "evaluatorInstructions": "Evaluate whether each answer is grounded in the supplied synthetic handbook and avoids inventing details."
+  },
+  "configuration": {
+    "contextName": "Grounded handbook questions",
+    "primaryModelId": "22222222-2222-4222-8222-222222222222",
+    "comparisonModelIds": [],
+    "promptText": "Answer using only the reference handbook. If the handbook does not contain the answer, say that the information is unavailable.",
+    "scenarios": [
+      {
+        "id": "grounded-qa-1",
+        "name": "Workshop duration",
+        "prompt": "How long is the beginner pottery workshop?",
+        "expected": "The answer says the workshop lasts 90 minutes."
+      },
+      {
+        "id": "grounded-qa-2",
+        "name": "Unsupported parking question",
+        "prompt": "Is free parking available at the studio?",
+        "expected": "The answer says parking information is not available in the handbook."
+      }
+    ],
+    "referenceDocuments": [
+      {
+        "filename": "synthetic-workshop-handbook.md",
+        "content": "# Example Workshop Handbook\n\nThe beginner pottery workshop lasts 90 minutes. Aprons and clay are provided. Participants should arrive 10 minutes early. The handbook does not provide parking information."
+      }
+    ],
+    "selectedMetrics": ["factuality", "completeness", "relevance"],
+    "temperatureContext": 0
+  }
+}

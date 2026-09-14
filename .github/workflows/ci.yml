@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# CI only reads the repository.
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Lint, typecheck, test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.13'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm format:check
+      - run: pnpm lint
+      - run: pnpm check:public-data
+      - run: pnpm typecheck
+      - run: pnpm build
+      - run: pnpm test
+
+  public-package:
+    name: Public package boundary
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.13'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Builds, tests, and packs @plumloom/cli on its own, then rejects any
+      # closed-surface file that reached the tarball.
+      - run: pnpm verify:public
+
+  smoke:
+    name: CLI smoke (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.13'
+          cache: pnpm
+      # The native keyring dependency must install and load on every published
+      # platform, so this job installs and executes the built binaries.
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build:public
+      - name: Run the CLI entry points
+        shell: bash
+        env:
+          AUTOEVAL_API_BASE_URL: https://api.example.test
+        run: |
+          set -euo pipefail
+          node packages/cli/dist/cli.js --version
+          node packages/cli/dist/cli.js --help
+          node packages/cli/dist/cli.js suite gate --help
+          node packages/cli/dist/cli.js eval create-from --help
+      - name: Start the MCP server over stdio
+        shell: bash
+        # Dummy value, NOT a real secret and never sent to the backend.
+        # Only used so the MCP `initialize` handshake boots in CI; the
+        # handshake returns server capabilities and makes no API call.
+        env:
+          AUTOEVAL_API_BASE_URL: https://api.example.test
+          AUTOEVAL_API_KEY: pl_sk_ci_smoke_placeholder
+        run: |
+          set -euo pipefail
+          printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"ci","version":"0.0.0"}}}' \
+            | node packages/cli/dist/mcp.js > mcp-response.json
+          grep -q '"result"' mcp-response.json

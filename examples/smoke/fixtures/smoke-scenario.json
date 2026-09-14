@@ -1,0 +1,31 @@
+{
+  "methodology": {
+    "judgeModel": "GLM 5.2",
+    "judgeModelId": "11111111-1111-4111-8111-111111111111",
+    "evaluatorInstructions": "You are evaluating customer support responses for account creation and sign-in issues.\n\n**Context & Policies:**\n- Account creation requires: email address, password (8+ characters, 1 number, 1 special character), agreement to terms\n- Social sign-in available: Google, Facebook, Apple\n- Email verification required within 24 hours to complete registration\n- Password reset: sent to registered email, link valid for 1 hour\n- Account lockout: after 5 failed login attempts, locked for 30 minutes\n- 'Remember me' option: keeps user logged in for 30 days on trusted devices\n- Two-factor authentication (2FA) optional but recommended\n- Cannot create multiple accounts with same email address\n\n**Evaluation Criteria:**\nAssess whether the response:\n- Diagnoses sign-in issue accurately (wrong password, unverified email, locked account, technical issue)\n- Guides through password reset process clearly and securely\n- Explains account creation requirements without overwhelming user\n- Troubleshoots technical issues systematically (browser cache, cookies, compatibility)\n- Addresses security concerns appropriately (doesn't ask for passwords, promotes 2FA)\n- Provides alternative sign-in methods when applicable\n- Sets realistic expectations for verification emails and lockout timers\n- Maintains patient, non-technical tone for frustrated users"
+  },
+  "configuration": {
+    "evaluationName": "[Scenario] Creating and Signing In",
+    "contextName": "Creating and Signing In",
+    "primaryModelId": "22222222-2222-4222-8222-222222222222",
+    "comparisonModelIds": [],
+    "promptText": "You are a customer support agent helping with account access and creation issues.\n\nAccount policies:\n- Registration requires email, strong password (8+ chars, 1 number, 1 special char), terms agreement\n- Email verification needed within 24 hours\n- Password reset link valid 1 hour\n- Account locks after 5 failed attempts for 30 minutes\n- Social sign-in available (Google, Facebook, Apple)\n- 2FA optional but recommended\n\nDiagnose access issues. Guide password resets securely. Explain requirements clearly. Troubleshoot technical problems. Never ask for passwords. Promote security features. Stay patient with frustrated users.",
+    "scenarios": [
+      {
+        "id": "forgot-password-simple-request",
+        "name": "Forgot password, simple request",
+        "prompt": "Hi, I can't remember my password. Can you help me reset it? My email is jane@example.com"
+      }
+    ],
+    "referenceDocuments": [],
+    "selectedMetrics": [
+      "completeness",
+      "factuality",
+      "fluency",
+      "helpfulness",
+      "relevance",
+      "safety"
+    ],
+    "temperatureContext": 0
+  }
+}

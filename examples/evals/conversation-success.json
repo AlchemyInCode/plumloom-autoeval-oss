@@ -1,0 +1,45 @@
+{
+  "methodology": {
+    "judgeModel": "GLM 5.2",
+    "judgeModelId": "11111111-1111-4111-8111-111111111111",
+    "evaluatorInstructions": "Evaluate whether the support assistant follows the synthetic booking guide, confirms the requested change, and communicates clearly."
+  },
+  "configuration": {
+    "evaluationName": "Booking Change ",
+    "contextName": "Successful booking change",
+    "contextType": "conversation",
+    "artifact": {
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are a support assistant for a fictional workshop booking service. Follow the supplied booking guide."
+        },
+        {
+          "role": "user",
+          "content": "I booked the Saturday 10 AM watercolor class. Can I move to Sunday afternoon?"
+        },
+        {
+          "role": "assistant",
+          "content": "I can help with that. Sunday has sessions at 1 PM and 3 PM. Which one would you prefer?"
+        },
+        {
+          "role": "user",
+          "content": "The 3 PM session, please."
+        },
+        {
+          "role": "assistant",
+          "content": "Your booking has been moved to Sunday at 3 PM at no charge. Your confirmation number remains DEMO-1042, and an updated confirmation will be emailed shortly."
+        }
+      ]
+    },
+    "expected": "The assistant offers valid Sunday times, asks the user to choose, confirms Sunday at 3 PM, states that the change is free, and explains that an updated confirmation will be sent.",
+    "referenceDocuments": [
+      {
+        "filename": "synthetic-booking-guide.md",
+        "content": "# Example Booking Guide\n\nCustomers may change sessions without a fee until 24 hours before class. Sunday watercolor sessions begin at 1 PM and 3 PM. After a change, keep the existing confirmation number and send an updated confirmation email."
+      }
+    ],
+    "selectedMetrics": ["completeness", "factuality", "helpfulness", "relevance"],
+    "temperatureContext": 0
+  }
+}

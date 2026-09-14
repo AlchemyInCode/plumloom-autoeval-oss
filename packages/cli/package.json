@@ -1,0 +1,83 @@
+{
+  "name": "@plumloom/cli",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "description": "Deterministic, file-driven terminal client and MCP server for Plumloom Autoeval",
+  "keywords": [
+    "llm",
+    "evaluation",
+    "evals",
+    "cli",
+    "mcp",
+    "ci",
+    "release-gate",
+    "plumloom",
+    "autoeval"
+  ],
+  "homepage": "https://github.com/plumloom-org/plumloom-autoeval/tree/main/packages/cli#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/plumloom-org/plumloom-autoeval.git",
+    "directory": "packages/cli"
+  },
+  "bugs": {
+    "url": "https://github.com/plumloom-org/plumloom-autoeval/issues"
+  },
+  "author": "Plumloom",
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "type": "module",
+  "bin": {
+    "autoeval": "./dist/cli.js",
+    "autoeval-mcp": "./dist/mcp.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/cli.d.ts",
+      "import": "./dist/cli.js"
+    },
+    "./package.json": "./package.json",
+    "./*.js": {
+      "types": "./dist/*.d.ts",
+      "import": "./dist/*.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:live": "vitest run --config vitest.live.config.ts",
+    "boundary:check": "node scripts/check-public-boundary.mjs",
+    "package:check": "node scripts/check-package-contents.mjs",
+    "mcp": "node dist/mcp.js",
+    "prepublishOnly": "pnpm run boundary:check && pnpm run build && pnpm run test && pnpm run package:check"
+  },
+  "dependencies": {
+    "@inquirer/password": "^5.1.1",
+    "@modelcontextprotocol/server": "^2.0.0",
+    "@napi-rs/keyring": "^1.3.0",
+    "asciichart": "^1.5.25",
+    "chalk": "^6.0.0",
+    "cli-progress": "^3.12.0",
+    "cli-table3": "^0.6.5",
+    "cliui": "^9.0.1",
+    "commander": "^15.0.0",
+    "marked": "^15.0.12",
+    "marked-terminal": "^7.3.0",
+    "ora": "^9.4.1",
+    "yaml": "^2.9.0",
+    "zod": "^4.4.3"
+  }
+}

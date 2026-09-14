@@ -1,0 +1,65 @@
+name: Release @plumloom/cli
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: Pack and verify without publishing.
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+    environment: npm-publish
+    permissions:
+      contents: read
+      # Required for npm provenance attestations.
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.13'
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+
+      - run: pnpm install --frozen-lockfile
+
+      # Same gates as prepublishOnly, run explicitly so a failure is attributed.
+      - run: pnpm verify:public
+
+      - name: Check the tag matches the package version
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        env:
+          TAG_REF: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          package_version=$(node -p "require('./packages/cli/package.json').version")
+          if [ "$TAG_REF" != "v${package_version}" ]; then
+            echo "Tag ${TAG_REF} does not match @plumloom/cli version ${package_version}." >&2
+            exit 1
+          fi
+
+      - name: Publish
+        if: ${{ github.event_name == 'push' || inputs.dry-run == false }}
+        working-directory: packages/cli
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_PROVENANCE: 'true'
+        # prepublishOnly is skipped here because verify:public already ran the
+        # identical boundary, build, test, and pack checks above.
+        run: npm publish --access public --provenance --ignore-scripts
+
+      - name: Dry run
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.dry-run }}
+        working-directory: packages/cli
+        run: npm publish --dry-run --access public --ignore-scripts

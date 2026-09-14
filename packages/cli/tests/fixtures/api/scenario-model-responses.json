@@ -1,0 +1,80 @@
+{
+  "evaluation_id": "22222222-2222-4222-8222-222222222222",
+  "outputs": [
+    {
+      "scenario_id": "77777777-7777-4777-8777-777777777771",
+      "scenario_index": 0,
+      "scenario_name": "Cosmetic rename PR",
+      "status": "successful",
+      "model_responses": [
+        {
+          "display_name": "DeepSeek V4 Pro",
+          "model_key": "deepseek-ai/deepseek-v4-pro",
+          "provider_key": "[REDACTED]",
+          "status": "success",
+          "best_run": { "overall_score": 4.26, "response": "[SANITIZED MODEL RESPONSE]" }
+        },
+        {
+          "display_name": "GPT-5",
+          "model_key": "openai/gpt-5",
+          "provider_key": "[REDACTED]",
+          "status": "success",
+          "best_run": { "overall_score": 3.43, "response": "[SANITIZED MODEL RESPONSE]" }
+        }
+      ]
+    },
+    {
+      "scenario_id": "77777777-7777-4777-8777-777777777772",
+      "scenario_index": 1,
+      "scenario_name": "Optional array reduce",
+      "status": "successful",
+      "model_responses": [
+        {
+          "display_name": "DeepSeek V4 Pro",
+          "model_key": "deepseek-ai/deepseek-v4-pro",
+          "provider_key": "[REDACTED]",
+          "status": "success",
+          "best_run": { "overall_score": 4.19, "response": "[SANITIZED MODEL RESPONSE]" }
+        },
+        {
+          "display_name": "GPT-5",
+          "model_key": "openai/gpt-5",
+          "provider_key": "[REDACTED]",
+          "status": "success",
+          "best_run": { "overall_score": 4.23, "response": "[SANITIZED MODEL RESPONSE]" }
+        }
+      ]
+    },
+    {
+      "scenario_id": "77777777-7777-4777-8777-777777777773",
+      "scenario_index": 2,
+      "scenario_name": "Swallowed error in route",
+      "status": "successful",
+      "model_responses": [
+        {
+          "display_name": "DeepSeek V4 Pro",
+          "model_key": "deepseek-ai/deepseek-v4-pro",
+          "provider_key": "[REDACTED]",
+          "status": "success",
+          "best_run": { "overall_score": 4.04, "response": "[SANITIZED MODEL RESPONSE]" }
+        },
+        {
+          "display_name": "GPT-5",
+          "model_key": "openai/gpt-5",
+          "provider_key": "[REDACTED]",
+          "status": "success",
+          "best_run": { "overall_score": 4.15, "response": "[SANITIZED MODEL RESPONSE]" }
+        }
+      ]
+    }
+  ],
+  "pagination": {
+    "has_next": false,
+    "has_previous": false,
+    "limit": 50,
+    "page": 1,
+    "total": 3,
+    "total_pages": 1
+  },
+  "schema_version": "v1.0"
+}

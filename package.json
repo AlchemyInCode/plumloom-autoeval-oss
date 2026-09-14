@@ -1,0 +1,42 @@
+{
+  "name": "plumloom-autoeval-workspace",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Workspace root for the Plumloom Autoeval CLI",
+  "type": "module",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "packageManager": "pnpm@11.16.0",
+  "scripts": {
+    "build": "pnpm -r --sequential build",
+    "build:public": "pnpm --filter @plumloom/cli build",
+    "typecheck": "pnpm -r --sequential typecheck",
+    "test": "pnpm -r --sequential test",
+    "test:public": "pnpm --filter @plumloom/cli test",
+    "test:coverage": "pnpm -r --sequential test:coverage",
+    "test:live": "pnpm --filter @plumloom/cli test:live",
+    "boundary:check": "pnpm --filter @plumloom/cli boundary:check",
+    "package:check": "pnpm --filter @plumloom/cli package:check",
+    "verify:public": "pnpm check:public-data && pnpm --filter @plumloom/cli boundary:check && pnpm --filter @plumloom/cli build && pnpm --filter @plumloom/cli test && pnpm --filter @plumloom/cli package:check",
+    "lint": "eslint . --max-warnings 0",
+    "check:public-data": "node scripts/check-public-data.mjs .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "mcp": "node packages/cli/dist/mcp.js"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^26.2.0",
+    "@vitest/coverage-v8": "^4.1.11",
+    "eslint": "^10.8.1",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.9.6",
+    "typescript": "^6.0.2",
+    "typescript-eslint": "^8.67.0",
+    "vitest": "^4.1.11"
+  },
+  "workspaces": [
+    "packages/*"
+  ]
+}

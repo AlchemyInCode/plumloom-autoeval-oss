@@ -1,0 +1,39 @@
+{
+  "methodology": {
+    "judgeModel": "GLM 5.2",
+    "judgeModelId": "11111111-1111-4111-8111-111111111111",
+    "evaluatorInstructions": "Compare the primary and comparison models for correctness, usefulness, and instruction following across all test cases."
+  },
+  "configuration": {
+    "contextName": "Primary and comparison model evaluation",
+    "primaryModelId": "22222222-2222-4222-8222-222222222222",
+    "comparisonModelIds": [
+      "33333333-3333-4333-8333-333333333333",
+      "44444444-4444-4444-8444-444444444444"
+    ],
+    "promptText": "You are a concise writing assistant. Follow the requested format exactly and do not add facts that were not provided.",
+    "scenarios": [
+      {
+        "id": "comparison-1",
+        "name": "One-sentence summary",
+        "prompt": "Summarize in one sentence: The community garden added twelve raised beds and extended weekend opening hours.",
+        "expected": "A single sentence mentions both twelve raised beds and longer weekend hours."
+      },
+      {
+        "id": "comparison-2",
+        "name": "Three-item checklist",
+        "prompt": "Turn these items into exactly three checklist lines: notebook, reusable bottle, name badge.",
+        "expected": "Exactly three checklist lines are returned, one for each supplied item."
+      },
+      {
+        "id": "comparison-3",
+        "name": "Uncertainty handling",
+        "prompt": "The event begins at 9:00 AM. What time will it end?",
+        "expected": "The answer explains that the end time cannot be determined because no duration was provided."
+      }
+    ],
+    "referenceDocuments": [],
+    "selectedMetrics": ["factuality", "helpfulness", "relevance", "fluency"],
+    "temperatureContext": 0.2
+  }
+}

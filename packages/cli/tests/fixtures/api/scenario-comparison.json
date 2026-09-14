@@ -1,0 +1,39 @@
+{
+  "evaluation_id": "22222222-2222-4222-8222-222222222222",
+  "evaluation_summary": {
+    "model_count": 2,
+    "overall_mean": 4.05,
+    "test_case_count": 3,
+    "total_evaluations": 6
+  },
+  "scenarios": [
+    {
+      "scenario_id": "77777777-7777-4777-8777-777777777771",
+      "scenario_index": 0,
+      "scenario_name": "Cosmetic rename PR",
+      "model_scores": [
+        { "model_key": "deepseek-ai/deepseek-v4-pro", "score": { "mean": 4.26 } },
+        { "model_key": "openai/gpt-5", "score": { "mean": 3.43 } }
+      ]
+    },
+    {
+      "scenario_id": "77777777-7777-4777-8777-777777777772",
+      "scenario_index": 1,
+      "scenario_name": "Optional array reduce",
+      "model_scores": [
+        { "model_key": "deepseek-ai/deepseek-v4-pro", "score": { "mean": 4.19 } },
+        { "model_key": "openai/gpt-5", "score": { "mean": 4.23 } }
+      ]
+    },
+    {
+      "scenario_id": "77777777-7777-4777-8777-777777777773",
+      "scenario_index": 2,
+      "scenario_name": "Swallowed error in route",
+      "model_scores": [
+        { "model_key": "deepseek-ai/deepseek-v4-pro", "score": { "mean": 4.04 } },
+        { "model_key": "openai/gpt-5", "score": { "mean": 4.15 } }
+      ]
+    }
+  ],
+  "schema_version": "v1.0"
+}

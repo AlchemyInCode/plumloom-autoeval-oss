@@ -1,0 +1,9 @@
+{"version":1,"id":"11111111-1111-4111-8111-111111111111","cwd":"/workspace","agentPreset":"web"}
+{"type":"turn/start","timestamp":"2030-01-01T09:00:00.000Z","data":{"turn":1}}
+{"type":"user/message","timestamp":"2030-01-01T09:00:00.500Z","data":{"turn":1,"message":{"role":"user","content":"What is the temperature in Example City right now?"}}}
+{"type":"tool/call","timestamp":"2030-01-01T09:00:01.000Z","data":{"turn":1,"step":1,"callId":"call-1","name":"weather.lookup","arguments":"{\"city\":\"Example City\",\"units\":\"celsius\"}"}}
+{"type":"tool/result","timestamp":"2030-01-01T09:00:01.400Z","data":{"turn":1,"step":1,"callId":"call-1","message":{"role":"tool","content":"{\"city\":\"Example City\",\"temperature_c\":18}"}}}
+{"type":"tool/call","timestamp":"2030-01-01T09:00:01.600Z","data":{"turn":1,"step":2,"callId":"call-2","name":"weather.forecast","arguments":"{\"city\":\"Example City\"}"}}
+{"type":"tool/result","timestamp":"2030-01-01T09:00:01.900Z","data":{"turn":1,"step":2,"callId":"call-2","message":{"role":"tool","content":"upstream timeout"},"error":{"name":"ToolError","code":"TIMEOUT"}}}
+{"type":"assistant/message","timestamp":"2030-01-01T09:00:02.200Z","data":{"turn":1,"step":3,"message":{"role":"assistant","content":[{"type":"text","text":"The current temperature in Example City is 18 degrees Celsius."}]},"usage":{"inputTokens":420,"outputTokens":24}}}
+{"type":"turn/end","timestamp":"2030-01-01T09:00:02.300Z","data":{"turn":1,"reason":{"kind":"completed"}}}
