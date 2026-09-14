@@ -7,7 +7,7 @@ Autoeval is an open-source CLI and MCP server for evaluating AI applications, in
 Follow this path from a repository visit to a repeatable release gate:
 
 1. Meet the requirements and configure Plumloom.
-2. Build Autoeval from this repository.
+2. Install Autoeval.
 3. Log in and run the quickstart.
 4. Run your first file-driven evaluation.
 5. Add a suite gate to CI.
@@ -47,7 +47,15 @@ https://app.plumloom.ai/api-keys
 
 Create an API key for Autoeval. Use it to authenticate from your terminal, CI, or other development tools.
 
-## 2. Build Autoeval from this repository
+## 2. Install Autoeval
+
+Install from npm:
+
+```bash
+npm install --global @plumloom/cli
+```
+
+Or build from source:
 
 ```bash
 pnpm install --frozen-lockfile
