@@ -4,7 +4,6 @@ about: Create a report to help us improve
 title: ''
 labels: ''
 assignees: ''
-
 ---
 
 **Describe the bug**  
@@ -21,6 +20,7 @@ Steps to reproduce the behavior:
 A clear and concise description of what you expected to happen.
 
 **Environment**
+
 - Autoeval version: [run `autoeval --version`]
 - Node.js version: [run `node --version`]
 - OS: [e.g. macOS 15, Ubuntu 24.04, Windows 11]
