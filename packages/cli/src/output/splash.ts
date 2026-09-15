@@ -252,7 +252,7 @@ export function renderSplash(context: SplashContext): string {
   const wordmark = renderWordmark(context, version);
   const boltBlock = renderBoltBlock(context, version);
   const prompt = `${' '.repeat(14)}${paint(
-    'Run a command to evaluate with Autoeval.',
+    'Run a command to get started...',
     'charcoal',
     context.colorMode,
   )}`;

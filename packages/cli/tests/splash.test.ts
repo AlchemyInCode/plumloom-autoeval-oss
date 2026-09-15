@@ -100,7 +100,7 @@ describe('renderSplash', () => {
     expect(output).toContain('intelligent evaluation engine');
     expect(output).toContain('powered by');
     expect(output).toContain('plumloom');
-    expect(output).toContain('Run a command to evaluate with Autoeval.');
+    expect(output).toContain('Run a command to get started...');
   });
 
   it('does not print identity or workspace in the design block', () => {

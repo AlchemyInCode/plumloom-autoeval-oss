@@ -139,7 +139,7 @@ describe('runCli splash integration', () => {
     }
 
     const stderrOutput = stderrWrites.join('');
-    expect(stderrOutput).not.toContain('Run a command to evaluate with Autoeval.');
+    expect(stderrOutput).not.toContain('Run a command to get started...');
   });
 
   it('does not print the splash in json mode', async () => {
@@ -177,7 +177,7 @@ describe('runCli splash integration', () => {
     }
 
     const stderrOutput = stderrWrites.join('');
-    expect(stderrOutput).not.toContain('Run a command to evaluate with Autoeval.');
+    expect(stderrOutput).not.toContain('Run a command to get started...');
   });
 
   it('accepts trailing --json after a subcommand', async () => {
@@ -312,7 +312,7 @@ describe('runCli splash integration', () => {
     }
 
     const stderrOutput = stderrWrites.join('');
-    expect(stderrOutput).toContain('Run a command to evaluate with Autoeval.');
+    expect(stderrOutput).toContain('Run a command to get started...');
     expect(stderrOutput).toContain(`v${CLI_VERSION}`);
   });
 
@@ -343,7 +343,7 @@ describe('runCli splash integration', () => {
     }
 
     const stderrOutput = stderrWrites.join('');
-    expect(stderrOutput).toContain('Run a command to evaluate with Autoeval.');
+    expect(stderrOutput).toContain('Run a command to get started...');
     expect(stderrOutput).toContain('Signed in.');
     expect(stderrOutput).toContain('autoeval quickstart');
     expect(stderrOutput).toContain('autoeval --help');
