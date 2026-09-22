@@ -1,104 +1,235 @@
 # Autoeval quickstart
 
-From a Plumloom CLI key to a finished evaluation result in three commands. Requires Node.js 22.13
-or newer.
+By the end of this page you will have an evaluation defined in a file you own, run it once or many
+times, read the result, and use that result to decide whether a release goes ahead. That loop is
+the whole product: everything else in these docs is a variation on it.
 
-## 1. Build from this repository
+Allow about fifteen minutes. You need a Plumloom CLI key.
 
-The package is not currently published to npm.
+## 1. Requirements
+
+- **Node.js 22.13 or newer.**
+- **An AI provider connected in Plumloom.** Autoeval runs evaluations through the models your
+  Plumloom account can reach, so connect a provider first under **Settings → AI Providers & Models**
+  ([app.plumloom.ai/ai-providers](https://app.plumloom.ai/ai-providers)). Plumloom currently supports
+  OpenAI and Together.ai keys. Without one, `autoeval models` returns nothing.
+- **A Plumloom CLI key.** Create one under **Settings → API Keys**
+  ([app.plumloom.ai/api-keys](https://app.plumloom.ai/api-keys)). It starts with `pl_sk_`.
+- **pnpm 11, only if you build from source.** Install it with `npm install --global pnpm@11`.
+  Current Node releases no longer bundle Corepack, so `corepack enable` does not work on Node 25 and
+  later.
+
+## 2. Install
+
+Install the published package:
+
+```bash
+npm install --global @plumloom/cli
+```
+
+This gives you two commands: `autoeval` for the terminal and `autoeval-mcp` for MCP clients.
+
+To build from source instead (contributors, or to run an unreleased change):
 
 ```bash
 pnpm install --frozen-lockfile
-pnpm --filter @plumloom/cli build
-node packages/cli/dist/cli.js --help
+pnpm build
 ```
 
-The examples below use `autoeval` for readability. Replace it with
-`node packages/cli/dist/cli.js` when running from the checkout. To use the short command, link the
-local build once from `packages/cli` and rebuild after pulling changes.
+From a checkout, run `node packages/cli/dist/cli.js` wherever these docs say `autoeval`.
 
-## 2. Authenticate
+## 3. Configure
+
+Do this before running any command, including `--help`:
 
 ```bash
-export AUTOEVAL_API_BASE_URL="<autoeval-api-origin>"
-autoeval login
+export AUTOEVAL_API_BASE_URL="https://api.plumloom.ai"
 ```
 
-`AUTOEVAL_API_BASE_URL` is required and has no built-in default. `login` accepts a `pl_sk_…` key.
-For non-interactive use, set `AUTOEVAL_API_KEY` in the
-environment or pass `autoeval login --key "$AUTOEVAL_API_KEY"`. The key is stored in the OS
-credential store only after Plumloom validates it and is never printed.
+Every Autoeval command requires this variable, and there is no built-in default. It must be an
+`https` origin with no path, query, or fragment; plain `http` is accepted only for `localhost`
+development. The reason is recorded in
+[ADR 0011](../internal/adr/0011-required-api-base-url.md).
 
-## 3. Run your first evaluation
+Then give Autoeval your key. Choose one:
+
+```bash
+# Interactive: prompts for the key, validates it, then stores it in the OS credential store.
+autoeval login
+
+# CI and scripts: read from the environment on every command. Never written to disk.
+export AUTOEVAL_API_KEY="pl_sk_..."
+```
+
+Use the environment variable in CI. `autoeval login --key <key>` also works, but it writes the key to
+the OS credential store (which a headless runner may not have) and leaves it in your shell history.
+[How credentials are resolved](./core-workflows.md#1-authentication-and-credential-resolution)
+explains the full order.
+
+## 4. Verify
+
+```bash
+autoeval --help
+autoeval whoami
+```
+
+`--help` confirms the install. `whoami` is the first command that talks to Plumloom, so it confirms
+the origin and the key together. If either fails, the
+[troubleshooting guide](../../TROUBLESHOOTING.md) lists each error and its fix.
+
+## 5. Create an evaluation from a file
+
+An evaluation is a JSON file that you keep in version control next to your code. Start from one of
+the public examples.
+
+Find the model and workspace IDs you will need:
+
+```bash
+autoeval models
+autoeval workspace list
+```
+
+If you have no workspace, create one with `autoeval workspace create --name "My workspace"`.
+
+Copy an example and check it:
+
+```bash
+cp examples/evals/scenario-basic.json my-eval.json
+autoeval eval validate --input my-eval.json
+```
+
+`validate` checks the file's structure and confirms every model it names is enabled on your account.
+It makes one read-only request and creates nothing.
+
+Create the evaluation and run it in one step:
+
+```bash
+autoeval eval create-from \
+  --workspace <workspace-id> \
+  --input my-eval.json \
+  --judge-model-id <judge-model-uuid> \
+  --primary-model-id <primary-model-uuid> \
+  --run
+```
+
+The two model flags are needed here only because the public examples ship with placeholder UUIDs.
+Once your own file contains your own enabled model UUIDs, drop both flags.
+
+The judge must be a different model from the one under test. Autoeval rejects a file where they
+match, because a model grading its own answer is not a useful measurement.
+
+`--run` waits for the run to finish and prints the evaluation ID and the Run ID. Keep both; the next
+two steps use them.
+
+## 6. Run it: single-run or multi-run
+
+This is the decision that matters most, and it lives in your eval file rather than in a flag.
+
+Language models and the judges that grade them are not deterministic. Run the same evaluation twice
+and the score can move. The question is whether you are measuring your system or measuring noise.
+
+**Single-run** executes the evaluation once. It is fast and cheap, and right for iterating on a
+prompt, where you want a quick read rather than a verdict.
+
+**Multi-run** executes the same evaluation across several trials, then aggregates them to measure
+run-to-run variation. The result reports reliability statistics, including standard deviation and
+confidence intervals. That tells you how consistently your system performs, instead of basing a
+decision on a single run that happened to be lucky or unlucky.
+
+Set it with `runsPerScenario` in the file's `methodology` block:
+
+```json
+"methodology": {
+  "runsPerScenario": 5
+}
+```
+
+It accepts a whole number from 1 to 10 and defaults to 1 (single-run) when omitted.
+
+| Use                             | Setting                        |
+| ------------------------------- | ------------------------------ |
+| Iterating on a prompt or rubric | `1` (the default)              |
+| Any score you will gate on      | more than `1`, so it is stable |
+
+The choice changes how a release gate reads the result, which is the real reason it matters:
+
+- A **single-run** gate compares the one score against your threshold. A lucky run passes.
+- A **multi-run** gate compares the 95% confidence interval against your threshold. It passes only
+  when the whole interval clears the threshold, fails when the whole interval falls short, and
+  reports `INCONCLUSIVE` when the interval straddles it. A result that could have gone either way
+  is reported as exactly that, rather than as a pass.
+
+Multi-run applies to **scenario** evaluations, where Autoeval calls a model under test. Conversation
+and agent-trace evaluations grade a transcript or trace you supply. The file accepts
+`runsPerScenario` for these types too, and Autoeval sends it to the API without a warning, but the
+release gate always reads their results as single-run.
+
+To run an evaluation that already exists, without changing its file:
+
+```bash
+autoeval run <evaluation-id>
+```
+
+## 7. Inspect the results
+
+```bash
+autoeval results <evaluation-id> <run-id>
+```
+
+You get a scorecard: the overall score, per-metric scores, and, for multi-run evaluations, the
+interval and consistency evidence. Two variations:
+
+```bash
+autoeval results <evaluation-id> <run-id> --show-outputs    # every input and model response
+autoeval --json results <evaluation-id> <run-id>            # the complete payload, for scripts
+```
+
+While a run is still going, `autoeval status <evaluation-id> <run-id>` shows its progress.
+
+## 8. Gate a release on the result
+
+A gate turns a score into a yes or no that CI can act on:
+
+```bash
+autoeval gate <evaluation-id> --min-overall 4.0
+```
+
+It exits `0` when every threshold is met and `1` when any is not, so a failing gate stops the
+pipeline. Thresholds can also be set per metric, per scenario, or on judge agreement, and read from a
+JSON file with `--thresholds`.
+
+To gate a release on several evaluations at once, list them in a suite manifest and run
+`autoeval suite gate`. Two rules decide the outcome, and both are there to stop a bad release from
+passing quietly:
+
+- **`INCONCLUSIVE` is not a pass.** It exits non-zero, the same as `FAIL`. So does an evaluation
+  that has no threshold configured: it is `INCONCLUSIVE`, never a silent pass.
+- **The suite takes its worst result.** Outcomes roll up in the order
+  `ERROR`, then `FAIL`, then `INCONCLUSIVE`, then `PASS`. There is no averaging, so one failing
+  evaluation fails the suite however well the others did.
+
+See [release gating for CI](./release-gating.md).
+
+## Want to see it work first?
+
+`autoeval quickstart` runs a bundled sample end to end with no file of your own. It resolves your
+workspace and judge model, grades a recorded agent trace, and prints the result, which makes it a
+good way to confirm everything is connected before you write an evaluation.
 
 ```bash
 autoeval quickstart
 ```
 
-That single command resolves your workspace and judge model, grades a bundled recorded agent
-trajectory, waits for it to finish, and prints the result. No UUID copy-paste is needed in the
-normal path.
-
-- **Sample** — the default is an agent trace: a recorded run of a tool-using agent. It is graded by
-  the judge alone, so there is no model under test to choose.
-- **Workspace** — if you have one, it is used. With several, you pick from a numbered list, or pass
-  `--workspace <workspace-id>`. Quickstart never invents a default workspace and never creates a
-  demo workspace. With no workspace, run `autoeval workspace create --name "My workspace"`.
-- **Judge model** — a single enabled model is selected automatically. With several, quickstart uses
-  its curated fast-model preferences, then asks you to choose if no preference is available.
-- **Scenario instead** — `autoeval quickstart --sample scenario` calls a model under test and
-  grades its answer. A single enabled model is selected automatically; otherwise the same curated
-  preference and picker rules apply.
-- **Overrides** — pin the choices with `--judge-model-id`, `--primary-model-id`, or
-  `--workspace`.
-- **Non-interactive** — `--yes`, `--json`, and non-TTY sessions never prompt; they fail with the
-  flag required to resolve an ambiguous choice.
-- **Your own file** — `autoeval quickstart --input my-eval.json`.
-
-The evaluation is saved as `Quickstart Baseline - <timestamp>`, and the output includes a
-ready-to-run `autoeval results` command.
-
-## 4. Read the result again
-
-```bash
-autoeval results <evaluation-id> <run-id>
-autoeval --json results <evaluation-id> <run-id>
-```
-
-Human output is a scorecard; `--json` carries the full reliability detail and validated backend
-payload. Use `autoeval status <evaluation-id> <run-id>` while a run is still in progress.
-
-For a custom release policy, use `autoeval --json results` to [build your own gate over the
-structured evaluation evidence](./release-gating.md#custom-gates-from-json-results).
-
-## Run an eval file yourself
-
-Once past the first result, drive evaluations from files you keep in version control:
-
-```bash
-autoeval workspace list
-autoeval models
-autoeval eval validate --input examples/evals/scenario-basic.json
-
-autoeval eval create-from \
-  --workspace <workspace-id> \
-  --input examples/evals/scenario-basic.json \
-  --judge-model-id <model-uuid> \
-  --primary-model-id <model-uuid> \
-  --run
-```
-
-The model override flags are needed for public samples because they carry synthetic placeholder
-UUIDs. Files containing your own enabled model UUIDs need neither flag. `runsPerScenario` is
-validated as an integer from 1 to 10, preserved, and sent to the API as `runs_per_scenario`; it
-defaults to 1 when omitted. Legacy `autoStopEnabled` is accepted for compatibility but ignored and
-not forwarded; automatic stopping is controlled by the evaluation service.
+It saves the evaluation as `Quickstart Baseline - <timestamp>` and prints a ready-to-run
+`autoeval results` command.
 
 ## Go deeper
 
-- [Command guide](./commands.md) — commands in task order
-- [CLI reference](./cli-reference.md) — options, output, and exit codes
-- [Release gating for CI](./release-gating.md) — `autoeval gate` and `autoeval suite gate`
-- [MCP server](./mcp.md) — the same action layer over stdio
-- [Examples](../../examples)
+- [Architecture overview](./architecture.md): how the CLI and the MCP server share one action layer
+- [Core workflows](./core-workflows.md): authentication, the evaluation lifecycle, suites, and MCP,
+  step by step
+- [Command guide](./commands.md): every command in task order
+- [CLI reference](./cli-reference.md): exact options, output, and exit codes
+- [Release gating for CI](./release-gating.md)
+- [MCP server](./mcp.md)
 - [Troubleshooting](../../TROUBLESHOOTING.md)

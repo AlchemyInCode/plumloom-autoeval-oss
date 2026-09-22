@@ -4,6 +4,91 @@ Use `--debug` for bounded, redacted request metadata on stderr. Put `--json` bef
 deterministic command for machine-readable output. Never include a real credential in an issue or
 copied diagnostic.
 
+## Setup and connection errors
+
+These are the errors a new setup is most likely to hit, in roughly the order you would meet them.
+
+### `AUTOEVAL_API_BASE_URL is not defined`
+
+```text
+Error: AUTOEVAL_API_BASE_URL is not defined. Set it to the Autoeval API origin to continue.
+```
+
+**Exit code `2`.** Every command needs this variable, including `--help` and `--version`, and there
+is no built-in default. Set it before running anything:
+
+```bash
+export AUTOEVAL_API_BASE_URL="https://api.plumloom.ai"
+```
+
+To make it permanent, add that line to your shell profile. In CI, set it as a pipeline variable.
+
+### `The Autoeval API must use HTTPS`
+
+```text
+Error: The Autoeval API must use HTTPS; HTTP is allowed only for localhost development.
+```
+
+**Exit code `2`.** The origin must start with `https://`. Plain `http://` is accepted only for a
+`localhost` origin during local development.
+
+### `AUTOEVAL_API_BASE_URL must be an origin without a path`
+
+```text
+Error: AUTOEVAL_API_BASE_URL must be an origin without a path.
+```
+
+**Exit code `2`.** Give the origin only: `https://api.plumloom.ai`, not
+`https://api.plumloom.ai/v1`. Autoeval adds the API path itself.
+
+### `AUTOEVAL_API_BASE_URL must not contain credentials, query parameters, or fragments`
+
+```text
+Error: AUTOEVAL_API_BASE_URL must not contain credentials, query parameters, or fragments.
+```
+
+**Exit code `2`.** Remove everything after the host, such as `?x=1` or `#section`, and any
+`user:password@` part.
+
+### `Could not connect to the Autoeval API`
+
+```text
+Error: Could not connect to the Autoeval API.
+```
+
+**Exit code `4`.** The origin is well formed but could not be reached. Check your network, then
+check the origin for a typo.
+
+### `The CLI key format is invalid`
+
+```text
+Error: The CLI key format is invalid. Create a new Autoeval key in Plumloom.
+```
+
+**Exit code `3`.** The key failed a local format check before any request was made. A CLI key starts
+with `pl_sk_`. Create one at [app.plumloom.ai](https://app.plumloom.ai). If the key came from
+`AUTOEVAL_API_KEY`, check that the variable holds the whole key with no quotes or trailing spaces
+around it.
+
+### `No Autoeval CLI key is available`
+
+```text
+Error: No Autoeval CLI key is available. Run `autoeval login` first.
+```
+
+**Exit code `3`.** Neither `AUTOEVAL_API_KEY` nor the OS credential store holds a key. Run
+`autoeval login`, or set `AUTOEVAL_API_KEY`.
+
+If you have already logged in, check whether `AUTOEVAL_API_BASE_URL` has changed. Stored keys are
+saved per API origin, so a key saved while pointing at one origin is not used for another. Log in
+again against the new origin.
+
+### `The OS credential store is unavailable`
+
+**Exit code `3`.** The machine has no OS credential store for Autoeval to use, which is common on a
+headless CI runner. Set `AUTOEVAL_API_KEY` instead. It is read on every command and never needs to be
+stored.
+
 ## No enabled models are shown
 
 **Symptom:** `autoeval models` is empty, or file preflight reports that a model is not enabled.
