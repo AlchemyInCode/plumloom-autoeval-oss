@@ -34,7 +34,7 @@ function, `whoAmI` in `actions/identity.ts`. One is reached through `commands/`,
 
 ## Layers
 
-All the code ships in one package, `packages/cli`: 80 TypeScript files and about 14,400 lines.
+All the code ships in one package, `packages/cli`.
 
 | Layer        | Files | Lines | Role                                                                                                                           |
 | ------------ | ----- | ----- | ------------------------------------------------------------------------------------------------------------------------------ |
