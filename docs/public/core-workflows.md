@@ -138,9 +138,15 @@ What happens at each step:
    confirmed as enabled on your account, and the model roles are checked: the judge cannot also be
    the primary or a comparison model, the primary cannot also be a comparison model, and comparison
    models must be unique. `eval validate` runs this step on its own and stops there.
-2. **Create the evaluation**, named from the file.
+2. **Create the evaluation.** Its title comes from the file: `evaluationName` when the file sets
+   it, otherwise `contextName`, which every file must have. `eval create-from`, `suite run`, and
+   `suite gate` all resolve the title this way. For example, `examples/evals/scenario-basic.json` has
+   no `evaluationName`, so its evaluation is titled "Basic factual questions", its `contextName`.
 3. **Create a methodology version**: the judge model, the evaluator instructions, and
-   `runsPerScenario`, which decides single-run or multi-run.
+   `runsPerScenario`. For a scenario evaluation, `runsPerScenario` decides whether the model under
+   test runs once or across several trials. Conversation and agent-trace evaluations grade the
+   conversation or trace you supply rather than running a model under test again, so for them it
+   does not create multi-run evidence.
 4. **Create a configuration version** for that methodology: for a scenario, the primary and
    comparison models, the prompt, and the scenarios; for a conversation or agent trace, the artifact
    and the expected outcome.
@@ -151,10 +157,15 @@ What happens at each step:
 
 Two safeguards to keep in mind:
 
-- **Autoeval never submits a second run on your behalf.** If submission or polling fails, it reports
-  the failure and stops, so a network problem cannot cause a duplicate run.
+- **Autoeval does not resubmit a run on its own.** Each run submission carries a fresh idempotency
+  key. If submission or polling fails, Autoeval reports the failure and stops; it does not retry the
+  submission in the same command. This does not rule out every duplicate: if the API accepted the
+  run but the response was lost, running the command again is a new submission with a new key, and
+  it can create a second run. Check the evaluation's runs before you retry.
 - **Public eval files carry no account identity.** Your account is resolved from the authenticated
-  session, so an example file works for anyone.
+  session, so no file needs editing to name you. Running an example still needs the right access:
+  your account must reach the workspace and have the models enabled, and for public examples with
+  placeholder model IDs you must pass `--judge-model-id` and, for a scenario, `--primary-model-id`.
 
 `eval run-configured` validates the file (step 1), then runs steps 3 to 6 against an evaluation that
 already exists, instead of creating a new one.
@@ -202,8 +213,13 @@ How each evaluation is decided:
 - **Multi-run scenario:** the 95% confidence interval is compared against the threshold. The lower
   bound at or above the threshold passes, the upper bound below it fails, and an interval that
   straddles it is `INCONCLUSIVE`.
-- **Conversation and agent trace:** each configured metric's score is compared against its
-  threshold.
+- **Conversation and agent trace:** each metric that has a gate threshold is compared against that
+  threshold. Scoring and gating are configured separately. The evaluation scores the metrics listed
+  in its file's `selectedMetrics`: three to six metrics from the metric catalog, with a default set
+  of completeness, factuality, fluency, helpfulness, relevance, and safety. The gate reads only the
+  metrics you give a threshold to: `--metric` flags or a `--thresholds` file for `autoeval gate`, and
+  the manifest's `gate` blocks for `autoeval suite gate`. A metric can be scored without being
+  gated.
 - **No threshold configured:** `INCONCLUSIVE`. An evaluation is never a silent pass.
 - **Multi-run that did not converge:** if convergence was enabled and the consistency target was
   not reached, a result that would otherwise pass is `INCONCLUSIVE`. A `FAIL` stays `FAIL`. If the
@@ -259,7 +275,7 @@ The difference from the CLI is that run tools **return a handle straight away** 
 A run can outlast an MCP client's request timeout, so the client polls `get_run_status` and then
 calls `get_results`. The CLI does the same submission and adds its own wait on top.
 
-The server exposes sixteen tools, marked read-only or state-changing:
+The server exposes the following tools, marked read-only or state-changing:
 
 | Tools                                                                                                                                                                                 | Access         |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |

@@ -17,9 +17,9 @@ Follow this path from a repository visit to a repeatable release gate:
 
 - Node.js 22.13 or newer
 - pnpm 11, only to build from source: `npm install --global pnpm@11`
-- A Plumloom API key beginning with `pl_sk_`
+- A Plumloom CLI key beginning with `pl_sk_`
 - `AUTOEVAL_API_BASE_URL`
-- A supported OS credential store for interactive login persistence
+- A supported OS credential store, only if you want `autoeval login` to save your key
 
 ## 1. Configure Plumloom
 

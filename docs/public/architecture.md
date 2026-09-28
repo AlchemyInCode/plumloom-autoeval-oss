@@ -8,8 +8,10 @@ does. If you only want to run evaluations, start with the [quickstart](./quickst
 **`actions/` is the product. The CLI and the MCP server are two thin adapters over the same typed
 action layer.**
 
-Everything Autoeval can do is a function in `actions/`. The terminal commands and the MCP tools both
-call those functions directly. That is why the MCP server never shells out to the CLI, and why a
+Core Autoeval operations, such as creating and running evaluations, reading results, and gating, are
+implemented in the shared `actions/` layer. Other code lives outside it: command-line parsing,
+rendering, authentication plumbing, and trace handling. The terminal commands and the MCP tools both
+call the action functions directly. That is why the MCP server never shells out to the CLI, and why a
 behavior fixed in an action is fixed for both at once.
 
 ```mermaid
@@ -67,7 +69,7 @@ into `domain/` or `types/` rather than importing upward.
 ### Two files to know
 
 `commands/program.ts` declares every command and its options. `commands/executor.ts` holds one
-`case` per command, which calls the action and writes the result. Almost every change to the CLI touches both.
+`case` per command, which calls the action and writes the result. Adding or changing a CLI command commonly touches both files.
 
 ## How to add a CLI command
 
@@ -139,14 +141,27 @@ The worked example is `get_current_user`, which is the MCP twin of `whoami`.
 Every expected failure is an `AutoevalError` (`errors/autoeval-error.ts`) with a `kind`, and the kind
 decides the exit code. Scripts and CI can rely on these:
 
-| Exit code | Meaning                                | Error kinds                                                                   |
-| --------- | -------------------------------------- | ----------------------------------------------------------------------------- |
-| `0`       | Success                                |                                                                               |
-| `1`       | A gate did not pass                    | `gate_failed`: a failed gate, or a suite `FAIL` or `INCONCLUSIVE`             |
-| `2`       | The command or its input was wrong     | `usage`, `validation`, `unsupported`                                          |
-| `3`       | Credentials or permissions             | `authentication`, `authorization`, `plan_restriction`                         |
-| `4`       | Could not reach, or trust, the service | `network`, `upstream`, `timeout`                                              |
-| `5`       | A run did not complete                 | `run_failed`: a run that ended in a non-`COMPLETED` state, or a suite `ERROR` |
+| Exit code | Meaning                                | Error kinds                                                                               |
+| --------- | -------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `0`       | Success                                |                                                                                           |
+| `1`       | The release decision is not `PASS`     | `gate_failed`: the gate decided `FAIL` or `INCONCLUSIVE` (see below)                      |
+| `2`       | The command or its input was wrong     | `usage`, `validation`, `unsupported`                                                      |
+| `3`       | Credentials or permissions             | `authentication`, `authorization`, `plan_restriction`                                     |
+| `4`       | Could not reach, or trust, the service | `network`, `upstream`, `timeout`                                                          |
+| `5`       | A run or its results were not usable   | `run_failed`: a run that ended in a non-`COMPLETED` state, or a suite `ERROR` (see below) |
+
+Exit codes `1` and `5` need care, because a gate has more outcomes than pass and fail:
+
+- **Exit `1` does not always mean a regression.** A gate resolves to `PASS`, `FAIL`, or
+  `INCONCLUSIVE`, and exit `1` covers both `FAIL` and `INCONCLUSIVE`. `INCONCLUSIVE` means there was
+  not enough evidence to decide: for example, a multi-run confidence interval that straddles the
+  threshold, a metric with no usable score, or no applicable threshold configured. Read the report
+  before you conclude the change is worse or the threshold is wrong.
+- **Exit `5` is broader than an infrastructure problem.** In suite gating, `ERROR` means an
+  evaluation could not complete successfully or its results could not be read. The cause can be
+  credentials, model availability, the eval configuration, an upstream or run failure, or result
+  retrieval. `ERROR` is kept separate from `FAIL` and `INCONCLUSIVE` so CI can tell "the evidence
+  said no" apart from "there is no evidence".
 
 When you add a failure, reuse an existing kind before inventing one. A new kind changes what CI sees.
 

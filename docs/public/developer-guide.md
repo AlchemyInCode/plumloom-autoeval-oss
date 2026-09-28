@@ -14,7 +14,9 @@ Requirements:
 - pnpm 11: install it with `npm install --global pnpm@11`. Corepack is no longer bundled with Node
   25 and later, so `corepack enable` is not a reliable way to get it.
 - a Plumloom CLI key beginning with `pl_sk_`
-- an OS credential store supported by the keyring dependency when saving interactive credentials
+- an OS credential store supported by the keyring dependency, only if you want `autoeval login`
+  to save your key locally. With `AUTOEVAL_API_KEY` set, Autoeval runs without one, which is the
+  normal case in CI and other headless environments.
 
 Configure the API origin first. Every command requires it, including `--help`:
 

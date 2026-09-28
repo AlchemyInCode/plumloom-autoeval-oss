@@ -145,18 +145,29 @@ Set it with `runsPerScenario` in the file's `methodology` block:
 
 It accepts a whole number from 1 to 10 and defaults to 1 (single-run) when omitted.
 
-| Use                             | Setting                        |
-| ------------------------------- | ------------------------------ |
-| Iterating on a prompt or rubric | `1` (the default)              |
-| Any score you will gate on      | more than `1`, so it is stable |
+| Use                             | Setting                     |
+| ------------------------------- | --------------------------- |
+| Iterating on a prompt or rubric | `1` (the default)           |
+| Any score you will gate on      | more than `1`, for evidence |
 
-The choice changes how a release gate reads the result, which is the real reason it matters:
+More runs do not make a result stable. They give you the evidence to judge whether it is stable.
+The results show the run-to-run variation and the confidence interval. A result is convincing when
+the variation is low and the interval is narrow enough that a small change in score would not change
+the release decision. If the interval is wide, or it straddles your gate threshold, the evidence is
+not strong enough for a confident decision. When a consistency target is configured, the results
+also report whether the run met it.
 
-- A **single-run** gate compares the one score against your threshold. A lucky run passes.
-- A **multi-run** gate compares the 95% confidence interval against your threshold. It passes only
-  when the whole interval clears the threshold, fails when the whole interval falls short, and
-  reports `INCONCLUSIVE` when the interval straddles it. A result that could have gone either way
-  is reported as exactly that, rather than as a pass.
+The choice also changes how `autoeval suite gate` reads a scenario result, which is the other reason
+it matters:
+
+- For a **single-run** result, `suite gate` compares the one score against your threshold. A lucky
+  run passes.
+- For a **multi-run** result, `suite gate` compares the 95% confidence interval against your
+  threshold. It passes only when the whole interval clears the threshold, fails when the whole
+  interval falls short, and reports `INCONCLUSIVE` when the interval straddles it.
+
+The single-evaluation gate, `autoeval gate <evaluation-id>`, does not use the confidence interval. It
+compares the scored result against the thresholds you configure.
 
 Multi-run applies to **scenario** evaluations, where Autoeval calls a model under test. Conversation
 and agent-trace evaluations grade a transcript or trace you supply. The file accepts
