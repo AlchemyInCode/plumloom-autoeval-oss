@@ -48,8 +48,7 @@ export AUTOEVAL_API_BASE_URL="https://api.plumloom.ai"
 
 Every Autoeval command requires this variable, and there is no built-in default. It must be an
 `https` origin with no path, query, or fragment; plain `http` is accepted only for `localhost`
-development. The reason is recorded in
-[ADR 0011](../internal/adr/0011-required-api-base-url.md).
+development.
 
 Then give Autoeval your key. Choose one:
 

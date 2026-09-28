@@ -36,16 +36,16 @@ function, `whoAmI` in `actions/identity.ts`. One is reached through `commands/`,
 
 All the code ships in one package, `packages/cli`.
 
-| Layer        | Files | Lines | Role                                                                                                                           |
-| ------------ | ----- | ----- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `commands/`  | 3     | 2,542 | Command definitions (`program.ts`) and their execution (`executor.ts`)                                                         |
-| `actions/`   | 14    | 1,839 | The typed action layer: evaluations, runs, results, suites, gates, doctor, models, workspaces, quality standards               |
-| `api/`       | 5     | 1,583 | HTTP client, endpoints, response schemas, API errors                                                                           |
-| `output/`    | 17    | 3,562 | Human rendering: scorecards, tables, sections, spinners, redaction                                                             |
-| `mcp/`       | 4     | 581   | The stdio MCP server and its tools, over the same actions                                                                      |
-| Supporting   | 30    | 3,627 | `auth/`, `polling/`, `gate/`, `suite/`, `quickstart/`, `trace/`, `configured-run/`, `domain/`, `errors/`, `runtime/`, `types/` |
-| `guide/`     | 2     | 305   | Guide content                                                                                                                  |
-| Package root | 5     | 318   | Entry points and configuration: `cli.ts`, `mcp.ts`, `run.ts`, `config.ts`, `version.ts`                                        |
+| Layer        | Role                                                                                                                           |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| `commands/`  | Command definitions (`program.ts`) and their execution (`executor.ts`)                                                         |
+| `actions/`   | The typed action layer: evaluations, runs, results, suites, gates, doctor, models, workspaces, quality standards               |
+| `api/`       | HTTP client, endpoints, response schemas, API errors                                                                           |
+| `output/`    | Human rendering: scorecards, tables, sections, spinners, redaction                                                             |
+| `mcp/`       | The stdio MCP server and its tools, over the same actions                                                                      |
+| Supporting   | `auth/`, `polling/`, `gate/`, `suite/`, `quickstart/`, `trace/`, `configured-run/`, `domain/`, `errors/`, `runtime/`, `types/` |
+| `guide/`     | Guide content                                                                                                                  |
+| Package root | Entry points and configuration: `cli.ts`, `mcp.ts`, `run.ts`, `config.ts`, `version.ts`                                        |
 
 ### The dependency rule
 
@@ -66,9 +66,8 @@ into `domain/` or `types/` rather than importing upward.
 
 ### Two files to know
 
-`commands/executor.ts` (57 KB) is the largest source file, and `commands/program.ts` (33 KB) is the
-third largest, after `output/digest.ts`. `program.ts` declares every command and its options. `executor.ts` holds one `case` per
-command, which calls the action and writes the result. Almost every change to the CLI touches both.
+`commands/program.ts` declares every command and its options. `commands/executor.ts` holds one
+`case` per command, which calls the action and writes the result. Almost every change to the CLI touches both.
 
 ## How to add a CLI command
 
@@ -130,7 +129,7 @@ The worked example is `get_current_user`, which is the MCP twin of `whoami`.
 3. **Do not block on long work.** A tool that starts an evaluation returns a handle straight away;
    the client then polls `get_run_status` and fetches `get_results`. A run can outlast an MCP
    client's request timeout, and holding the call open made clients report a timeout even when the
-   run had succeeded. [ADR 0005](../internal/adr/0005-asynchronous-mcp-runs.md) records the decision.
+   run had succeeded.
 
 4. **Leave suites and gates out of MCP.** Gating is pure local logic over results the action layer
    already returns, so an MCP client that wants a gate reads the results and applies its own policy.
@@ -163,21 +162,5 @@ pnpm boundary:check
 `pnpm test` runs the full suite with no network and no credentials. The live tests in `tests/live/`
 are excluded by the Vitest configuration on purpose, and run separately with `pnpm test:live`.
 `boundary:check` confirms nothing private has crept into the published package.
-
-## Architecture decisions
-
-The reasons behind several constraints are recorded as ADRs in
-[`docs/internal/adr/`](../internal/adr/):
-
-| ADR                                                          | Decision                                             |
-| ------------------------------------------------------------ | ---------------------------------------------------- |
-| [0001](../internal/adr/0001-pivot-only-client-boundary.md)   | The CLI talks only to the configured Autoeval API    |
-| [0002](../internal/adr/0002-cli-credential-storage.md)       | Where the CLI stores credentials                     |
-| [0004](../internal/adr/0004-mcp-peer-entry-point.md)         | MCP as a peer entry point, not a CLI wrapper         |
-| [0005](../internal/adr/0005-asynchronous-mcp-runs.md)        | MCP runs submit and return rather than block         |
-| [0007](../internal/adr/0007-cli-release-gate.md)             | The CLI release gate                                 |
-| [0009](../internal/adr/0009-suite-release-gating.md)         | Suite release gating                                 |
-| [0010](../internal/adr/0010-deepseek-harness-integration.md) | DeepSeek Harness trace import                        |
-| [0011](../internal/adr/0011-required-api-base-url.md)        | `AUTOEVAL_API_BASE_URL` is required, with no default |
 
 For the step-by-step flow behind each part, see [core workflows](./core-workflows.md).
