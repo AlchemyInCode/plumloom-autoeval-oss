@@ -1,5 +1,8 @@
 # Examples
 
+For guided walkthroughs that use these files, see the
+[end-to-end examples](../docs/public/examples/grade-a-recorded-agent-trace.md) in the documentation.
+
 Runnable, sanitized examples for the Plumloom Autoeval CLI. Every identifier here is a synthetic
 placeholder — pass your own workspace and model UUIDs on the command line.
 

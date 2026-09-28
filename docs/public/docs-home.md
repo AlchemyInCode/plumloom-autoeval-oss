@@ -54,6 +54,10 @@ Autoeval is for teams shipping LLM-powered features who want automated, version-
 
 - **[Architecture overview](./architecture.md)** — how the CLI and the MCP server share one action layer, and how to add a command or an MCP tool.
 - **[Core workflows](./core-workflows.md)** — authentication, the evaluation lifecycle, suites, and MCP, step by step with diagrams.
+- **End-to-end examples**: three walkthroughs you can run, each with the result you get, the commands, and the most common failure.
+  - [Grade a recorded agent trace](./examples/grade-a-recorded-agent-trace.md)
+  - [Write and run your own evaluation file](./examples/write-and-run-your-own-eval.md)
+  - [Gate a release in CI](./examples/gate-a-release-in-ci.md)
 - **[Release gating for CI](./release-gating.md)** — `autoeval gate` and `autoeval suite gate`, suite mechanics, and the manifest format.
 - **[MCP server](./mcp.md)** — invoke Autoeval from coding agents over stdio.
 - **[Troubleshooting](../../TROUBLESHOOTING.md)** — common errors and recovery.
