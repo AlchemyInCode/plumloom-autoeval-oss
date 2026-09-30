@@ -18,10 +18,10 @@ reach. It is a small YAML (or JSON) file that you commit next to the evaluation 
 # evals/autoeval.suite.yaml
 workspace: <workspace-id>
 gate:
-  minOverall: 4.0 # default for every scenario eval below
+  minOverall: 3.5 # default for every scenario eval below
 evals:
   - ./freezing-point.autoeval.json
-  - file: ./refund-conversation.autoeval.json
+  - file: ./weather-trace.autoeval.json
     gate:
       metrics:
         factuality: 4.0 # conversation and agent-trace evals gate on per-metric scores
@@ -54,10 +54,47 @@ enabled models, and the manifest and its evaluation files. It reports every prob
 any check blocks, it exits with code `2`. A bad key or a disabled model then fails the job in
 seconds, before a run you pay for.
 
-<!-- M3-PENDING-KEY: paste a real passing `doctor` report and one real blocked report here. -->
+```text
+• Pre-flight checks passed. This configuration is ready to run.
+Passed   6
+Failed   0
+Skipped  0
+
+CHECK                                        STATUS    DETAIL
+Auth and scopes                              pass      Authenticated with a valid CLI identity.
+Manifest syntax                              pass      evals/autoeval.suite.yaml lists 2 eval
+                                                       file(s).
+Workspace scope                              pass      The selected workspace is reachable.
+Model catalog                                pass      12 of 12 model(s) are usable.
+/repo/evals/freezing-point.autoev…  pass      scenario eval is valid; 2 model(s) enabled
+                                                       for this account.
+/repo/evals/weather-trace.autoeva…  pass      agent_trace eval is valid; 1 model(s)
+                                                       enabled for this account.
+```
+
+A blocked report names each problem and how to fix it. Here the manifest points at a public example
+that still has placeholder model IDs:
 
 ```text
-OUTPUT PENDING: captured from a real run before this page ships.
+• Pre-flight checks failed. Fix the items below before running the suite.
+Passed   4
+Failed   1
+Skipped  0
+
+CHECK                                     STATUS    DETAIL
+Auth and scopes                           pass      Authenticated with a valid CLI identity.
+Manifest syntax                           pass      evals/blocked.suite.yaml lists 1 eval file(s).
+Workspace scope                           pass      The selected workspace is reachable.
+Model catalog                             pass      12 of 12 model(s) are usable.
+/repo/evals/scenario-basic.json  FAIL      Judge model ID
+                                                    11111111-1111-4111-8111-111111111111 is not
+                                                    enabled for this account. Run "autoeval
+                                                    models" and choose an enabled model ID
+
+How to fix
+- /repo/evals/scenario-basic.json: Run "autoeval models" and use an enabled model ID.
+Error: Pre-flight check failed: 1 of 5 checks did not pass.
+Hint: Run the command with --help to see required options and examples
 ```
 
 ## 3. Run the gate locally
@@ -77,17 +114,49 @@ verdict. The suite verdict is the worst of them, in this order: `ERROR`, then `F
 | `INCONCLUSIVE` | `1`       | The evidence cannot decide. It blocks, the same as a failure.      |
 | `ERROR`        | `5`       | At least one evaluation did not complete. Rerun before you decide. |
 
-Only `PASS` exits `0`. On any other verdict, the command prints a line like this, and the error
-code (`SUITE_GATE_FAIL`, `SUITE_GATE_INCONCLUSIVE` or `SUITE_GATE_ERROR`) tells the three apart:
+Only `PASS` exits `0`. With `--json`, the error code (`SUITE_GATE_FAIL`,
+`SUITE_GATE_INCONCLUSIVE`, or `SUITE_GATE_ERROR`) tells the three apart.
 
 ```text
-Suite release gate: FAIL. 0 error, 1 failed, 0 inconclusive of 2 evals.
+• Suite release gate: PASS
+Workspace     ffffffff-ffff-4fff-8fff-ffffffffffff
+PASS          2
+FAIL          0
+INCONCLUSIVE  0
+ERROR         0
+
+Every eval in the suite met its configured release criteria.
 ```
 
-<!-- M3-PENDING-KEY: paste the real `suite gate` report for a passing and a failing suite here. -->
+The same suite with `minOverall: 4.8` fails, names the evaluation that blocked the release, and
+exits `1`:
 
 ```text
-OUTPUT PENDING: captured from a real run before this page ships.
+• Suite release gate: FAIL
+Workspace     ffffffff-ffff-4fff-8fff-ffffffffffff
+PASS          1
+FAIL          1
+INCONCLUSIVE  0
+ERROR         0
+
+Blocking evals
+- Basic factual questions [FAIL]
+  context: scenario
+  run: eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee
+  Primary model overall score: 4.30 required >= 4.80 -> FAIL
+    reason: score is below the required threshold
+  reason: Primary model overall score: score is below the required threshold
+
+Failure clusters
+1 failure(s) grouped into 1 root cause(s).
+
+ROOT CAUSE                                            CATEGORY      COUNT  EVALS
+Primary model overall score below threshold (>=       threshold         1  Basic factual questions
+4.80)
+
+- Primary model overall score below threshold (>= 4.80): Primary model overall score: 4.30 required >= 4.80 — score is below the require…
+Error: Suite release gate: FAIL. 0 error, 1 failed, 0 inconclusive of 2 evals.
+Hint: Inspect the failing metric with `autoeval results <evaluation-id> <run-id>`, then adjust the evaluation or the thresholds
 ```
 
 ## 4. Add the CI job
@@ -129,8 +198,6 @@ jobs:
 The job fails when either step exits with a code other than `0`, and that blocks the merge if you
 make the check required in your branch protection settings.
 
-<!-- M3-PENDING-KEY: run this workflow once against a real workspace and confirm it passes and fails as described. -->
-
 If your release depends on **one** evaluation that is already configured, you can use the
 single-evaluation gate instead. This repository runs it with its own action; see
 [Release gating](../release-gating.md).
@@ -138,8 +205,35 @@ single-evaluation gate instead. This repository runs it with its own action; see
 ## What most often goes wrong
 
 **The manifest has no thresholds, so the gate never passes.** With no `gate` block, the gate has
-nothing to compare a score with. It marks every evaluation `INCONCLUSIVE`, even one that scores 4.9
-out of 5, and the suite exits with code `1` on every run. The sample manifest at
+nothing to compare a score with. It marks every evaluation `INCONCLUSIVE`, however well it scores,
+and the suite exits with code `1` on every run:
+
+```text
+• Suite release gate: INCONCLUSIVE
+Workspace     ffffffff-ffff-4fff-8fff-ffffffffffff
+PASS          0
+FAIL          0
+INCONCLUSIVE  1
+ERROR         0
+
+Blocking evals
+- Basic factual questions [INCONCLUSIVE]
+  context: scenario
+  run: eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee
+  reason: no score thresholds are configured for this eval
+
+Failure clusters
+1 failure(s) grouped into 1 root cause(s).
+
+ROOT CAUSE                                        CATEGORY      COUNT  EVALS
+no score thresholds are configured for this eval  inconclusive      1  Basic factual questions
+
+- no score thresholds are configured for this eval: no score thresholds are configured for this eval
+Error: Suite release gate: INCONCLUSIVE. 0 error, 0 failed, 1 inconclusive of 1 evals.
+Hint: Inspect the failing metric with `autoeval results <evaluation-id> <run-id>`, then adjust the evaluation or the thresholds
+```
+
+The sample manifest at
 [`examples/suite/autoeval.suite.yaml`](../../../examples/suite/autoeval.suite.yaml) has no `gate`
 block, so copy the manifest in step 1 instead, or add thresholds before you use the sample in CI.
 

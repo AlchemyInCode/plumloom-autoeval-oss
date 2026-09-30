@@ -27,13 +27,49 @@ autoeval quickstart
    ships inside the npm package, so it works on a global install with no repository checkout.
 4. **Prints the result.**
 
-<!-- M3-PENDING-KEY: paste the real `autoeval quickstart` output here, captured with a test key. -->
-
 ```text
-OUTPUT PENDING: captured from a real run before this page ships.
+Workspace   Default Workspace (ffffffff-ffff-4fff-8fff-ffffffffffff)
+Judge       Llama 3.3 70B (aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa)
+Sample      examples/evals/agent-trace-basic.json (bundled)
+Evaluation  Quickstart Baseline - 2026-09-30T22:59:37Z (dddddddd-dddd-4ddd-8ddd-dddddddddddd)
+Overall score
+
+█ █     █ █ ███
+█ █     █ █   █
+███     ███ ███
+  █       █   █
+  █  █    █ ███  / 5 overall
+────────────────────────────────────────────────────────────────────────────────────────────────────
+Context          agent_trace
+Judge agreement  2/2
+Metrics scored   8
+
+SESSION EVALUATION
+METRIC                      SCORE
+helpfulness                  4.14
+relevance                    4.44
+factuality                   4.72
+
+TRAJECTORY EVALUATION
+Trajectory score  4.7 / 5
+Judge agreement   2/2
+
+DIMENSION                            SCORE
+Logical progression                    4.2
+Appropriate sequence of actions        4.5
+Decision consistency across steps      4.8
+Repeated calls or loops                  5
+Unnecessary detours                      5
+
+Use --json for full reliability detail and the untouched backend payload
+
+Re-read this run any time:
+  autoeval results dddddddd-dddd-4ddd-8ddd-dddddddddddd eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee
+Run with --json for full reliability detail
 ```
 
-Keep the evaluation ID and the Run ID from the output. You need them in the next step.
+`quickstart` prints the command to read this run again at the end. Keep the evaluation ID and the Run
+ID from it: you need them in the next step.
 
 ## 2. Read the scorecard
 
@@ -41,22 +77,56 @@ Keep the evaluation ID and the Run ID from the output. You need them in the next
 autoeval results <evaluation-id> <run-id>
 ```
 
-<!-- M3-PENDING-KEY: paste the real `autoeval results` output here. -->
-
 ```text
-OUTPUT PENDING: captured from a real run before this page ships.
+Overall score
+
+█ █     █ █ ███
+█ █     █ █   █
+███     ███ ███
+  █       █   █
+  █  █    █ ███  / 5 overall
+────────────────────────────────────────────────────────────────────────────────────────────────────
+Context          agent_trace
+Judge agreement  2/2
+Metrics scored   8
+
+SESSION EVALUATION
+METRIC                      SCORE
+helpfulness                  4.14
+relevance                    4.44
+factuality                   4.72
+
+TRAJECTORY EVALUATION
+Trajectory score  4.7 / 5
+Judge agreement   2/2
+
+DIMENSION                            SCORE
+Logical progression                    4.2
+Appropriate sequence of actions        4.5
+Decision consistency across steps      4.8
+Repeated calls or loops                  5
+Unnecessary detours                      5
+
+Use --json for full reliability detail and the untouched backend payload
 ```
 
-For an agent trace, the evidence that matters is the **per-metric score**. The release gate reads
-only the configured `per_metric.<metric>.score` values for agent traces and conversations. It does
-not read the overall outcome. Note the metric names on your scorecard: you set thresholds on them
-in [Example 3](./gate-a-release-in-ci.md).
+The scorecard has two parts:
 
-To see every input and model response behind the scores:
+- **Session evaluation** gives one score per metric: here `helpfulness`, `relevance`, and
+  `factuality`. These are the scores a release gate can use. The gate reads only these per-metric
+  scores for agent traces and conversations, and only for the metrics you give a threshold. Note
+  the names: you set thresholds on them in [Example 3](./gate-a-release-in-ci.md).
+- **Trajectory evaluation** scores how the agent got there: its planning, its order of actions, and
+  any loops or detours. It is shown on the scorecard, but a gate does not read it.
+
+For the complete payload, including the reliability detail, use JSON:
 
 ```bash
-autoeval results <evaluation-id> <run-id> --show-outputs
+autoeval --json results <evaluation-id> <run-id>
 ```
+
+`--show-outputs` adds every input and model response for **scenario** evaluations. An agent-trace
+scorecard does not change with it, because the trace you supplied is the input.
 
 ## 3. Grade your own trace
 
