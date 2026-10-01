@@ -11,9 +11,18 @@ not call model providers directly.
 Requirements:
 
 - Node.js 22.13 or newer
-- pnpm 11
+- pnpm 11: install it with `npm install --global pnpm@11`. Corepack is no longer bundled with Node
+  25 and later, so `corepack enable` is not a reliable way to get it.
 - a Plumloom CLI key beginning with `pl_sk_`
-- an OS credential store supported by the keyring dependency when saving interactive credentials
+- an OS credential store supported by the keyring dependency, only if you want `autoeval login`
+  to save your key locally. With `AUTOEVAL_API_KEY` set, Autoeval runs without one, which is the
+  normal case in CI and other headless environments.
+
+Configure the API origin first. Every command requires it, including `--help`:
+
+```bash
+export AUTOEVAL_API_BASE_URL="https://api.plumloom.ai"
+```
 
 Install and build:
 
@@ -28,13 +37,18 @@ replace it with `node packages/cli/dist/cli.js`.
 
 ## Authentication
 
-Credential lookup order is:
+Every command except `login` looks for a key in this order, and never prompts:
 
 1. `AUTOEVAL_API_KEY`
 2. the OS credential store
-3. a masked interactive prompt used by `autoeval login`
 
-`login` validates the key with Plumloom before storing a prompted key. An environment-provided key is never persisted. `logout` removes only the local credential-store entry; it does not revoke the key or unset `AUTOEVAL_API_KEY`.
+`autoeval login` checks the `--key` flag first, then the same two sources, and finally offers a
+masked prompt in an interactive terminal.
+
+`login` validates the key with Plumloom before storing it, and stores only a key that came from
+`--key` or the prompt. An environment-provided key is never persisted. Stored keys are saved per API
+origin. `logout` removes only the local credential-store entry; it does not revoke the key or unset
+`AUTOEVAL_API_KEY`.
 
 ```bash
 autoeval login
@@ -42,7 +56,11 @@ autoeval whoami
 autoeval logout
 ```
 
-There is no `--key` option. Use a shell or CI secret store for `AUTOEVAL_API_KEY` and never place a real key in a configuration file, command argument, fixture, log, or issue.
+`autoeval login --key <pl_sk_...>` is available for non-interactive login, but a key passed as a
+command argument is written to your shell history and is visible to other processes. Prefer a shell
+or CI secret store for `AUTOEVAL_API_KEY`, and never place a real key in a configuration file,
+fixture, log, or issue. See
+[core workflows](./core-workflows.md#1-authentication-and-credential-resolution) for the full flow.
 
 ## Supported evaluation contexts
 

@@ -16,10 +16,10 @@ Follow this path from a repository visit to a repeatable release gate:
 ## Requirements
 
 - Node.js 22.13 or newer
-- pnpm 11
-- A Plumloom API key beginning with `pl_sk_`
+- pnpm 11, only to build from source: `npm install --global pnpm@11`
+- A Plumloom CLI key beginning with `pl_sk_`
 - `AUTOEVAL_API_BASE_URL`
-- A supported OS credential store for interactive login persistence
+- A supported OS credential store, only if you want `autoeval login` to save your key
 
 ## 1. Configure Plumloom
 
@@ -58,10 +58,13 @@ npm install --global @plumloom/cli
 Or build from source:
 
 ```bash
+export AUTOEVAL_API_BASE_URL="https://api.plumloom.ai"
 pnpm install --frozen-lockfile
 pnpm build
 node packages/cli/dist/cli.js --help
 ```
+
+Every command, including `--help`, requires `AUTOEVAL_API_BASE_URL`, so it is set first.
 
 The examples below use the installed `autoeval` binary. When running directly from this repository, replace `autoeval` with:
 
@@ -83,7 +86,7 @@ When you are ready to use your own evaluation files, run:
 autoeval models
 ```
 
-Then continue with the [file-driven workflow](#file-driven-evaluations) below.
+Then continue with the [file-driven workflow](#4-run-your-first-file-driven-evaluation) below.
 
 ## 4. Run your first file-driven evaluation
 
