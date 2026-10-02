@@ -402,9 +402,9 @@ evals reads as one cluster, not twelve failures.
 
 What each context type is gated on:
 
-- **Scenario, single run** — primary-model overall mean and each configured
+- **Scenario, single trial** — primary-model overall mean and each configured
   per-scenario mean.
-- **Scenario, multiple runs** — 95% confidence intervals. `ci95_lower` at or
+- **Scenario, multiple trials** — 95% confidence intervals. `ci95_lower` at or
   above the threshold passes, `ci95_upper` below it fails, an interval that
   crosses the threshold is inconclusive. When convergence was enabled but not
   reached, the eval is inconclusive rather than passing; convergence is read
