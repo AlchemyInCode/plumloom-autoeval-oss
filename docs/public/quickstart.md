@@ -127,7 +127,7 @@ This is the decision that matters most, and it lives in your eval file rather th
 Language models and the judges that grade them are not deterministic. Run the same evaluation twice
 and the score can move. The question is whether you are measuring your system or measuring noise.
 
-**A single trial** executes each scenario once and gives one point-in-time score, with no
+**A single trial** executes each scenario once and gives one point-in-time score per scenario, with no
 trial-to-trial reliability evidence. It is fast and cheap during development, and it is also a valid
 choice when a team accepts a point estimate.
 
