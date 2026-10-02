@@ -154,7 +154,7 @@ Exit codes `1` and `5` need care, because a gate has more outcomes than pass and
 
 - **Exit `1` does not always mean a regression.** A gate resolves to `PASS`, `FAIL`, or
   `INCONCLUSIVE`, and exit `1` covers both `FAIL` and `INCONCLUSIVE`. `INCONCLUSIVE` means there was
-  not enough evidence to decide: for example, a multi-run confidence interval that straddles the
+  not enough evidence to decide: for example, a confidence interval from multiple trials that straddles the
   threshold, a metric with no usable score, or no applicable threshold configured. Read the report
   before you conclude the change is worse or the threshold is wrong.
 - **Exit `5` is broader than an infrastructure problem.** In suite gating, `ERROR` means an

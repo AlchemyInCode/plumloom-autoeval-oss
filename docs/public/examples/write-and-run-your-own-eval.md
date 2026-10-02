@@ -140,7 +140,7 @@ For a scenario evaluation, decide how many trials to run. Add `runsPerScenario` 
   one sample. More trials do not make the score stable. They give you the evidence to judge whether
   it is stable.
 
-The [quickstart](../quickstart.md#6-run-it-single-run-or-multi-run) explains how the gate reads a
+The [quickstart](../quickstart.md#6-run-it-one-trial-or-several) explains how the gate reads a
 single trial and multiple trials.
 
 ## 5. Create and run it
@@ -194,7 +194,8 @@ several times and summarizes the trial results into reliability evidence:
 The point of multiple trials is not to make the score more stable. It is to give you evidence about
 how stable the result actually is, so a release decision does not depend on one sample. This is the
 same file with `"runsPerScenario": 3`. The overall interval (±0.39) and the warning on `fluency`
-(±1.15) show real variation across the three trials:
+(±1.15) show real variation across the three trials. The scorecard labels each trial as a run, so
+"3 runs" means three trials inside one run:
 
 ```text
 █ █     ███  █

@@ -146,7 +146,7 @@ What happens at each step:
    `runsPerScenario`. For a scenario evaluation, `runsPerScenario` decides whether the model under
    test runs once or across several trials. Conversation and agent-trace evaluations grade the
    conversation or trace you supply rather than running a model under test again, so for them it
-   does not create multi-run evidence.
+   does not create evidence from multiple trials.
 4. **Create a configuration version** for that methodology: for a scenario, the primary and
    comparison models, the prompt, and the scenarios; for a conversation or agent trace, the artifact
    and the expected outcome.
@@ -209,10 +209,12 @@ The work happens in three planes:
 
 How each evaluation is decided:
 
-- **Single-run scenario:** the score is compared against the threshold.
-- **Multi-run scenario:** the 95% confidence interval is compared against the threshold. The lower
-  bound at or above the threshold passes, the upper bound below it fails, and an interval that
-  straddles it is `INCONCLUSIVE`.
+- **Scenario, single trial:** `minOverall` is compared with the primary model's overall score, and
+  `minScenario` with each scenario score.
+- **Scenario, multiple trials:** each threshold is compared against a 95% confidence interval:
+  `minOverall` against the interval for the primary model's overall score, and `minScenario`
+  against the interval for each scenario score. A lower bound at or above the threshold passes, an
+  upper bound below it fails, and an interval that straddles it is `INCONCLUSIVE`.
 - **Conversation and agent trace:** each metric that has a gate threshold is compared against that
   threshold. Scoring and gating are configured separately. The evaluation scores the metrics listed
   in its file's `selectedMetrics`: three to six metrics from the metric catalog, with a default set
@@ -221,9 +223,9 @@ How each evaluation is decided:
   the manifest's `gate` blocks for `autoeval suite gate`. A metric can be scored without being
   gated.
 - **No threshold configured:** `INCONCLUSIVE`. An evaluation is never a silent pass.
-- **Multi-run that did not converge:** if convergence was enabled and the consistency target was
-  not reached, a result that would otherwise pass is `INCONCLUSIVE`. A `FAIL` stays `FAIL`. If the
-  multi-run evaluation did not complete, the result is `ERROR`.
+- **Multiple trials that did not converge:** if convergence was enabled and the consistency target
+  was not reached, a result that would otherwise pass is `INCONCLUSIVE`. A `FAIL` stays `FAIL`. If
+  the evaluation did not complete, the result is `ERROR`.
 
 How the suite rolls up: the worst outcome wins, in the order `ERROR`, `FAIL`, `INCONCLUSIVE`,
 `PASS`. There is no averaging and no combined suite score. The exit code tells CI which kind of

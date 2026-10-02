@@ -120,20 +120,21 @@ match, because a model grading its own answer is not a useful measurement.
 `--run` waits for the run to finish and prints the evaluation ID and the Run ID. Keep both; the next
 two steps use them.
 
-## 6. Run it: single-run or multi-run
+## 6. Run it: one trial or several
 
 This is the decision that matters most, and it lives in your eval file rather than in a flag.
 
 Language models and the judges that grade them are not deterministic. Run the same evaluation twice
 and the score can move. The question is whether you are measuring your system or measuring noise.
 
-**Single-run** executes the evaluation once. It is fast and cheap, and right for iterating on a
-prompt, where you want a quick read rather than a verdict.
+**A single trial** executes the evaluation once and gives one point-in-time score, with no
+trial-to-trial reliability evidence. It is fast and cheap during development, and it is also a valid
+choice when a team accepts a point estimate.
 
-**Multi-run** executes the same evaluation across several trials, then aggregates them to measure
-run-to-run variation. The result reports reliability statistics, including standard deviation and
-confidence intervals. That tells you how consistently your system performs, instead of basing a
-decision on a single run that happened to be lucky or unlucky.
+**Multiple trials** execute the same evaluation several times, then aggregate the trials to measure
+the variation between them. The result reports reliability statistics, including the confidence
+interval. That tells you how consistently your system performs, instead of basing a decision on one
+trial that happened to be lucky or unlucky.
 
 Set it with `runsPerScenario` in the file's `methodology` block:
 
@@ -143,15 +144,15 @@ Set it with `runsPerScenario` in the file's `methodology` block:
 }
 ```
 
-It accepts a whole number from 1 to 10 and defaults to 1 (single-run) when omitted.
+It accepts a whole number from 1 to 10 and defaults to 1 (a single trial) when omitted.
 
-| Use                             | Setting                     |
-| ------------------------------- | --------------------------- |
-| Iterating on a prompt or rubric | `1` (the default)           |
-| Any score you will gate on      | more than `1`, for evidence |
+| You want                                              | Setting           |
+| ----------------------------------------------------- | ----------------- |
+| A fast point estimate, in development or for a gate   | `1` (the default) |
+| Reliability evidence, and interval-aware suite gating | more than `1`     |
 
-More runs do not make a result stable. They give you the evidence to judge whether it is stable.
-The results show the run-to-run variation and the confidence interval. A result is convincing when
+More trials do not make a result stable. They give you the evidence to judge whether it is stable.
+The results show the variation between trials and the confidence interval. A result is convincing when
 the variation is low and the interval is narrow enough that a small change in score would not change
 the release decision. If the interval is wide, or it straddles your gate threshold, the evidence is
 not strong enough for a confident decision. When a consistency target is configured, the results
@@ -160,19 +161,19 @@ also report whether the run met it.
 The choice also changes how `autoeval suite gate` reads a scenario result, which is the other reason
 it matters:
 
-- For a **single-run** result, `suite gate` compares the one score against your threshold. A lucky
-  run passes.
-- For a **multi-run** result, `suite gate` compares the 95% confidence interval against your
+- For a **single trial**, `suite gate` compares the one score against your threshold. A lucky trial
+  passes.
+- For **multiple trials**, `suite gate` compares the 95% confidence interval against your
   threshold. It passes only when the whole interval clears the threshold, fails when the whole
   interval falls short, and reports `INCONCLUSIVE` when the interval straddles it.
 
 The single-evaluation gate, `autoeval gate <evaluation-id>`, does not use the confidence interval. It
 compares the scored result against the thresholds you configure.
 
-Multi-run applies to **scenario** evaluations, where Autoeval calls a model under test. Conversation
-and agent-trace evaluations grade a transcript or trace you supply. The file accepts
+Multiple trials apply to **scenario** evaluations, where Autoeval calls a model under test.
+Conversation and agent-trace evaluations grade a transcript or trace you supply. The file accepts
 `runsPerScenario` for these types too, and Autoeval sends it to the API without a warning, but the
-release gate always reads their results as single-run.
+release gate always reads their results as a single trial.
 
 To run an evaluation that already exists, without changing its file:
 
@@ -186,8 +187,8 @@ autoeval run <evaluation-id>
 autoeval results <evaluation-id> <run-id>
 ```
 
-You get a scorecard: the overall score, per-metric scores, and, for multi-run evaluations, the
-interval and consistency evidence. Two variations:
+You get a scorecard: the overall score, per-metric scores, and, for an evaluation with multiple
+trials, the interval and consistency evidence. Two variations:
 
 ```bash
 autoeval results <evaluation-id> <run-id> --show-outputs    # every input and model response
