@@ -23,7 +23,7 @@ capabilities; it introduces no new backend evaluation system.
 | Verdict          | `PASS \| FAIL \| INCONCLUSIVE` against the flag thresholds                               | per-eval `PASS \| FAIL \| INCONCLUSIVE \| ERROR`, rolled up `ERROR > FAIL > INCONCLUSIVE > PASS` |
 | Missing metric   | scenario: fails; conversation / agent trace: `INCONCLUSIVE`                              | `INCONCLUSIVE` (evidence exists but cannot decide) and still blocks the release                  |
 | Session evidence | configured `per_metric.<metric>.score` only                                              | configured `per_metric.<metric>.score` only                                                      |
-| Multi-run        | not interval-aware                                                                       | 95% confidence-interval comparison plus convergence classification                               |
+| Multiple trials  | not interval-aware                                                                       | 95% confidence-interval comparison plus convergence classification                               |
 | Exit codes       | `0` pass, `1` threshold miss, `5` non-completed run                                      | `0` `PASS`, `1` `FAIL`/`INCONCLUSIVE`, `5` `ERROR`                                               |
 
 Use the single-evaluation gate when one committed evaluation is the release signal. Use the suite
@@ -246,10 +246,10 @@ Thresholds come from the manifest's `gate` blocks (`packages/cli/src/gate/policy
 `minOverall`, `minScenario`, and `metrics` (a map of metric name to minimum score). A per-eval
 `gate` block overrides the suite default field by field.
 
-#### 2.1 Scenario, single run
+#### 2.1 Scenario, single trial
 
 Run mode is detected from `progress.totalRuns` in the terminal run status, falling back to
-whether the result cells carry confidence intervals. With one run, comparison is a point
+whether the result cells carry confidence intervals. With a single trial, comparison is a point
 estimate:
 
 - `mean >= threshold` → `PASS`
@@ -259,9 +259,9 @@ estimate:
 A missing score is never treated as zero. `minOverall` applies to the primary model's overall
 cell; `minScenario` applies to every scenario cell for that primary model.
 
-#### 2.2 Scenario, multiple runs
+#### 2.2 Scenario, multiple trials
 
-With more than one run the point estimate is not defensible on its own, so gating compares the
+With multiple trials the point estimate is not defensible on its own, so gating compares the
 95% confidence interval against the threshold:
 
 | Condition                        | Decision       | Meaning                                 |
@@ -279,7 +279,7 @@ With more than one run the point estimate is not defensible on its own, so gatin
 
 - `OPTIMAL_CONFIDENCE_REACHED` → `CONVERGED`.
 - No consistency target (absent, null, or `<= 0`) → `NOT_APPLICABLE`: convergence was never
-  enabled, this is a fixed-N run and interval-only gating applies.
+  enabled, this is a run with a fixed number of trials and interval-only gating applies.
 - A target exists → compare `achievedConsistency` using `targetConsistencyOperator`.
   `MAX_RUNS_REACHED` on its own does **not** prove a convergence failure.
 - A failure reason, or a non-terminal/failed run state → `ERROR`.
@@ -554,11 +554,11 @@ Nothing in the suite layer re-implements evaluation lifecycle logic:
 ### 5. Live validation findings
 
 The gate was exercised end-to-end against the real backend with a suite containing a scenario
-single-run eval, a scenario multi-run eval with convergence enabled, a conversation eval, and an
+eval with a single trial, a scenario eval with multiple trials and convergence enabled, a conversation eval, and an
 agent-trace eval (`examples/smoke/fixtures/`, including
 `smoke-scenario-multirun.json`).
 
-**Real multi-run convergence payload.** The terminal run status reported
+**Real convergence payload with multiple trials.** The terminal run status reported
 `autoStopTriggered.reason: MAX_RUNS_REACHED` together with `achievedConsistency: 0.02`,
 `targetConsistency: 0.1`, and `targetConsistencyOperator: "<"`.
 
@@ -571,8 +571,8 @@ which downgraded a legitimately passing eval to `INCONCLUSIVE` and blocked the r
 The fix honours `targetConsistencyOperator` (`<`, `<=`, `>`, default `>=`) and is locked in by
 regression tests covering both a met and a missed lower-is-better target.
 
-**Final live suite behaviour.** After the fix the multi-run eval classified as `CONVERGED` and
-passed on `ci95_lower >= threshold`; the single-run scenario, conversation, and agent-trace
+**Final live suite behaviour.** After the fix the eval with multiple trials classified as `CONVERGED` and
+passed on `ci95_lower >= threshold`; the scenario eval with a single trial and the conversation and agent-trace
 evals gated on means and per-metric scores as designed; the suite verdict and exit code matched
 the per-eval evidence. Result fetching for finished evals overlapped with still-running evals as
 intended.
