@@ -14,14 +14,14 @@ Evaluations are defined in committed JSON files, run from the CLI or an MCP clie
 
 ## Core concepts
 
-| Concept                  | What it means                                                                                                                 |
-| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
-| **Workspace**            | The project container that holds evaluations.                                                                                 |
-| **Evaluation**           | A configured test: methodology (judge model + rubric) + configuration (model + scenarios/traces).                             |
-| **Run**                  | One execution of an evaluation. A run returns scores, reliability detail, and a verdict where applicable.                     |
-| **Suite**                | A manifest that groups multiple evaluations for release gating.                                                               |
-| **Gate**                 | A CI check that returns `PASS`, `FAIL`, or `INCONCLUSIVE` and exits with a non-zero code when the release should not proceed. |
-| **Multi-run evaluation** | Running the same evaluation multiple trials to get confidence intervals and consistency metrics.                              |
+| Concept        | What it means                                                                                                                 |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| **Workspace**  | The project container that holds evaluations.                                                                                 |
+| **Evaluation** | A configured test: methodology (judge model + rubric) + configuration (model + scenarios/traces).                             |
+| **Run**        | One execution of an evaluation. A run returns scores, reliability detail, and a verdict where applicable.                     |
+| **Suite**      | A manifest that groups multiple evaluations for release gating.                                                               |
+| **Gate**       | A CI check that returns `PASS`, `FAIL`, or `INCONCLUSIVE` and exits with a non-zero code when the release should not proceed. |
+| **Trial**      | One execution of a scenario inside a run. Several trials give confidence intervals; the scorecard calls them "runs".          |
 
 ## Reliability
 
