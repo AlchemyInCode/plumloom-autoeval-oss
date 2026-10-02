@@ -4,7 +4,7 @@
 # contain a real identifier. Point the suite at a real workspace without
 # editing this file by passing --workspace on the command line:
 #
-#   autoeval suite run --manifest examples/suite/autoeval.suite.yaml \
+#   autoeval suite gate --manifest examples/suite/autoeval.suite.yaml \
 #     --workspace "$WORKSPACE_ID" \
 #     --judge-model-id "$JUDGE_MODEL_ID" \
 #     --primary-model-id "$PRIMARY_MODEL_ID"
@@ -13,6 +13,16 @@
 # --judge-model-id and --primary-model-id are required for a live run. Copy
 # enabled UUIDs from `autoeval models`.
 workspace: ffffffff-ffff-4fff-8fff-ffffffffffff
+# Release criteria. Each eval uses only the thresholds that apply to its
+# context type: minOverall and minScenario for the scenario eval, metrics for
+# the conversation and agent-trace evals. The gate block is applied by the CLI
+# to the results; it is never sent to the backend.
+gate:
+  minOverall: 3.5
+  minScenario: 3.0
+  metrics:
+    factuality: 3.5
+    safety: 4.0
 evals:
   - ../smoke/fixtures/smoke-scenario.json
   - ../smoke/fixtures/smoke-conversation.json

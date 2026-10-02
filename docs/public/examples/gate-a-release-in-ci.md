@@ -1,18 +1,21 @@
 # Example 3: Gate a release in CI
 
-**When you are done**, a pull request cannot merge unless your evaluations pass. You have a suite
-manifest with thresholds, a pre-flight check that catches setup errors in seconds, and a CI job you
-can copy.
+**When you are done**, your pull request has an Autoeval CI check that can block the merge when you
+configure it as a required check. You have a suite manifest with release criteria, a pre-flight
+check that catches setup errors in seconds, and a CI job you can copy.
 
 **Needs:** one or more evaluation files that pass `autoeval eval validate`
 ([Example 2](./write-and-run-your-own-eval.md)), a workspace ID, a CLI key, and the API origin.
 
 ---
 
-## 1. Write a suite manifest, with thresholds
+## 1. Write a suite manifest, with release criteria
 
-A suite manifest lists the evaluation files a release depends on, and the scores each one must
-reach. It is a small YAML (or JSON) file that you commit next to the evaluation files:
+A suite manifest lists the evaluation files a release depends on, and the release criteria each one
+must satisfy. The criteria are a release policy, not one score cutoff: overall and per-scenario
+thresholds for scenario evaluations, per-metric thresholds for conversation and agent-trace
+evaluations, and, for scenarios with more than one trial, decisions that use the confidence
+interval. The manifest is a small YAML (or JSON) file that you commit next to the evaluation files:
 
 ```yaml
 # evals/autoeval.suite.yaml
@@ -30,18 +33,30 @@ evals:
 How it reads:
 
 - **Paths** resolve relative to the manifest, not to the directory you run the command from.
-- The top-level **`gate`** block is the default for every evaluation. A `gate` block on one entry
-  overrides it, field by field.
-- **Scenario** evaluations gate on `minOverall` and `minScenario`. **Conversation** and
-  **agent-trace** evaluations gate on `metrics`, one minimum score per metric name. Use the metric
-  names you saw on the scorecard in [Example 1](./grade-a-recorded-agent-trace.md#2-read-the-scorecard).
-- The `gate` blocks never go to the backend. They only decide the release.
+- The top-level **`gate`** block is the default for every evaluation, and a `gate` block on one entry
+  overrides it, field by field. Every evaluation inherits the suite-level settings, but it uses only
+  the thresholds that apply to its context type. In the manifest above, the scenario evaluation uses
+  `minOverall`, and the agent-trace evaluation uses its `metrics` threshold.
+- **Scenario** evaluations test a one-shot prompt against the model under test. Their results show
+  Model Performance, Scenario Performance, and the Model Response. `minOverall` gates the primary
+  model's overall score from Model Performance. `minScenario` gates each scenario (test case) score
+  from Scenario Performance, so a strong overall score cannot hide one weak scenario.
+- **Conversation** and **agent-trace** evaluations gate on `metrics`, one minimum score per metric
+  name. Use the metric names you saw on the scorecard in
+  [Example 1](./grade-a-recorded-agent-trace.md#2-read-the-scorecard).
+- Judge agreement can be gated separately with `autoeval gate --min-judge-agreement`. The suite
+  manifest's `gate` block has no judge-agreement field.
+- **The evaluation file and the `gate` block do different jobs.** The evaluation file defines what
+  gets run and scored. The `gate` block defines the release policy that the CLI applies to those
+  results. The gate configuration is not part of the evaluation request sent to the backend.
 - The keys are strict. A misspelled key fails at once with exit code `2`, for example
   `gate: Unrecognized key: "min_overall".` Run `autoeval doctor` (step 2) to catch this before CI.
 
-For a scenario evaluation with `runsPerScenario` above `1`, the gate compares the 95% confidence
-interval with your threshold. A result whose interval straddles the threshold is `INCONCLUSIVE`,
-and it blocks the release.
+This applies to the scenario thresholds above. For a scenario evaluation with more than one trial
+(`runsPerScenario` above `1`), `minOverall` is evaluated against the 95% confidence interval for the
+primary model's overall score, and `minScenario` is evaluated against the confidence interval for
+each scenario score. If an interval crosses its threshold, that check is `INCONCLUSIVE`, and it
+blocks the release.
 
 ## 2. Pre-flight with `doctor`
 
@@ -107,12 +122,12 @@ The gate runs every evaluation in the manifest, reads the results, and gives eac
 verdict. The suite verdict is the worst of them, in this order: `ERROR`, then `FAIL`, then
 `INCONCLUSIVE`, then `PASS`.
 
-| Suite verdict  | Exit code | Meaning                                                            |
-| -------------- | --------- | ------------------------------------------------------------------ |
-| `PASS`         | `0`       | Every evaluation met its thresholds. The release may proceed.      |
-| `FAIL`         | `1`       | At least one evaluation missed a threshold.                        |
-| `INCONCLUSIVE` | `1`       | The evidence cannot decide. It blocks, the same as a failure.      |
-| `ERROR`        | `5`       | At least one evaluation did not complete. Rerun before you decide. |
+| Suite verdict  | Exit code | Meaning                                                                                    |
+| -------------- | --------- | ------------------------------------------------------------------------------------------ |
+| `PASS`         | `0`       | Every evaluation met its release criteria. The release may proceed.                        |
+| `FAIL`         | `1`       | At least one evaluation missed a threshold.                                                |
+| `INCONCLUSIVE` | `1`       | The evidence cannot decide. It blocks, the same as a failure.                              |
+| `ERROR`        | `5`       | At least one evaluation could not complete successfully, or its results could not be read. |
 
 Only `PASS` exits `0`. With `--json`, the error code (`SUITE_GATE_FAIL`,
 `SUITE_GATE_INCONCLUSIVE`, or `SUITE_GATE_ERROR`) tells the three apart.
@@ -188,19 +203,28 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install --global @plumloom/cli
+      - run: npm install --global @plumloom/cli@0.1.2
       - name: Pre-flight
         run: autoeval doctor --manifest evals/autoeval.suite.yaml
       - name: Release gate
         run: autoeval suite gate --manifest evals/autoeval.suite.yaml
 ```
 
-The job fails when either step exits with a code other than `0`, and that blocks the merge if you
-make the check required in your branch protection settings.
+The CLI version is pinned on purpose. A release gate must give the same answer on every run, and an
+unpinned install would let a new CLI release change gate behavior with no change in your repository.
+Update the version deliberately, in its own pull request.
 
-If your release depends on **one** evaluation that is already configured, you can use the
-single-evaluation gate instead. This repository runs it with its own action; see
-[Release gating](../release-gating.md).
+The job fails when either step exits with a code other than `0`. The workflow by itself does not
+block a merge: the check blocks it only when you make it a required check in your branch protection
+settings.
+
+Choose the gate by what you want:
+
+- **A simple threshold check on one evaluation that is already configured:** use
+  `autoeval gate <evaluation-id>`. It compares the scored result with the thresholds you configure.
+  This repository runs it with its own action; see [Release gating](../release-gating.md).
+- **Confidence-interval-aware gating for a scenario with more than one trial:** use
+  `autoeval suite gate`, even if the suite contains only one evaluation.
 
 ## What most often goes wrong
 
@@ -234,8 +258,8 @@ Hint: Inspect the failing metric with `autoeval results <evaluation-id> <run-id>
 ```
 
 The sample manifest at
-[`examples/suite/autoeval.suite.yaml`](../../../examples/suite/autoeval.suite.yaml) has no `gate`
-block, so copy the manifest in step 1 instead, or add thresholds before you use the sample in CI.
+[`examples/suite/autoeval.suite.yaml`](../../../examples/suite/autoeval.suite.yaml) includes a `gate`
+block, so you can copy it as a working starting point.
 
 ## Next
 

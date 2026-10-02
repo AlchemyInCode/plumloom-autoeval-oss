@@ -47,13 +47,15 @@ The file has two blocks:
 ```
 
 - **`methodology`** is how the answer is graded: the judge model and its instructions.
-- **`configuration`** is what is tested: the model under test (`primaryModelId`), the system prompt,
-  the scenarios, and the metrics.
+- **`configuration`** defines the evaluation inputs and the scoring setup for the model under test:
+  the primary model (`primaryModelId`), the prompt, the scenarios (test cases), the selected
+  metrics, and related context settings.
 
 ## 2. Put in real model IDs
 
-The two UUIDs above are synthetic placeholders. Every public example uses them, so no real
-identifier is ever committed. Replace them with models your account has enabled:
+The two UUIDs above are synthetic placeholders. The public examples use synthetic model IDs so they
+stay portable and are not tied to a specific Plumloom account or enabled-model configuration.
+Replace them with models your account has enabled:
 
 ```bash
 autoeval models
@@ -77,9 +79,11 @@ Qwen3.8 2.4T A95B       together  66666666-6666-4666-8666-666666666666
 Showing 12 models
 ```
 
-You can edit the file, or keep the placeholders and override them on the command line with
-`--judge-model-id` and `--primary-model-id`. Editing the file is better for an evaluation you will
-commit, because the file then records which models it was graded with.
+You can edit the file, or keep the placeholders and pass `--judge-model-id` and
+`--primary-model-id` to the commands that accept them (`eval create-from`, `suite run`, and
+`suite gate`). `eval validate` does not accept these overrides, so replace the IDs in the file
+before you validate. Editing the file is better for an evaluation you will commit, because the file
+then records which models the evaluation is configured to use.
 
 Choose **different** models for the judge and the model under test. A model cannot grade its own
 answers (see step 3).
@@ -113,7 +117,7 @@ messages you are most likely to see:
 A file that still has the placeholder UUIDs fails on the first row, because the placeholders are not
 real models. Validation checks the judge first, so the message names the judge.
 
-## 4. Choose single-run or multi-run
+## 4. Choose how many trials to run
 
 For a scenario evaluation, decide how many trials to run. Add `runsPerScenario` to the
 `methodology` block:
@@ -127,14 +131,17 @@ For a scenario evaluation, decide how many trials to run. Add `runsPerScenario` 
 }
 ```
 
-- Leave it out (single-run) while you iterate on the prompt or the rubric. It is fast and cheap.
-- Set it above `1` (multi-run) for any evaluation you will gate a release on. More runs do not make
-  the score stable. They give you the evidence to judge whether it is stable: the run-to-run
-  variation and a 95% confidence interval. `autoeval suite gate` then compares that interval with
-  your threshold instead of trusting one run.
+- **A single trial** (`runsPerScenario: 1`, the default) gives one point-in-time score, with no
+  trial-to-trial reliability evidence. It is faster and cheaper during development, and it is also a
+  valid choice when a team accepts a point estimate. A release gate on a single trial compares that
+  one score with the threshold.
+- **Multiple trials** (`runsPerScenario` above `1`) give you reliability evidence across trials, and
+  they let `autoeval suite gate` compare a 95% confidence interval with your threshold instead of
+  one sample. More trials do not make the score stable. They give you the evidence to judge whether
+  it is stable.
 
-The [quickstart](../quickstart.md#6-run-it-single-run-or-multi-run) explains how the gate reads each
-mode.
+The [quickstart](../quickstart.md#6-run-it-single-run-or-multi-run) explains how the gate reads a
+single trial and multiple trials.
 
 ## 5. Create and run it
 
@@ -172,53 +179,67 @@ title yourself.
 autoeval results <evaluation-id> <run-id>
 ```
 
-A multi-run result adds the reliability evidence to the scorecard: a 95% confidence interval for
-each score, the coefficient of variation (CV) against the consistency target, and a stability
-label. This is the same file with `"runsPerScenario": 3`:
+A scenario with multiple trials does more than return one score. Autoeval runs the same scenario
+several times and summarizes the trial results into reliability evidence:
+
+- **Mean score:** the average score across the trials. This is the central result, but by itself it
+  does not tell you how stable the behavior was.
+- **95% confidence interval:** the uncertainty around that mean. A narrow interval means the trials
+  give a consistent estimate. A wide interval means the result is still uncertain.
+- **Coefficient of variation (CV):** the variation across the trial scores, relative to the mean.
+  A lower CV means the trials agree more closely with one another.
+- **Consistency target:** when one is configured, Autoeval compares the observed variation with
+  that target and reports whether the target was met.
+
+The point of multiple trials is not to make the score more stable. It is to give you evidence about
+how stable the result actually is, so a release decision does not depend on one sample. This is the
+same file with `"runsPerScenario": 3`. The overall interval (±0.39) and the warning on `fluency`
+(±1.15) show real variation across the three trials:
 
 ```text
-
-█ █     ███ ███
-█ █     █ █   █
-███     █ █ ███
-  █     █ █   █
-  █  █  ███ ███  / 5 overall · stable
-95% CI 4.03–4.03 · CV 0.00 (target <0.10)
+█ █     ███  █
+█ █       █  █
+███     ███  █
+  █     █    █
+  █  █  ███  █   / 5 overall · stable
+95% CI 3.82–4.6 · CV 0.04 (target <0.10)
 ────────────────────────────────────────────────────────────────────────────────────────────────────
-Context  scenario · GLM 5.3 Flash (primary) · 1 test case · 2 runs · 3 metrics
+Context  scenario · GLM 5.3 Flash (primary) · 1 test case · 3 runs · 3 metrics
 
 RUBRIC FIT
 METRIC                       MEAN    95% CI
 factuality                   4.30     ±0.00
-fluency                      4.20     ±0.00
+fluency                      4.73     ±1.15  ⚠
 relevance                    3.60     ±0.00
-overall                      4.03     ±0.00
+overall                      4.21     ±0.39
 
 TEST CASES
 TEST CASE                    MEAN    95% CI
-Freezing point               4.03     ±0.00
+Freezing point               4.21     ±0.39
 
 BEST RESPONSE
-GLM 5.3 Flash · run 3 · scored 4.03 / 5
+GLM 5.3 Flash · run 3 · scored 4.3 / 5
 "At standard atmospheric pressure, what is the freezing point of pure water in degrees Celsius?"  →
-"The freezing point of pure water at standard atmospheric pressure is 0 °C (32 °F)."
-factuality 4.3 · fluency 4.2 · relevance 3.6
-100 tokens · $0.0005 · 3.3s  (this run)
+"The freezing point of pure water at standard atmospheric pressure is **0 °C**."
+factuality 4.3 · fluency 5 · relevance 3.6
+85 tokens · $0.0005 · 4.5s  (this run)
 
-2 runs
-best run per test case: 100 tokens · $0.0005 · 3.3s model time
+3 runs
+best run per test case: 85 tokens · $0.0005 · 4.5s model time
 
 --show-outputs for full responses · --json for the raw payload
 ```
 
 ## What most often goes wrong
 
-**You run a public example file as it is.** Every file under `examples/` carries synthetic model
-UUIDs. This is on purpose: public files never contain a real identifier. Until you replace the IDs,
-or pass `--judge-model-id` and `--primary-model-id`, the file fails:
+**You run a public example file as it is.** Every file under `examples/` uses synthetic model IDs,
+so it is portable and not tied to one account. What you must do depends on the command:
 
-- `eval validate` reports that the judge model ID is not enabled for this account.
-- `eval create-from --run` and `suite` stop earlier, with exit code `2` and this message:
+- **`eval validate`** validates the model IDs stored in the file, and it does not accept
+  `--judge-model-id` or `--primary-model-id`. Replace the placeholder IDs in the file first.
+  Otherwise it reports that the judge model ID is not enabled for this account.
+- **`eval create-from --run`** and the **`suite`** commands accept the command-line overrides. Without
+  them, they stop with exit code `2` and this message:
 
 ```text
 This eval file contains a synthetic judge model UUID. Run "autoeval models" and pass --judge-model-id <uuid>

@@ -1,7 +1,7 @@
 # Example 1: Grade a recorded agent trace
 
-**When you are done**, you have one scored agent-trace evaluation in your workspace, and you can
-read its scorecard. This is the shortest path from a new install to a real result.
+**When you are done**, you have one scored agent-trace evaluation in your workspace. This is the
+shortest path from a new install to grading a recorded agent trace and reading its scorecard.
 
 **Time:** about five minutes. **Needs:** an installed CLI, an API origin, and a CLI key. If you do
 not have these yet, do steps 1 to 3 of the [quickstart](../quickstart.md) first.
@@ -117,9 +117,13 @@ The scorecard has two parts:
   scores for agent traces and conversations, and only for the metrics you give a threshold. Note
   the names: you set thresholds on them in [Example 3](./gate-a-release-in-ci.md).
 - **Trajectory evaluation** scores how the agent got there: its planning, its order of actions, and
-  any loops or detours. It is shown on the scorecard, but a gate does not read it.
+  any loops or detours. It is diagnostic evidence about the path the agent took, and it helps explain
+  why a trace succeeded or failed. The release evidence for an agent-trace evaluation is its session
+  metrics, so trajectory scores do not currently take part in the gate decision.
 
-For the complete payload, including the reliability detail, use JSON:
+For the complete result, use JSON. For an agent trace, `--json` returns the full validated result
+payload: the session scores, judge agreement, the trajectory evaluation, and the underlying backend
+fields. An agent trace is graded as a fixed input, so this is not evidence from repeated trials:
 
 ```bash
 autoeval --json results <evaluation-id> <run-id>
@@ -130,14 +134,16 @@ scorecard does not change with it, because the trace you supplied is the input.
 
 ## 3. Grade your own trace
 
-Run the same flow on a trace file of your own:
+Run the same flow on a trace of your own. `--input` expects an Autoeval agent-trace evaluation file,
+the same shape as `examples/evals/agent-trace-basic.json`. It does not accept a raw OpenTelemetry
+trace or a harness session log:
 
 ```bash
 autoeval quickstart --input ./my-agent-trace.json
 ```
 
-If your agent runs on DeepSeek Harness, convert a session log into an agent-trace file first. This
-step runs locally and needs no key:
+If you start from a DeepSeek Harness session, convert the raw session into that evaluation file
+first. This step runs locally and needs no key:
 
 ```bash
 autoeval trace import --from deepseek-harness \
