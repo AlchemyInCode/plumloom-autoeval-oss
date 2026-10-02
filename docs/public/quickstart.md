@@ -127,7 +127,7 @@ This is the decision that matters most, and it lives in your eval file rather th
 Language models and the judges that grade them are not deterministic. Run the same evaluation twice
 and the score can move. The question is whether you are measuring your system or measuring noise.
 
-**A single trial** executes the evaluation once and gives one point-in-time score, with no
+**A single trial** executes each scenario once and gives one point-in-time score, with no
 trial-to-trial reliability evidence. It is fast and cheap during development, and it is also a valid
 choice when a team accepts a point estimate.
 
@@ -173,7 +173,7 @@ compares the scored result against the thresholds you configure.
 Multiple trials apply to **scenario** evaluations, where Autoeval calls a model under test.
 Conversation and agent-trace evaluations grade a transcript or trace you supply. The file accepts
 `runsPerScenario` for these types too, and Autoeval sends it to the API without a warning, but the
-release gate always reads their results as a single trial.
+release gate evaluates their per-metric scores directly; multiple-trial reliability logic does not apply.
 
 To run an evaluation that already exists, without changing its file:
 
