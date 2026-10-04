@@ -149,14 +149,14 @@ payload with `autoeval --json results <evaluation-id> <run-id>`). `has_data: fal
 backend scored no data for that cell — usually a scenario/model combination that never produced a
 gradeable response. Fix the eval file or drop the threshold; do not treat it as a pass.
 
-## Null confidence interval on a required multi-run Scenario check
+## Null confidence interval on a required Scenario check with multiple trials
 
-**Symptom:** `required 95% confidence interval is unavailable` on a multi-run scenario eval.
+**Symptom:** `required 95% confidence interval is unavailable` on a scenario eval with multiple trials.
 
 **Check:** Interval-aware gating needs the backend to return a 95% confidence interval for that
-cell. Too few completed runs, or a run that stopped early, leaves the interval null. Verify the run
-mode and run count with `autoeval status <evaluation-id> <run-id>`; if the eval is genuinely
-single-run, gate it with a plain score threshold instead of relying on interval comparison. A
+cell. Too few completed trials, or a run that stopped early, leaves the interval null. Verify the
+trial count with `autoeval status <evaluation-id> <run-id>`; if the eval genuinely has a
+single trial, gate it with a plain score threshold instead of relying on interval comparison. A
 missing interval is `INCONCLUSIVE`, never `PASS`.
 
 ## Convergence fields are unavailable through status

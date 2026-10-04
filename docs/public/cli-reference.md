@@ -450,10 +450,10 @@ gate plane and exits non-zero for any non-`PASS` verdict.
 
 Per-eval decision rules:
 
-- **Scenario, single run** — `mean >= threshold` passes, `mean < threshold` fails, a null or
+- **Scenario, single trial** — `mean >= threshold` passes, `mean < threshold` fails, a null or
   absent mean, `has_data: false`, or an errored scenario cell is `INCONCLUSIVE`. A missing score
   is never treated as zero.
-- **Scenario, multiple runs** — `ci95_lower >= threshold` passes, `ci95_upper < threshold` fails,
+- **Scenario, multiple trials** — `ci95_lower >= threshold` passes, `ci95_upper < threshold` fails,
   a straddling interval or an absent bound is `INCONCLUSIVE`. Run mode comes from
   `progress.totalRuns`, falling back to whether result cells carry intervals.
 - **Convergence** — classified from `autoStopTriggered.reason`, `achievedConsistency`,
