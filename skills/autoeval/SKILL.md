@@ -56,6 +56,10 @@ autoeval doctor --workspace <workspace-id> --input <eval-file>
 autoeval eval validate --input <eval-file>
 ```
 
+Public example files carry placeholder model IDs, so `doctor` probes them with the same overrides
+the gate will use: add `--judge-model-id <uuid>` and, for scenario evals, `--primary-model-id <uuid>`
+with IDs from `autoeval models`, exactly as you will pass them to `suite gate`.
+
 `doctor` exits `2` when any check fails. Report each failing check with its hint and stop. Do not
 work around a failed check by editing the eval file or the manifest.
 

@@ -42,6 +42,12 @@ share one package name and one version, enforced by `packages/cli/tests/agent-sk
   server to an existing skills-only plugin, so adding one later means a new listing.
 - Live behaviour on each host needs accounts and network access, so trigger tests run by hand and
   their results are recorded in the integration guide rather than in CI.
+- `autoeval doctor` gains `--judge-model-id` and `--primary-model-id`, with the override semantics
+  of `suite run` and `suite gate`. The skill's preflight runs `doctor` on the public example files,
+  whose model IDs are synthetic placeholders, and without an override `doctor` reported every one
+  as not enabled and exited blocked (seen 2026-10-06 on the hosted service). The examples stay
+  portable and the skill still stops on a failed `doctor`; the fix is in the CLI, not a skill-side
+  exception. This touches `packages/cli/src/commands`, agreed in review on 2026-10-06.
 - The manifests set `AUTOEVAL_API_BASE_URL` to the hosted origin, `https://api.plumloom.ai`, so the
   MCP server starts without extra setup. Confirmed in review on 2026-10-06: for people using the
   skill, the public docs and the published product are the source of truth, and both use the hosted

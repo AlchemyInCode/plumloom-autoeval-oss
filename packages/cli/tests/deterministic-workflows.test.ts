@@ -1314,3 +1314,112 @@ describe('suite run execution', () => {
     }
   });
 });
+
+describe('doctor model overrides', () => {
+  // The public example files carry a synthetic judge UUID. doctor probes each file's models
+  // against the account, so without an override every public example fails the eval check.
+  const PUBLIC_JUDGE_PLACEHOLDER = '11111111-1111-4111-8111-111111111111';
+
+  function doctorFetch(): ReturnType<typeof vi.fn<typeof fetch>> {
+    return vi.fn<typeof fetch>((inputArg) => {
+      const path = requestUrl(inputArg).pathname;
+      if (path.endsWith('/auth/me')) {
+        return Promise.resolve(
+          jsonResponse({ id: 'user-1', user_sys_id: 'system-1', email: 'user@example.test' }),
+        );
+      }
+      if (path.endsWith(`/workspaces/${IDS.workspace}`)) {
+        return Promise.resolve(
+          jsonResponse({ workspace_id: IDS.workspace, name: 'Doctor workspace', eval_count: 0 }),
+        );
+      }
+      if (path.endsWith('/byok/models/enabled')) {
+        return Promise.resolve(
+          jsonResponse({
+            models: [
+              {
+                supported_model_id: IDS.model,
+                provider_model_id: 'judge',
+                model_key: 'judge',
+                provider: 'test',
+                display_name: 'Enabled judge',
+              },
+            ],
+          }),
+        );
+      }
+      return Promise.resolve(jsonResponse({ detail: `unexpected ${path}` }, 404));
+    });
+  }
+
+  function publicStyleEval(): unknown {
+    return {
+      methodology: {
+        judgeModel: 'Placeholder judge',
+        judgeModelId: PUBLIC_JUDGE_PLACEHOLDER,
+        evaluatorInstructions: 'Check the reply against the synthetic guide.',
+      },
+      configuration: {
+        contextName: 'Placeholder conversation',
+        contextType: 'conversation',
+        artifact: {
+          messages: [
+            { role: 'user', content: 'Hello' },
+            { role: 'assistant', content: 'Hi, how can I help?' },
+          ],
+        },
+        expected: 'A greeting.',
+        selectedMetrics: ['factuality'],
+      },
+    };
+  }
+
+  it('passes a public example once --judge-model-id swaps in an enabled model', async () => {
+    const evalFile = await writeTempJson('public-example.json', publicStyleEval());
+    const stdout = new MemoryStream();
+    try {
+      await createExecutorWithOutput(doctorFetch(), stdout).execute(
+        {
+          kind: 'doctor',
+          workspaceId: IDS.workspace,
+          inputFiles: [evalFile.path],
+          judgeModelId: IDS.model,
+        },
+        { json: true, debug: false },
+      );
+      const report = JSON.parse(stdout.value) as {
+        status: string;
+        checks: { id: string; status: string; detail: string }[];
+      };
+      expect(report.status).toBe('ready');
+      const evalCheck = report.checks.find((check) => check.id.startsWith('eval:'));
+      expect(evalCheck?.status).toBe('pass');
+    } finally {
+      await evalFile.cleanup();
+    }
+  });
+
+  it('still blocks the same public example when no override is given', async () => {
+    const evalFile = await writeTempJson('public-example.json', publicStyleEval());
+    const stdout = new MemoryStream();
+    try {
+      await expect(
+        createExecutorWithOutput(doctorFetch(), stdout).execute(
+          { kind: 'doctor', workspaceId: IDS.workspace, inputFiles: [evalFile.path] },
+          { json: true, debug: false },
+        ),
+      ).rejects.toMatchObject({ code: 'DOCTOR_BLOCKED' });
+      const report = JSON.parse(stdout.value) as {
+        status: string;
+        checks: { id: string; status: string; detail: string }[];
+      };
+      expect(report.status).toBe('blocked');
+      const evalCheck = report.checks.find((check) => check.id.startsWith('eval:'));
+      expect(evalCheck?.status).toBe('fail');
+      expect(evalCheck?.detail).toContain(PUBLIC_JUDGE_PLACEHOLDER);
+      expect(evalCheck?.detail).toContain('not enabled');
+    } finally {
+      await evalFile.cleanup();
+    }
+  });
+});

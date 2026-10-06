@@ -58,7 +58,9 @@ autoeval doctor --workspace <workspace-id> --input ./evals/refund-policy.json
 ```
 
 It is read-only, reports every problem in one pass with a hint per failure, and exits `2` when the
-report is blocked. See [suite execution and release gating](#30-doctor-pre-flight).
+report is blocked. It accepts the same `--judge-model-id` and `--primary-model-id` overrides as
+`suite gate`, so the pre-flight checks the models the gate will actually run with. See
+[suite execution and release gating](#30-doctor-pre-flight).
 
 ### Authentication
 

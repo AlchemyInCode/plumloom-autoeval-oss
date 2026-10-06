@@ -284,6 +284,24 @@ describe('deterministic command parsing', () => {
     ],
     [
       [
+        'doctor',
+        '--manifest',
+        'autoeval.suite.yaml',
+        '--judge-model-id',
+        IDS.model,
+        '--primary-model-id',
+        IDS.workspace,
+      ],
+      {
+        kind: 'doctor',
+        manifestFile: 'autoeval.suite.yaml',
+        inputFiles: [],
+        judgeModelId: IDS.model,
+        primaryModelId: IDS.workspace,
+      },
+    ],
+    [
+      [
         'trace',
         'import',
         '--from',

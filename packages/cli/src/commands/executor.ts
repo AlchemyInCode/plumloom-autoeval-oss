@@ -1012,9 +1012,20 @@ export class RuntimeCommandExecutor implements CommandExecutor {
       }
       case 'doctor': {
         const manifestFile = command.manifestFile;
+        // Same override semantics as suite run / suite gate: explicit CLI model UUIDs replace
+        // the file's judge (and scenario primary) model before the eval file is probed.
+        const modelOverrides = {
+          ...(command.judgeModelId === undefined ? {} : { judgeModelId: command.judgeModelId }),
+          ...(command.primaryModelId === undefined
+            ? {}
+            : { primaryModelId: command.primaryModelId }),
+        };
         const report = await runDoctor(context, {
           loadEvalFile: async (inputFile: string) =>
-            parseConfiguredRunInput(await readConfiguredRunInput(inputFile)),
+            applyModelOverrides(
+              parseConfiguredRunInput(await readConfiguredRunInput(inputFile)),
+              modelOverrides,
+            ),
           evalFiles: command.inputFiles,
           ...(command.workspaceId === undefined ? {} : { workspaceId: command.workspaceId }),
           ...(manifestFile === undefined

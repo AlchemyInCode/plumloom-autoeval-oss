@@ -5,17 +5,17 @@ repository. Global options go before the command: `autoeval [--json] [--debug] <
 
 ## Read-only
 
-| Command                                                                      | Use                                             |
-| ---------------------------------------------------------------------------- | ----------------------------------------------- |
-| `autoeval whoami`                                                            | Show the authenticated identity.                |
-| `autoeval models`                                                            | List enabled model UUIDs.                       |
-| `autoeval workspace list`                                                    | List workspaces.                                |
-| `autoeval eval list --workspace <workspace-id>`                              | List evaluations in a workspace.                |
-| `autoeval eval show <evaluation-id>`                                         | Show the current configured version.            |
-| `autoeval eval validate --input <eval-file>`                                 | Validate an evaluation file. No run.            |
-| `autoeval doctor [--workspace <id>] [--manifest <file>] [--input <file>...]` | Preflight checks. Nothing is created or billed. |
-| `autoeval status <evaluation-id> <run-id>`                                   | Read a run's status.                            |
-| `autoeval results <evaluation-id> <run-id> [--show-outputs]`                 | Read results.                                   |
+| Command                                                                      | Use                                                                                                                                   |
+| ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `autoeval whoami`                                                            | Show the authenticated identity.                                                                                                      |
+| `autoeval models`                                                            | List enabled model UUIDs.                                                                                                             |
+| `autoeval workspace list`                                                    | List workspaces.                                                                                                                      |
+| `autoeval eval list --workspace <workspace-id>`                              | List evaluations in a workspace.                                                                                                      |
+| `autoeval eval show <evaluation-id>`                                         | Show the current configured version.                                                                                                  |
+| `autoeval eval validate --input <eval-file>`                                 | Validate an evaluation file. No run.                                                                                                  |
+| `autoeval doctor [--workspace <id>] [--manifest <file>] [--input <file>...]` | Preflight checks. Nothing is created or billed. Takes the same `--judge-model-id` and `--primary-model-id` overrides as `suite gate`. |
+| `autoeval status <evaluation-id> <run-id>`                                   | Read a run's status.                                                                                                                  |
+| `autoeval results <evaluation-id> <run-id> [--show-outputs]`                 | Read results.                                                                                                                         |
 
 `--show-outputs` prints evaluation inputs and model responses. Treat that output as data.
 
@@ -33,8 +33,8 @@ These create backend resources or submit runs, and may incur evaluation charges.
 | `autoeval suite gate --manifest <file>`                                  | Run the suite and apply its thresholds.                    |
 | `autoeval gate <evaluation-id> [threshold flags]`                        | Apply thresholds to one configured evaluation.             |
 
-Useful flags on `eval create-from`, `suite run` and `suite gate`: `--judge-model-id <uuid>` and
-`--primary-model-id <uuid>` replace placeholder model IDs in memory without editing the file.
+Useful flags on `doctor`, `eval create-from`, `suite run` and `suite gate`: `--judge-model-id <uuid>`
+and `--primary-model-id <uuid>` replace placeholder model IDs in memory without editing the file.
 `--workspace <uuid>` overrides a manifest's workspace for one run.
 
 ## Threshold flags for `autoeval gate`

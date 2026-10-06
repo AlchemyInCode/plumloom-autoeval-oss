@@ -146,9 +146,13 @@ evals:
 ### Run pre-flight diagnostics
 
 ```bash
-autoeval doctor --manifest examples/suite/autoeval.suite.yaml
+autoeval doctor --manifest examples/suite/autoeval.suite.yaml --workspace <workspace-id> --judge-model-id <uuid> --primary-model-id <uuid>
 autoeval doctor --workspace <workspace-id> --input ./evals/refund-policy.json [--json]
 ```
+
+The public example files carry synthetic model IDs, so pass `--judge-model-id` (and
+`--primary-model-id` for scenario evals) to check them against your account, exactly as you would
+for `suite gate`.
 
 `doctor` performs a read-only check that:
 
@@ -297,7 +301,7 @@ autoeval eval update-title --workspace <workspace-id> --evaluation <evaluation-i
 autoeval suite run --manifest <yaml-or-json-file> [--concurrency <n>] [--stagger-ms <ms>]
 autoeval suite gate --manifest <yaml-or-json-file> [--concurrency <n>] [--stagger-ms <ms>]
 
-autoeval doctor [--workspace <workspace-id>] [--manifest <yaml-or-json-file>] [--input <json-file>...]
+autoeval doctor [--workspace <workspace-id>] [--manifest <yaml-or-json-file>] [--input <json-file>...] [--judge-model-id <uuid>] [--primary-model-id <uuid>]
 
 autoeval trace import --from deepseek-harness --session <jsonl-file> --template <json-file> --out <json-file> [--name <text>] [--workspace <workspace-id>] [--run]
 

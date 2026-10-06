@@ -533,9 +533,20 @@ export function createProgram(
       (value: string, previous: readonly string[]) => [...previous, value],
       [] as string[],
     )
+    .option('--judge-model-id <uuid>', 'override every eval judge model with an enabled model UUID')
+    .option(
+      '--primary-model-id <uuid>',
+      'override every scenario primary model with an enabled model UUID',
+    )
     .action(
       async (
-        options: { workspace?: string; manifest?: string; input?: string[] },
+        options: {
+          workspace?: string;
+          manifest?: string;
+          input?: string[];
+          judgeModelId?: string;
+          primaryModelId?: string;
+        },
         command: Command,
       ) => {
         await executor.execute(
@@ -544,6 +555,10 @@ export function createProgram(
             inputFiles: options.input ?? [],
             ...(options.workspace === undefined ? {} : { workspaceId: options.workspace }),
             ...(options.manifest === undefined ? {} : { manifestFile: options.manifest }),
+            ...(options.judgeModelId === undefined ? {} : { judgeModelId: options.judgeModelId }),
+            ...(options.primaryModelId === undefined
+              ? {}
+              : { primaryModelId: options.primaryModelId }),
           },
           executionOptions(command),
         );

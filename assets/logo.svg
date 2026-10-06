@@ -1,5 +1,46 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96" role="img" aria-label="Placeholder logo">
-  <!-- Placeholder. Replace with the official Plumloom logo before any directory submission. -->
-  <rect width="96" height="96" rx="16" fill="#2f2a4a" />
-  <path d="M28 50l12 12 28-30" fill="none" stroke="#ffffff" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" />
+<svg width="512" height="512" viewBox="53 52 150 150" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g clip-path="url(#clip0_1_23922)">
+<path d="M900 0H0V253.093H900V0Z" fill="white"/>
+<mask id="mask0_1_23922" style="mask-type:luminance" maskUnits="userSpaceOnUse" x="78" y="72" width="745" height="110">
+<path d="M822.83 72H78V182H822.83V72Z" fill="white"/>
+</mask>
+<g mask="url(#mask0_1_23922)">
+<path d="M178 99.0601V111.61C178 126.55 165.88 138.67 150.94 138.67H108C101.4 138.67 95.7 142.5 93 148.06V148.08C92.85 148.4 92.7 148.72 92.57 149.05L78 182V148.67C78 127.5 95.16 110.34 116.33 110.34H151.33C151.33 110.34 151.33 110.34 151.34 110.34C151.34 110.34 151.36 110.34 151.37 110.34C163.34 110.34 173.04 100.64 173.04 88.6701C173.04 86.3901 172.68 84.1901 172.03 82.1201C175.76 86.7601 178 92.6501 178 99.0701V99.0601Z" fill="url(#paint0_linear_1_23922)"/>
+<path d="M153.09 72.09C152.38 72.03 151.66 72 150.94 72H105.06C90.12 72 78 84.12 78 99.06V128.46C82.68 119.59 90.35 112.57 99.67 108.68V105.33C99.67 102.57 101.91 100.33 104.67 100.33H151.34C153.85 100.33 155.92 102.18 156.28 104.59C163.07 102.49 168.01 96.15 168.01 88.67C168.01 80.06 161.48 72.97 153.1 72.1L153.09 72.09Z" fill="url(#paint1_linear_1_23922)"/>
+
+
+
+
+
+
+
+
+</g>
+</g>
+<defs>
+<linearGradient id="paint0_linear_1_23922" x1="199.47" y1="132.06" x2="68.97" y2="132.06" gradientUnits="userSpaceOnUse">
+<stop offset="0.1" stop-color="#813671"/>
+<stop offset="0.2" stop-color="#ACABC8"/>
+<stop offset="0.26" stop-color="#C7F3FE"/>
+<stop offset="0.3" stop-color="#B3BDD6"/>
+<stop offset="0.34" stop-color="#9D83AB"/>
+<stop offset="0.38" stop-color="#8E598B"/>
+<stop offset="0.41" stop-color="#843F78"/>
+<stop offset="0.43" stop-color="#813671"/>
+<stop offset="0.46" stop-color="#7A3A72"/>
+<stop offset="0.84" stop-color="#346B88"/>
+</linearGradient>
+<linearGradient id="paint1_linear_1_23922" x1="175.17" y1="100.23" x2="83.13" y2="100.23" gradientUnits="userSpaceOnUse">
+<stop offset="0.16" stop-color="#333333"/>
+<stop offset="0.38" stop-color="#57314D"/>
+<stop offset="0.64" stop-color="#7C3068"/>
+<stop offset="0.77" stop-color="#8B3073"/>
+<stop offset="0.83" stop-color="#92337A"/>
+<stop offset="0.92" stop-color="#A63E8D"/>
+<stop offset="1" stop-color="#BF4BA6"/>
+</linearGradient>
+<clipPath id="clip0_1_23922">
+<rect width="900" height="254" fill="white"/>
+</clipPath>
+</defs>
 </svg>

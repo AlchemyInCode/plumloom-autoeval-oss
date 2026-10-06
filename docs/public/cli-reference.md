@@ -172,9 +172,10 @@ Human output shows the refreshed evaluation list. JSON output contains the updat
 
 ## Diagnostics
 
-### `autoeval doctor [--workspace <workspace-id>] [--manifest <yaml-or-json-file>] [--input <json-file>...]`
+### `autoeval doctor [--workspace <workspace-id>] [--manifest <yaml-or-json-file>] [--input <json-file>...] [--judge-model-id <uuid>] [--primary-model-id <uuid>]`
 
-- Optional: `--workspace <workspace-id>`, `--manifest <yaml-or-json-file>`, `--input <json-file>` (repeatable)
+- Optional: `--workspace <workspace-id>`, `--manifest <yaml-or-json-file>`, `--input <json-file>` (repeatable),
+  `--judge-model-id <uuid>`, `--primary-model-id <uuid>`
 
 Pre-flight checks that run before any evaluation is created or any run is submitted. Nothing is
 created, submitted, or billed.
@@ -189,6 +190,11 @@ Checks, in order:
 - **Eval files** — every manifest entry plus each `--input` file is read, expanded, schema-checked,
   and probed against the enabled model catalog (judge, primary, and comparison model IDs).
 
+`--judge-model-id` and `--primary-model-id` replace the file's judge model and, for scenario evals,
+the primary model before the probe, with the same override semantics as `suite run` and
+`suite gate`. Pass them when checking the public example files, whose model IDs are synthetic
+placeholders; without an override those files fail the eval check by design.
+
 A failing check never aborts the remaining checks, so one command reports every problem. Checks that
 depend on a failed prerequisite are reported as `skipped`, not as failures.
 
@@ -201,6 +207,7 @@ Exit codes: `0` when every check passes; `2` (`DOCTOR_BLOCKED`) when any check f
 ```bash
 autoeval doctor --manifest autoeval.suite.yaml
 autoeval doctor --workspace ffffffff-ffff-4fff-8fff-ffffffffffff --input ./evals/refund-policy.json --json
+autoeval doctor --manifest examples/suite/autoeval.suite.yaml --workspace <workspace-id> --judge-model-id <uuid> --primary-model-id <uuid>
 ```
 
 ## Traces
