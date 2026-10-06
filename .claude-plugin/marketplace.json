@@ -1,0 +1,14 @@
+{
+  "name": "plumloom",
+  "description": "Plumloom's plugins for coding agents: evaluations and release gates with Autoeval.",
+  "owner": {
+    "name": "Plumloom"
+  },
+  "plugins": [
+    {
+      "name": "plumloom-autoeval",
+      "source": "./",
+      "description": "Run Plumloom Autoeval evaluations and release gates from a coding agent, and report the verdict Autoeval returns."
+    }
+  ]
+}
