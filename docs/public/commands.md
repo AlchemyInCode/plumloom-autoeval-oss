@@ -170,12 +170,15 @@ Working examples live in [`examples/`](../../examples).
 ```bash
 autoeval doctor --manifest autoeval.suite.yaml
 autoeval doctor --workspace <workspace-id> --input ./evals/refund-policy.json
+autoeval doctor --manifest examples/suite/autoeval.suite.yaml --workspace <workspace-id> --judge-model-id <uuid> --primary-model-id <uuid>
 ```
 
 `doctor` is the pre-flight pass: it confirms the CLI key authenticates, the
 workspace is reachable, the model catalog is available, the manifest parses, and
 every eval file is schema-valid with model IDs that are actually enabled for the
-account. It creates nothing and submits no runs. It reports every problem in one
+account. It creates nothing and submits no runs. `--judge-model-id` and
+`--primary-model-id` apply the same overrides as `suite gate`, which is how you
+check the public example files and their placeholder model IDs. It reports every problem in one
 pass and exits `2` when anything is blocking, so CI can run it as a fast gate
 before the expensive suite step.
 

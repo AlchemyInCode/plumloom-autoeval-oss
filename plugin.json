@@ -1,0 +1,42 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "plumloom-autoeval",
+  "version": "0.1.0",
+  "description": "Run Plumloom Autoeval evaluations and release gates from a coding agent, and report the verdict Autoeval returns.",
+  "author": {
+    "name": "Plumloom"
+  },
+  "homepage": "https://github.com/AlchemyInCode/plumloom-autoeval-oss#readme",
+  "repository": "https://github.com/AlchemyInCode/plumloom-autoeval-oss",
+  "license": "Apache-2.0",
+  "keywords": [
+    "autoeval",
+    "plumloom",
+    "evals",
+    "evaluation",
+    "llm evaluation",
+    "agent evaluation",
+    "release gate",
+    "ci",
+    "mcp"
+  ],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Plumloom Autoeval",
+        "shortDescription": "Evals and release gates",
+        "longDescription": "Run Plumloom Autoeval evaluations and release gates for AI agents and LLM features. The skill checks setup, validates evaluation files without spending a run, runs an evaluation or a suite gate, and reports the PASS, FAIL, INCONCLUSIVE or ERROR verdict exactly as Autoeval returns it. It never edits evaluations or thresholds to change a verdict. Requires the autoeval CLI and a Plumloom CLI key.",
+        "developerName": "Plumloom",
+        "category": "Developer Tools",
+        "capabilities": [],
+        "defaultPrompt": [
+          "Check my Autoeval setup without starting a run.",
+          "Run the eval suite for this repo and report the verdict.",
+          "Explain why the last release gate was inconclusive."
+        ],
+        "composerIcon": "./assets/logo.svg",
+        "logo": "./assets/logo.svg"
+      }
+    }
+  }
+}

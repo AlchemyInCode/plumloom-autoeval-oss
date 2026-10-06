@@ -1,0 +1,13 @@
+{
+  "name": "plumloom-autoeval",
+  "version": "0.1.0",
+  "description": "Run Plumloom Autoeval evaluations and release gates from a coding agent, and report the verdict Autoeval returns.",
+  "author": {
+    "name": "Plumloom"
+  },
+  "homepage": "https://github.com/AlchemyInCode/plumloom-autoeval-oss#readme",
+  "repository": "https://github.com/AlchemyInCode/plumloom-autoeval-oss",
+  "license": "Apache-2.0",
+  "keywords": ["autoeval", "plumloom", "evals", "evaluation", "release-gate", "ci", "mcp"],
+  "logo": "assets/logo.svg"
+}

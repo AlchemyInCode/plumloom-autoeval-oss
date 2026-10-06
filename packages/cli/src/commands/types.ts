@@ -86,6 +86,8 @@ export type DeterministicCommand =
       workspaceId?: string;
       manifestFile?: string;
       inputFiles: readonly string[];
+      judgeModelId?: string;
+      primaryModelId?: string;
     }
   | { kind: 'run'; evaluationId: string }
   | { kind: 'status'; evaluationId: string; runId: string }

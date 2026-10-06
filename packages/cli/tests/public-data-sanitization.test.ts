@@ -107,6 +107,35 @@ describe('public data sanitization', () => {
     );
   });
 
+  it('scans the agent skill package files', () => {
+    const root = mkdtempSync(join(tmpdir(), 'public-data-skill-'));
+    mkdirSync(join(root, 'skills/autoeval'), { recursive: true });
+    mkdirSync(join(root, '.claude-plugin'), { recursive: true });
+    writeFileSync(join(root, 'skills/autoeval/SKILL.md'), 'Contact developer@company.com');
+    writeFileSync(
+      join(root, 'mcp.json'),
+      JSON.stringify({ env: { AUTOEVAL_API_KEY: 'pl_sk_liveCredential12345' } }),
+    );
+    writeFileSync(
+      join(root, '.claude-plugin/plugin.json'),
+      JSON.stringify({ workspace: '02b45174-dad8-4f1a-8174-281430b552e4' }),
+    );
+
+    expect(scan(root)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          file: 'skills/autoeval/SKILL.md',
+          rule: 'non-reserved email domain',
+        }),
+        expect.objectContaining({ file: 'mcp.json', rule: 'Plumloom CLI key' }),
+        expect.objectContaining({
+          file: '.claude-plugin/plugin.json',
+          rule: 'non-synthetic UUID',
+        }),
+      ]),
+    );
+  });
+
   it('accepts synthetic placeholders', () => {
     const root = mkdtempSync(join(tmpdir(), 'public-data-ok-'));
     mkdirSync(join(root, 'examples'), { recursive: true });

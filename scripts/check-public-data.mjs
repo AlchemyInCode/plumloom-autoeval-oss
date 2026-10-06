@@ -14,8 +14,19 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 
-/** Directories scanned for public source and shipped-to-users data. */
-export const PUBLIC_DATA_DIRS = ['examples', 'packages/cli/src/json', 'packages/cli/tests'];
+/**
+ * Directories scanned for public source and shipped-to-users data, including
+ * the agent skill package (`skills/` and the host manifest folders).
+ */
+export const PUBLIC_DATA_DIRS = [
+  'examples',
+  'packages/cli/src/json',
+  'packages/cli/tests',
+  'skills',
+  '.claude-plugin',
+  '.cursor-plugin',
+  '.agents',
+];
 
 /** Documentation files are scanned for concrete identifiers as well. */
 export const PUBLIC_DOC_DIRS = ['docs'];
@@ -30,6 +41,9 @@ export const PUBLIC_ROOT_FILES = [
   'CODING_STANDARDS.md',
   '.env.example',
   'smoke-suite.yaml',
+  'plugin.json',
+  'mcp.json',
+  'gemini-extension.json',
 ];
 
 /** Local-only fixtures beneath otherwise public directories. */

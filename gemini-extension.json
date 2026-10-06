@@ -1,0 +1,13 @@
+{
+  "name": "plumloom-autoeval",
+  "version": "0.1.0",
+  "description": "Run Plumloom Autoeval evaluations and release gates from a coding agent, and report the verdict Autoeval returns.",
+  "mcpServers": {
+    "plumloom-autoeval": {
+      "command": "autoeval-mcp",
+      "env": {
+        "AUTOEVAL_API_BASE_URL": "https://api.plumloom.ai"
+      }
+    }
+  }
+}
