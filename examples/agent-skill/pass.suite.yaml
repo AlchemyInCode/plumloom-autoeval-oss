@@ -1,0 +1,19 @@
+# Agent skill example: a suite the skill should report as PASS.
+#
+# One sanitized conversation in which the assistant follows its reference guide, gated on
+# completeness and helpfulness. The workspace and the fixture's judge model ID are synthetic
+# placeholders, so a live run needs --workspace and --judge-model-id:
+#
+#   autoeval --json suite gate --manifest examples/agent-skill/pass.suite.yaml \
+#     --workspace "$WORKSPACE_ID" \
+#     --judge-model-id "$JUDGE_MODEL_ID"
+#
+# PASS depends on the judge's score. Recorded runs are listed in
+# docs/public/integration-agent-skill.md.
+workspace: ffffffff-ffff-4fff-8fff-ffffffffffff
+gate:
+  metrics:
+    completeness: 3.5
+    helpfulness: 3.5
+evals:
+  - ../evals/conversation-success.json
