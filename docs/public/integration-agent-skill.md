@@ -6,6 +6,9 @@ each host reads its own manifest at the repository root. The package adds no cod
 the `autoeval` CLI, and the manifests register the local `autoeval-mcp` server. For what the package
 can and cannot do, see [Agent skill security and permissions](./agent-skill-security.md).
 
+Claude Code, Codex, Cursor and Kiro run Autoeval end to end. On Gemini CLI the package installs and
+the skill triggers, but end-to-end Autoeval execution is not currently supported.
+
 ## Prerequisites
 
 - Node.js 22.13 or newer and the published CLI: `npm install --global @plumloom/cli`. This
@@ -96,7 +99,8 @@ Two notes:
 - On Windows, the desktop app runs the agent's commands in a sandbox that, in this test, did not
   find the globally installed `autoeval` command and had no network access. The agent then reported
   that it could not run the CLI and started nothing. The MCP server is a separate process, and
-  Codex's log showed it initialized.
+  Codex's log showed it initialized. With the chat's permission set to Full access, a request to
+  gate `examples/agent-skill/pass.suite.yaml` ran end to end and returned `PASS` (2026-10-07).
 - MCP tool calls follow your Codex approval settings. To be asked before every Autoeval tool, add
   this to `~/.codex/config.toml`, using the `plugin@marketplace` key Codex wrote when you installed:
 
@@ -137,6 +141,9 @@ an MCP server; Cursor prefixes a plugin's MCP server with `plugin-<package>-`. V
 Remove it by deleting the folder.
 
 ## Gemini CLI
+
+End-to-end Autoeval execution from Gemini CLI is not currently supported. The steps below install
+the package and load the skill, and the trigger results further down cover skill activation only.
 
 ```bash
 gemini extensions install https://github.com/AlchemyInCode/plumloom-autoeval-oss
@@ -234,13 +241,13 @@ session logs were read. "Triggered" means the host loaded the skill, not that th
 followed it. Sessions that never reached the model, for example
 on a usage limit, count as invalid rather than as a result.
 
-| Host        | Version                                       | Mode and tools                                                                                                                                        | Triggered when                                                                                      | Result                                                                             |
-| ----------- | --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| Claude Code | 2.1.289, Claude Sonnet 5.5                    | `claude -p`, only the Skill, Read, Glob and Grep tools allowed; shell, file writes and the MCP tools blocked                                          | the `Skill` tool loaded `plumloom-autoeval:autoeval`                                                | 10 of 10 as expected                                                               |
-| Cursor      | terminal agent 2026.10.01, Pro                | `agent -p --mode ask`; MCP, shell and web fetch are rejected in ask mode                                                                              | the agent read `skills/autoeval/SKILL.md`                                                           | 10 of 10 as expected                                                               |
-| Gemini CLI  | 0.62.0, gemini-3.8-flash, paid key            | `gemini -p`, default approval mode, `--allowed-tools activate_skill`, and a policy file denying shell commands, sub-agents and the Autoeval MCP tools | `activate_skill` for `autoeval` returned success                                                    | 10 of 10 as expected                                                               |
-| Kiro        | IDE 1.2.37, free plan                         | typed in the IDE, Autopilot off; power activation approved, every MCP tool call and command declined (on E1, read-only tools were approved)           | the agent called `kiro_powers` to activate `plumloom-autoeval-oss`                                  | 9 of 10 as expected with the first description; I4 then 3 of 3 after the fix below |
-| Codex       | ChatGPT desktop app 26.930.6422.0, gpt-6-luna | typed in a new chat, approval on request, every Autoeval MCP tool set to ask and each request declined                                                | the agent read `skills/autoeval/SKILL.md` (Codex lists the skill with its path; the agent opens it) | 10 of 10 as expected, 1 empty session invalid                                      |
+| Host        | Version                                       | Mode and tools                                                                                                                                        | Triggered when                                                                                      | Result                                                                              |
+| ----------- | --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| Claude Code | 2.1.289, Claude Sonnet 5.5                    | `claude -p`, only the Skill, Read, Glob and Grep tools allowed; shell, file writes and the MCP tools blocked                                          | the `Skill` tool loaded `plumloom-autoeval:autoeval`                                                | 10 of 10 as expected                                                                |
+| Cursor      | terminal agent 2026.10.01, Pro                | `agent -p --mode ask`; MCP, shell and web fetch are rejected in ask mode                                                                              | the agent read `skills/autoeval/SKILL.md`                                                           | 10 of 10 as expected                                                                |
+| Gemini CLI  | 0.62.0, gemini-3.8-flash, paid key            | `gemini -p`, default approval mode, `--allowed-tools activate_skill`, and a policy file denying shell commands, sub-agents and the Autoeval MCP tools | `activate_skill` for `autoeval` returned success                                                    | 10 of 10 as expected (skill activation only; end-to-end execution is not supported) |
+| Kiro        | IDE 1.2.37, free plan                         | typed in the IDE, Autopilot off; power activation approved, every MCP tool call and command declined (on E1, read-only tools were approved)           | the agent called `kiro_powers` to activate `plumloom-autoeval-oss`                                  | 9 of 10 as expected with the first description; I4 then 3 of 3 after the fix below  |
+| Codex       | ChatGPT desktop app 26.930.6422.0, gpt-6-luna | typed in a new chat, approval on request, every Autoeval MCP tool set to ask and each request declined                                                | the agent read `skills/autoeval/SKILL.md` (Codex lists the skill with its path; the agent opens it) | 10 of 10 as expected, 1 empty session invalid                                       |
 
 No evaluation was created and no credit was spent during the trigger runs: the tools that could
 have done so were blocked or rejected on every host, and the only Autoeval tools approved, on

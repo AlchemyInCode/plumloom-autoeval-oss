@@ -81,6 +81,9 @@ README with usage and configuration, and a local test. The local test is recorde
 
 ## Gemini CLI
 
+End-to-end Autoeval execution from Gemini CLI is not currently supported, and the gallery lists the
+extension as soon as the topic below is set.
+
 No form. The gallery crawls public repositories that carry the GitHub topic
 `gemini-cli-extension` and have `gemini-extension.json` at the repository root, once a day:
 
