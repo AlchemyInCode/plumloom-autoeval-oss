@@ -101,6 +101,10 @@ Two notes:
   that it could not run the CLI and started nothing. The MCP server is a separate process, and
   Codex's log showed it initialized. With the chat's permission set to Full access, a request to
   gate `examples/agent-skill/pass.suite.yaml` ran end to end and returned `PASS` (2026-10-07).
+  Full access turns off the sandbox and the approval prompts, so the agent runs commands, uses the
+  network and edits files anywhere without asking, which raises the stakes of any instruction hidden
+  in evaluation content. Use it only in a folder you trust, and set the chat back to asking for
+  approval when you are done.
 - MCP tool calls follow your Codex approval settings. To be asked before every Autoeval tool, add
   this to `~/.codex/config.toml`, using the `plugin@marketplace` key Codex wrote when you installed:
 
