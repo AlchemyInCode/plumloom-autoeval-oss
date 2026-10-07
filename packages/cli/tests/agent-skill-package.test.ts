@@ -122,7 +122,7 @@ const geminiExtensionSchema = z.object({
   name: z.string().min(1).regex(SKILL_NAME_PATTERN),
   version: z.string().regex(SEMANTIC_VERSION_PATTERN),
   description: z.string().min(1),
-  mcpServers: z.record(z.string(), hostServerSchema),
+  mcpServers: z.record(z.string(), hostServerSchema).optional(),
 });
 
 const cursorPluginManifestSchema = z.object({
@@ -282,7 +282,6 @@ function consistencyProblems(manifests: PackageManifests): string[] {
   const expectedLaunches = serverLaunches(manifests.agentPluginMcp.mcpServers);
   const hostLaunches: Record<string, string[]> = {
     '.claude-plugin/plugin.json': serverLaunches(manifests.claudePlugin.mcpServers),
-    'gemini-extension.json': serverLaunches(manifests.geminiExtension.mcpServers),
   };
   for (const [file, launches] of Object.entries(hostLaunches)) {
     if (JSON.stringify(launches) !== JSON.stringify(expectedLaunches)) {
@@ -290,10 +289,14 @@ function consistencyProblems(manifests: PackageManifests): string[] {
     }
   }
 
+  // Gemini CLI is skill-only until Autoeval supports it end to end.
+  if (manifests.geminiExtension.mcpServers !== undefined) {
+    problems.push('gemini-extension.json: must not declare mcpServers; Gemini CLI is skill-only');
+  }
+
   problems.push(
     ...serverProblems('mcp.json', manifests.agentPluginMcp.mcpServers),
     ...serverProblems('.claude-plugin/plugin.json', manifests.claudePlugin.mcpServers),
-    ...serverProblems('gemini-extension.json', manifests.geminiExtension.mcpServers),
   );
   return problems;
 }
@@ -424,16 +427,31 @@ describe('agent skill package manifests', () => {
     const manifests = loadPackageManifests();
     const drifted: PackageManifests = {
       ...manifests,
-      geminiExtension: {
-        ...manifests.geminiExtension,
-        version: '9.9.9',
+      geminiExtension: { ...manifests.geminiExtension, version: '9.9.9' },
+      claudePlugin: {
+        ...manifests.claudePlugin,
         mcpServers: { 'plumloom-autoeval': { command: 'another-binary' } },
       },
     };
 
     expect(consistencyProblems(drifted)).toEqual([
       `gemini-extension.json: version must be ${manifests.agentPlugin.version}`,
-      'gemini-extension.json: MCP servers must launch the same way as mcp.json',
+      '.claude-plugin/plugin.json: MCP servers must launch the same way as mcp.json',
+    ]);
+  });
+
+  it('reports a Gemini CLI extension that registers an MCP server', () => {
+    const manifests = loadPackageManifests();
+    const withServer: PackageManifests = {
+      ...manifests,
+      geminiExtension: {
+        ...manifests.geminiExtension,
+        mcpServers: { 'plumloom-autoeval': { command: 'autoeval-mcp' } },
+      },
+    };
+
+    expect(consistencyProblems(withServer)).toEqual([
+      'gemini-extension.json: must not declare mcpServers; Gemini CLI is skill-only',
     ]);
   });
 

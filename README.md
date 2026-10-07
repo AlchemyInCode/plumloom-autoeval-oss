@@ -371,16 +371,17 @@ See the [DeepSeek Harness integration guide](docs/public/integration-deepseek-ha
 
 This repository is also an agent skill package: one skill in `skills/autoeval/` plus a manifest per
 host. Claude Code, Codex, Cursor and Kiro can run Autoeval end to end and report the verdict it
-returns. Gemini CLI can install the package and trigger the skill, but end-to-end Autoeval execution
-from Gemini CLI is not currently supported. The skill never edits evaluations, suite manifests or
-thresholds to change a verdict.
+returns. Gemini CLI is skill-only for now: it can install the package and trigger the skill, but the
+extension registers no MCP server and end-to-end Autoeval execution from Gemini CLI is not
+currently supported. The skill never edits evaluations, suite manifests or thresholds to change a
+verdict.
 
 ```bash
 # Claude Code
 claude plugin marketplace add AlchemyInCode/plumloom-autoeval-oss
 claude plugin install plumloom-autoeval@plumloom
 
-# Gemini CLI (install and trigger only; end-to-end execution is not supported yet)
+# Gemini CLI (skill only: install and trigger; end-to-end execution is not supported yet)
 gemini extensions install https://github.com/AlchemyInCode/plumloom-autoeval-oss
 ```
 

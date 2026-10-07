@@ -3,18 +3,20 @@
 The agent skill package teaches a coding agent to run Autoeval and report the verdict it returns.
 One skill, `skills/autoeval/SKILL.md`, serves Claude Code, Codex, Cursor, Gemini CLI and Kiro;
 each host reads its own manifest at the repository root. The package adds no code: the skill drives
-the `autoeval` CLI, and the manifests register the local `autoeval-mcp` server. For what the package
-can and cannot do, see [Agent skill security and permissions](./agent-skill-security.md).
+the `autoeval` CLI, and the manifests for Claude Code, Codex, Cursor and Kiro register the local
+`autoeval-mcp` server. For what the package can and cannot do, see
+[Agent skill security and permissions](./agent-skill-security.md).
 
-Claude Code, Codex, Cursor and Kiro run Autoeval end to end. On Gemini CLI the package installs and
-the skill triggers, but end-to-end Autoeval execution is not currently supported.
+Claude Code, Codex, Cursor and Kiro run Autoeval end to end. Gemini CLI is skill-only for now: the
+extension installs and the skill triggers, but the extension registers no MCP server and end-to-end
+Autoeval execution from Gemini CLI is not currently supported.
 
 ## Prerequisites
 
 - Node.js 22.13 or newer and the published CLI: `npm install --global @plumloom/cli`. This
   installs the `autoeval` and `autoeval-mcp` executables the package relies on.
 - `AUTOEVAL_API_BASE_URL` in the shell your agent runs commands in. Plumloom's hosted service is
-  `https://api.plumloom.ai`; the manifests pass the same value to the MCP server.
+  `https://api.plumloom.ai`; the manifests that register the MCP server pass the same value to it.
 - One `autoeval login` on the machine. The key goes to the OS credential store, where both the CLI
   and the MCP server read it. The skill never asks for a key and never passes one on a command
   line.
@@ -146,8 +148,9 @@ Remove it by deleting the folder.
 
 ## Gemini CLI
 
-End-to-end Autoeval execution from Gemini CLI is not currently supported. The steps below install
-the package and load the skill, and the trigger results further down cover skill activation only.
+Gemini CLI is skill-only for now. The extension installs the skill and registers no MCP server, and
+end-to-end Autoeval execution from Gemini CLI is not currently supported. The trigger results
+further down cover skill activation only.
 
 ```bash
 gemini extensions install https://github.com/AlchemyInCode/plumloom-autoeval-oss
@@ -164,21 +167,15 @@ gemini skills list
 gemini mcp list
 ```
 
-`gemini extensions list` shows `✓ plumloom-autoeval (0.1.0)` with the MCP server
-`plumloom-autoeval` and the agent skill `autoeval`; `gemini skills list` shows
-`autoeval [Enabled]`; `gemini mcp list` shows
-`✓ plumloom-autoeval (from plumloom-autoeval): autoeval-mcp (stdio) - Connected`. Verified with
-Gemini CLI 0.62.0.
+`gemini extensions list` shows `✓ plumloom-autoeval (0.1.0)` with the agent skill `autoeval` and no
+MCP servers; `gemini skills list` shows `autoeval [Enabled]`; and `gemini mcp list`, on a machine
+with no other MCP servers configured, shows `No MCP servers configured.` Verified with Gemini CLI
+0.63.0 on 2026-10-07.
 
-Two notes:
-
-- Gemini CLI passes an extension's MCP server only standard environment variables plus the ones the
-  extension declares. The manifest supplies `AUTOEVAL_API_BASE_URL`; the key must come from
-  `autoeval login`, not from a shell variable.
-- In a non-interactive run (`gemini -p`) with the default approval mode, Gemini CLI offers no
-  `activate_skill` tool: the model chooses the skill, and the call returns
-  `Tool "activate_skill" not found`. Allow that one tool, for example with
-  `--allowed-tools activate_skill`, and the skill loads.
+In a non-interactive run (`gemini -p`) with the default approval mode, Gemini CLI offers no
+`activate_skill` tool: the model chooses the skill, and the call returns
+`Tool "activate_skill" not found`. Allow that one tool, for example with
+`--allowed-tools activate_skill`, and the skill loads.
 
 Remove it with `gemini extensions uninstall plumloom-autoeval`.
 
@@ -261,6 +258,8 @@ workspaces were the same before and after the runs.
 
 Observations worth knowing:
 
+- The Gemini CLI run was made on 2026-10-06, when the extension still registered the Autoeval MCP
+  server; the policy file denied its tools in every run.
 - On 2026-10-06 a free AI Studio key allowed 20 requests a day each for `gemini-2.5-flash` and
   `gemini-3.8-flash`, and one prompt takes several requests, so the Gemini CLI run used a paid
   key. That key was refused `gemini-2.5-flash` ("no longer available to new users") and ran on

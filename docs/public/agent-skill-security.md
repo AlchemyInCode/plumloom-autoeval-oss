@@ -20,7 +20,7 @@ the tool calls you approve.
 | `plugin.json`, `mcp.json`                                       | Agent Plugins manifest (Codex, Cursor, Kiro)      |
 | `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json` | Claude Code plugin and marketplace                |
 | `.cursor-plugin/plugin.json`                                    | Cursor plugin listing                             |
-| `gemini-extension.json`                                         | Gemini CLI extension                              |
+| `gemini-extension.json`                                         | Gemini CLI extension (skill only, no MCP server)  |
 | `.agents/plugins/marketplace.json`                              | Codex install from this repository                |
 | `assets/logo.svg`                                               | Listing icon (no scripts, no external references) |
 
@@ -29,15 +29,16 @@ those from fixed folders at the package root (Claude Code: `commands/`, `agents/
 `hooks/hooks.json`, `.mcp.json`, `.lsp.json`, `output-styles/`, `workflows/`, `themes/`,
 `monitors/`, `bin/`, `settings.json`; Cursor: `rules/`, `agents/`, `commands/`, `hooks/hooks.json`;
 Gemini CLI: `commands/`, a context file such as `GEMINI.md`), and this repository has none of them
-at its root. A host therefore loads two things: the skill and the MCP server entry. On
-2026-10-06, `claude plugin details plumloom-autoeval` listed one skill, one MCP server, and no
-agents, hooks or LSP servers; `gemini extensions list`, Kiro's power page and the Codex plugin page
-showed the same skill and the same MCP entry.
+at its root. A host therefore loads two things: the skill and the MCP server entry. Gemini CLI loads
+the skill only. On 2026-10-06, `claude plugin details plumloom-autoeval` listed one skill, one MCP
+server, and no agents, hooks or LSP servers; Kiro's power page and the Codex plugin page showed the
+same skill and the same MCP entry. On 2026-10-07, `gemini extensions list` showed the same skill
+and no MCP server.
 
 Installing the package runs nothing: it has no install scripts and no hooks. When a session starts,
-the host launches the MCP server, the `autoeval-mcp` executable from `@plumloom/cli`, which you
-install yourself beforehand (`npm install --global @plumloom/cli`). No package is downloaded when
-the agent starts.
+every host except Gemini CLI launches the MCP server, the `autoeval-mcp` executable from
+`@plumloom/cli`, which you install yourself beforehand (`npm install --global @plumloom/cli`). No
+package is downloaded when the agent starts.
 
 One host-specific point: Claude Code runs a dependency install when it caches a plugin whose root
 holds a `package.json` next to an npm or Bun lockfile. This repository's root holds `package.json`
@@ -49,7 +50,8 @@ user's machine.
 The ZIP submitted to the Codex directory leaves out `mcp.json`, so that listing is skills-only. An
 install from the repository itself, through a marketplace entry like the one in
 `.agents/plugins/marketplace.json`, reads the root `plugin.json` and `mcp.json` like the other Agent
-Plugins hosts: in the Codex test on 2026-10-06 it listed and started the MCP server.
+Plugins hosts: in the Codex test on 2026-10-06 it listed and started the MCP server. The Gemini CLI
+extension is skill-only as well: `gemini-extension.json` declares no MCP server.
 
 ## Credentials
 
@@ -63,9 +65,6 @@ the key from `AUTOEVAL_API_KEY` or, failing that, from the OS credential store e
 - The MCP server uses the key only for Autoeval API requests. Tool input, output, errors, schemas
   and descriptions do not contain it, and error output redacts recognized secret fields and CLI-key
   patterns.
-- Gemini CLI passes an extension's MCP server only standard variables such as `HOME` and `PATH`,
-  plus variables the extension declares. A key exported in your shell does not reach the server
-  there. Use `autoeval login` instead.
 - Never put a real key in a manifest or any checked-in MCP configuration.
 
 ## Actions that create resources or cost money
@@ -141,8 +140,8 @@ Names, descriptions or manifests that impersonate, understate permissions, or ex
 
 - In this package: one name across hosts (`plumloom-autoeval`, skill `autoeval`). The package test
   validates every manifest against its host's format, rejects unknown top-level fields in the Agent
-  Plugins manifests, and fails on a renamed package, a drifted version or a credential in a
-  manifest. `claude plugin validate --strict`
+  Plugins manifests, and fails on a renamed package, a drifted version, a credential in a manifest
+  or an MCP server in the Gemini CLI extension. `claude plugin validate --strict`
   passes for the marketplace and the plugin manifest.
 - Your part: install from this repository or a listing published by Plumloom, and check the source
   your host records afterwards (for example, `gemini extensions list` shows the source and ref).
@@ -203,10 +202,10 @@ Security properties lost when a skill moves between hosts.
 
 - In this package: one `SKILL.md` serves all five hosts, and its rules live in the skill text
   rather than in host-specific metadata, so no host drops them. The package test checks that every
-  manifest agrees on name, version and MCP launch.
-- Known host differences: the Codex directory listing is skills-only, Gemini CLI filters the
-  environment passed to the MCP server (see Credentials), and Kiro names the installed power after
-  the repository rather than after `plugin.json`.
+  manifest agrees on name and version, that the Claude Code manifest launches the MCP server the
+  same way as `mcp.json`, and that the Gemini CLI extension declares no MCP server.
+- Known host differences: the Codex directory listing and the Gemini CLI extension are skill-only,
+  and Kiro names the installed power after the repository rather than after `plugin.json`.
 
 ## Known limitations
 

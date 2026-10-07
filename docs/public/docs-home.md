@@ -60,7 +60,7 @@ Autoeval is for teams shipping LLM-powered features who want automated, version-
   - [Gate a release in CI](./examples/gate-a-release-in-ci.md)
 - **[Release gating for CI](./release-gating.md)** — `autoeval gate` and `autoeval suite gate`, suite mechanics, and the manifest format.
 - **[MCP server](./mcp.md)** — invoke Autoeval from coding agents over stdio.
-- **[Agent skill](./integration-agent-skill.md)** — install the Autoeval skill in Claude Code, Codex, Cursor, Gemini CLI or Kiro, and what the trigger tests showed. Gemini CLI is install and trigger only for now.
+- **[Agent skill](./integration-agent-skill.md)** — install the Autoeval skill in Claude Code, Codex, Cursor, Gemini CLI or Kiro, and what the trigger tests showed. Gemini CLI is skill-only for now: install and trigger, no MCP server.
 - **[Agent skill security and permissions](./agent-skill-security.md)** — what the skill package can do, organized against the OWASP Agentic Skills Top 10.
 - **[Troubleshooting](../../TROUBLESHOOTING.md)** — common errors and recovery.
 

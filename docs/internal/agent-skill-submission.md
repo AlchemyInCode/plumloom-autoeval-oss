@@ -81,7 +81,8 @@ README with usage and configuration, and a local test. The local test is recorde
 
 ## Gemini CLI
 
-End-to-end Autoeval execution from Gemini CLI is not currently supported, and the gallery lists the
+The Gemini CLI extension is skill-only: `gemini-extension.json` declares no MCP server, and
+end-to-end Autoeval execution from Gemini CLI is not currently supported. The gallery lists the
 extension as soon as the topic below is set.
 
 No form. The gallery crawls public repositories that carry the GitHub topic
