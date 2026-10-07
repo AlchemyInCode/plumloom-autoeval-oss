@@ -22,7 +22,7 @@ manifest per host format:
 
 - `plugin.json` and `mcp.json` in Agent Plugins 1.0.0 format, read by Codex, Cursor and Kiro;
 - `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` for Claude Code;
-- `gemini-extension.json` for Gemini CLI;
+- `gemini-extension.json` for Gemini CLI, skill only (no MCP server);
 - `.cursor-plugin/plugin.json` for the Cursor listing logo;
 - `.agents/plugins/marketplace.json` so Codex can install from this repository.
 
@@ -30,8 +30,9 @@ The skill adds no runtime code and no API calls. It directs the agent to the exi
 server. A release verdict comes only from `autoeval gate` or `autoeval suite gate`; the skill forbids
 editing evaluation files, suite manifests or thresholds to change a verdict.
 
-Manifests launch the published `autoeval-mcp` binary by name and carry no credential. All manifests
-share one package name and one version, enforced by `packages/cli/tests/agent-skill-package.test.ts`.
+Manifests that register the MCP server launch the published `autoeval-mcp` binary by name, and no
+manifest carries a credential. All manifests share one package name and one version, enforced by
+`packages/cli/tests/agent-skill-package.test.ts`.
 
 ## Consequences
 
@@ -40,6 +41,9 @@ share one package name and one version, enforced by `packages/cli/tests/agent-sk
 - The repository root gains eight entries. Hosts that copy a package copy the whole repository.
 - The Codex directory listing is skills-only. OpenAI does not currently support adding an MCP
   server to an existing skills-only plugin, so adding one later means a new listing.
+- The Gemini CLI extension is skill-only too: it registers no MCP server until Autoeval supports
+  Gemini CLI end to end, and the package test fails if `gemini-extension.json` declares one. Agreed
+  in review on 2026-10-07.
 - Live behaviour on each host needs accounts and network access, so trigger tests run by hand and
   their results are recorded in the integration guide rather than in CI.
 - `autoeval doctor` gains `--judge-model-id` and `--primary-model-id`, with the override semantics

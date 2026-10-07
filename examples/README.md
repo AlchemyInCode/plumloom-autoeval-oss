@@ -11,6 +11,7 @@ supported command-line overrides where available.
 examples/
 ├── evals/         runnable eval files, one per context type
 ├── suite/         suite manifest for CI release gating
+├── agent-skill/   three suites that show the PASS, FAIL and INCONCLUSIVE verdicts the agent skill reports
 ├── smoke/         end-to-end reference script and its fixtures
 ├── integrations/  third-party wiring (DeepSeek Harness via MCP)
 ├── quality-standards/  quality-standard input examples
@@ -54,6 +55,12 @@ autoeval suite gate --manifest examples/suite/autoeval.suite.yaml \
 ```
 
 See [Release gating](../docs/public/release-gating.md).
+
+## `agent-skill/` — one suite per verdict
+
+`agent-skill/pass.suite.yaml`, `fail.suite.yaml` and `inconclusive.suite.yaml` gate the two
+conversation fixtures above so that a coding agent using the Autoeval skill reports `PASS`, `FAIL`
+and `INCONCLUSIVE` in turn. See [`agent-skill/README.md`](./agent-skill/README.md).
 
 ## `smoke/` — end-to-end reference script
 

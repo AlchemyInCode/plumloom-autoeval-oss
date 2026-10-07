@@ -367,6 +367,34 @@ See the [MCP server guide](docs/public/mcp.md) for client configuration, availab
 
 See the [DeepSeek Harness integration guide](docs/public/integration-deepseek-harness.md).
 
+## Agent skill for coding agents
+
+This repository is also an agent skill package: one skill in `skills/autoeval/` plus a manifest per
+host. Claude Code, Codex, Cursor and Kiro can run Autoeval end to end and report the verdict it
+returns. Gemini CLI is skill-only for now: it can install the package and trigger the skill, but the
+extension registers no MCP server and end-to-end Autoeval execution from Gemini CLI is not
+currently supported. The skill never edits evaluations, suite manifests or thresholds to change a
+verdict.
+
+```bash
+# Claude Code
+claude plugin marketplace add AlchemyInCode/plumloom-autoeval-oss
+claude plugin install plumloom-autoeval@plumloom
+
+# Gemini CLI (skill only: install and trigger; end-to-end execution is not supported yet)
+gemini extensions install https://github.com/AlchemyInCode/plumloom-autoeval-oss
+```
+
+For Codex, Cursor and Kiro, and for what the package can and cannot do, see the
+[agent skill guide](docs/public/integration-agent-skill.md) and
+[agent skill security and permissions](docs/public/agent-skill-security.md). Example suites that
+show each verdict are in [`examples/agent-skill/`](examples/agent-skill/README.md).
+
+- Privacy policy: <!-- TODO(Plumloom): link to the privacy policy -->
+- Support: <!-- TODO(Plumloom): support link or email -->
+
+<!-- Kiro's power registry asks for a privacy policy link and a support contact in the README. -->
+
 ## Configuration
 
 | Variable                | Purpose                                         | Default  |
@@ -412,6 +440,8 @@ See the [developer guide](docs/public/developer-guide.md) for lifecycle details,
 - [Deterministic command reference](docs/public/cli-reference.md)
 - [MCP server guide](docs/public/mcp.md)
 - [Codex and Claude Code integration](docs/public/integration-codex-and-claude-code.md)
+- [Agent skill for coding agents](docs/public/integration-agent-skill.md)
+- [Agent skill security and permissions](docs/public/agent-skill-security.md)
 - [DeepSeek Harness integration](docs/public/integration-deepseek-harness.md)
 - [Release gating for CI](docs/public/release-gating.md)
 - [Troubleshooting](TROUBLESHOOTING.md)

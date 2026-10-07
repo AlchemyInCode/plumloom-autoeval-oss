@@ -1,0 +1,19 @@
+# Agent skill example: a suite the skill should report as FAIL.
+#
+# One sanitized conversation in which the assistant contradicts its reference guide, gated on
+# the same completeness and helpfulness bar as pass.suite.yaml. Same policy, different transcript,
+# different verdict. The workspace and the fixture's judge model ID are synthetic placeholders:
+#
+#   autoeval --json suite gate --manifest examples/agent-skill/fail.suite.yaml \
+#     --workspace "$WORKSPACE_ID" \
+#     --judge-model-id "$JUDGE_MODEL_ID"
+#
+# FAIL depends on the judge's score. Recorded runs are listed in
+# docs/public/integration-agent-skill.md.
+workspace: ffffffff-ffff-4fff-8fff-ffffffffffff
+gate:
+  metrics:
+    completeness: 3.5
+    helpfulness: 3.5
+evals:
+  - ../evals/conversation-failure.json

@@ -1,0 +1,13 @@
+# Agent skill example: a suite the skill should report as INCONCLUSIVE.
+#
+# The same conversation as pass.suite.yaml with no gate block, on purpose. An eval with no
+# configured threshold is INCONCLUSIVE, never a silent pass, so this verdict does not depend on
+# the judge. The eval still runs before the gate decides: doctor does not check threshold coverage
+# yet (see docs/public/release-gating.md, known limitations).
+#
+#   autoeval --json suite gate --manifest examples/agent-skill/inconclusive.suite.yaml \
+#     --workspace "$WORKSPACE_ID" \
+#     --judge-model-id "$JUDGE_MODEL_ID"
+workspace: ffffffff-ffff-4fff-8fff-ffffffffffff
+evals:
+  - ../evals/conversation-success.json

@@ -103,4 +103,24 @@ describe('public configured-run examples', () => {
       Promise.all(manifest.evalFiles.map((file) => readFile(file, 'utf8'))),
     ).resolves.toHaveLength(3);
   });
+
+  it.each([
+    ['pass', 'conversation-success.json', { completeness: 3.5, helpfulness: 3.5 }],
+    ['fail', 'conversation-failure.json', { completeness: 3.5, helpfulness: 3.5 }],
+    ['inconclusive', 'conversation-success.json', undefined],
+  ])(
+    'ships the agent skill %s example over an existing conversation fixture',
+    async (name, fixture, metrics) => {
+      const manifest = await readSuiteManifest(
+        fileURLToPath(new URL(`../../../examples/agent-skill/${name}.suite.yaml`, import.meta.url)),
+      );
+
+      expect(manifest.workspaceId).toBe('ffffffff-ffff-4fff-8fff-ffffffffffff');
+      expect(manifest.evalFiles.map((file) => file.split(/[\\/]/u).pop())).toEqual([fixture]);
+      expect(manifest.entries[0]?.gate.metrics).toEqual(metrics);
+      await expect(readFile(manifest.evalFiles[0] ?? '', 'utf8')).resolves.toContain(
+        '"contextType": "conversation"',
+      );
+    },
+  );
 });
