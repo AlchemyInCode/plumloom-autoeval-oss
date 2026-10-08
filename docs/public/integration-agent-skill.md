@@ -276,28 +276,28 @@ Observations worth knowing:
 
 ## Recorded sample runs
 
-The three examples in `examples/agent-skill/` were run on 2026-10-06 against the hosted service with
-the published CLI (`@plumloom/cli` 0.1.2) and GLM 5.2 as judge:
+The PASS example was run on 2026-10-07 against the hosted service from this checkout with GPT-5.6
+Sol as judge:
 
 ```bash
-autoeval --json suite gate --manifest examples/agent-skill/<name>.suite.yaml \
+autoeval --json suite gate --manifest examples/agent-skill/pass.suite.yaml \
   --workspace "$WORKSPACE_ID" \
   --judge-model-id "$JUDGE_MODEL_ID"
 ```
 
+| Manifest          | Verdict | Exit | Scores                                               |
+| ----------------- | ------- | ---- | ---------------------------------------------------- |
+| `pass.suite.yaml` | `PASS`  | `0`  | factuality 5.00, completeness 4.88, helpfulness 4.77 |
+
+The run created one evaluation and one run. Factuality, completeness and helpfulness were all gated
+at 3.5.
+
+The PASS doctor pre-flight reported five passing checks and exited `0`.
+
+The FAIL and INCONCLUSIVE examples were last run on 2026-10-06 against the hosted service with the
+published CLI (`@plumloom/cli` 0.1.2) and GLM 5.2 as judge:
+
 | Manifest                  | Verdict        | Exit                            | Scores                                                         |
 | ------------------------- | -------------- | ------------------------------- | -------------------------------------------------------------- |
-| `pass.suite.yaml`         | `PASS`         | `0`                             | completeness 4.60, helpfulness 4.60                            |
 | `fail.suite.yaml`         | `FAIL`         | `1` (`SUITE_GATE_FAIL`)         | completeness 1.60, helpfulness 2.16                            |
 | `inconclusive.suite.yaml` | `INCONCLUSIVE` | `1` (`SUITE_GATE_INCONCLUSIVE`) | not gated: "no metric thresholds are configured for this eval" |
-
-Each run created one evaluation and one run. An earlier run of the pass example, gated on
-factuality at 3.5, came back `FAIL`: factuality 2.86, relevance 2.72, completeness 4.20 and
-helpfulness 4.20, with the judge's note that the transcript invents the confirmation number
-`DEMO-1042`. That is why the examples gate on completeness and helpfulness. Scores move between runs
-of the same transcript (4.20 and 4.60 here), so keep a margin between a threshold and the scores you
-expect.
-
-The pre-flight for the three examples was run the same day with `--workspace` and
-`--judge-model-id`: every manifest reported five passing checks and exited `0`. Without the
-overrides each one was blocked on the placeholder workspace and judge ID, as designed.

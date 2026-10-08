@@ -16,7 +16,7 @@
         },
         {
           "role": "user",
-          "content": "I booked the Saturday 10 AM watercolor class. Can I move to Sunday afternoon?"
+          "content": "I booked the Saturday 10 AM watercolor class two weeks from now. Can I move to Sunday afternoon?"
         },
         {
           "role": "assistant",
@@ -28,11 +28,11 @@
         },
         {
           "role": "assistant",
-          "content": "Your booking has been moved to Sunday at 3 PM at no charge. Your confirmation number remains DEMO-1042, and an updated confirmation will be emailed shortly."
+          "content": "Your booking has been moved to Sunday at 3 PM. Since the class is two weeks away, there is no change fee. Your existing confirmation number will stay the same, and an updated confirmation will be emailed shortly."
         }
       ]
     },
-    "expected": "The assistant offers valid Sunday times, asks the user to choose, confirms Sunday at 3 PM, states that the change is free, and explains that an updated confirmation will be sent.",
+    "expected": "The assistant offers valid Sunday times, asks the user to choose, confirms Sunday at 3 PM, states that the change is free because it is more than 24 hours before class, keeps the existing confirmation number without inventing one, and explains that an updated confirmation will be sent.",
     "referenceDocuments": [
       {
         "filename": "synthetic-booking-guide.md",

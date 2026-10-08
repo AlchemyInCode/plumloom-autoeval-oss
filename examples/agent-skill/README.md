@@ -3,21 +3,17 @@
 Three suite manifests that show the verdicts the Autoeval agent skill reports. They reuse the
 sanitized conversation fixtures in `../evals/`, so there are no new fixtures to keep in sync.
 
-| Manifest                  | Eval file                   | Gate                                      | Verdict        | Exit                            |
-| ------------------------- | --------------------------- | ----------------------------------------- | -------------- | ------------------------------- |
-| `pass.suite.yaml`         | `conversation-success.json` | `completeness ≥ 3.5`, `helpfulness ≥ 3.5` | `PASS`         | `0`                             |
-| `fail.suite.yaml`         | `conversation-failure.json` | `completeness ≥ 3.5`, `helpfulness ≥ 3.5` | `FAIL`         | `1` (`SUITE_GATE_FAIL`)         |
-| `inconclusive.suite.yaml` | `conversation-success.json` | none                                      | `INCONCLUSIVE` | `1` (`SUITE_GATE_INCONCLUSIVE`) |
+| Manifest                  | Eval file                   | Gate                                                          | Verdict        | Exit                            |
+| ------------------------- | --------------------------- | ------------------------------------------------------------- | -------------- | ------------------------------- |
+| `pass.suite.yaml`         | `conversation-success.json` | `factuality ≥ 3.5`, `completeness ≥ 3.5`, `helpfulness ≥ 3.5` | `PASS`         | `0`                             |
+| `fail.suite.yaml`         | `conversation-failure.json` | `completeness ≥ 3.5`, `helpfulness ≥ 3.5`                     | `FAIL`         | `1` (`SUITE_GATE_FAIL`)         |
+| `inconclusive.suite.yaml` | `conversation-success.json` | none                                                          | `INCONCLUSIVE` | `1` (`SUITE_GATE_INCONCLUSIVE`) |
 
-PASS and FAIL apply one policy, completeness and helpfulness at 3.5, to two transcripts: one where
-the assistant follows its reference guide and one where it contradicts it. INCONCLUSIVE has no
+PASS gates factuality as well as completeness and helpfulness. Its transcript states that the class
+is two weeks away, keeps the existing confirmation number without inventing its value, and follows
+the reference guide's fee, schedule and email rules. FAIL demonstrates the original completeness
+and helpfulness policy against a transcript that contradicts its guide. INCONCLUSIVE has no
 threshold at all, and Autoeval never treats that as a pass.
-
-Factuality is left out of the gate on purpose. In the successful transcript the assistant states a
-confirmation number, `DEMO-1042`, that the user never gave, and a judge can mark that down: with
-GLM 5.2 as judge it scored 2.86 on factuality, and the judge's note on the reference document named
-that number. Gating on factuality makes the PASS example fail, which is a fair reading of the
-transcript but not what this example is for.
 
 ## Pre-flight
 

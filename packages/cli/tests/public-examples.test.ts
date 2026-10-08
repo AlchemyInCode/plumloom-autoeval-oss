@@ -105,7 +105,7 @@ describe('public configured-run examples', () => {
   });
 
   it.each([
-    ['pass', 'conversation-success.json', { completeness: 3.5, helpfulness: 3.5 }],
+    ['pass', 'conversation-success.json', { factuality: 3.5, completeness: 3.5, helpfulness: 3.5 }],
     ['fail', 'conversation-failure.json', { completeness: 3.5, helpfulness: 3.5 }],
     ['inconclusive', 'conversation-success.json', undefined],
   ])(

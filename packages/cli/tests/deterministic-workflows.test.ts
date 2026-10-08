@@ -1319,6 +1319,8 @@ describe('doctor model overrides', () => {
   // The public example files carry a synthetic judge UUID. doctor probes each file's models
   // against the account, so without an override every public example fails the eval check.
   const PUBLIC_JUDGE_PLACEHOLDER = '11111111-1111-4111-8111-111111111111';
+  const PUBLIC_PRIMARY_PLACEHOLDER = '22222222-2222-4222-8222-222222222222';
+  const ENABLED_PRIMARY_MODEL_ID = IDS.config;
 
   function doctorFetch(): ReturnType<typeof vi.fn<typeof fetch>> {
     return vi.fn<typeof fetch>((inputArg) => {
@@ -1343,6 +1345,13 @@ describe('doctor model overrides', () => {
                 model_key: 'judge',
                 provider: 'test',
                 display_name: 'Enabled judge',
+              },
+              {
+                supported_model_id: ENABLED_PRIMARY_MODEL_ID,
+                provider_model_id: 'primary',
+                model_key: 'primary',
+                provider: 'test',
+                display_name: 'Enabled primary',
               },
             ],
           }),
@@ -1374,6 +1383,27 @@ describe('doctor model overrides', () => {
     };
   }
 
+  function publicStyleScenario(
+    judgeModelId = PUBLIC_JUDGE_PLACEHOLDER,
+    primaryModelId = PUBLIC_PRIMARY_PLACEHOLDER,
+  ): unknown {
+    return {
+      methodology: {
+        judgeModel: 'Placeholder judge',
+        judgeModelId,
+        evaluatorInstructions: 'Check the answer.',
+      },
+      configuration: {
+        contextName: 'Placeholder scenario',
+        primaryModelId,
+        comparisonModelIds: [],
+        promptText: 'Answer accurately.',
+        scenarios: [{ name: 'Arithmetic', userQuestion: 'What is 2 + 2?' }],
+        selectedMetrics: ['factuality'],
+      },
+    };
+  }
+
   it('passes a public example once --judge-model-id swaps in an enabled model', async () => {
     const evalFile = await writeTempJson('public-example.json', publicStyleEval());
     const stdout = new MemoryStream();
@@ -1398,6 +1428,136 @@ describe('doctor model overrides', () => {
       await evalFile.cleanup();
     }
   });
+
+  it('passes a scenario once --primary-model-id swaps in an enabled model', async () => {
+    const evalFile = await writeTempJson('public-scenario.json', publicStyleScenario(IDS.model));
+    const stdout = new MemoryStream();
+    try {
+      await createExecutorWithOutput(doctorFetch(), stdout).execute(
+        {
+          kind: 'doctor',
+          workspaceId: IDS.workspace,
+          inputFiles: [evalFile.path],
+          primaryModelId: ENABLED_PRIMARY_MODEL_ID,
+        },
+        { json: true, debug: false },
+      );
+
+      const report = JSON.parse(stdout.value) as {
+        status: string;
+        checks: { id: string; status: string }[];
+      };
+      expect(report.status).toBe('ready');
+      expect(report.checks.find((check) => check.id === `eval:${evalFile.path}`)?.status).toBe(
+        'pass',
+      );
+    } finally {
+      await evalFile.cleanup();
+    }
+  });
+
+  it('applies both model overrides to eval files loaded through a manifest', async () => {
+    const suiteFiles = await writeTempSuiteFiles({
+      'public-scenario.json': JSON.stringify(publicStyleScenario()),
+      'autoeval.suite.yaml': [
+        `workspace: ${IDS.workspace}`,
+        'evals:',
+        '  - ./public-scenario.json',
+        '',
+      ].join('\n'),
+    });
+    const stdout = new MemoryStream();
+    try {
+      const manifestFile = suiteFiles.paths['autoeval.suite.yaml'];
+      const evalFile = suiteFiles.paths['public-scenario.json'];
+      if (manifestFile === undefined || evalFile === undefined) {
+        throw new Error('doctor manifest fixtures were not created');
+      }
+      await createExecutorWithOutput(doctorFetch(), stdout).execute(
+        {
+          kind: 'doctor',
+          manifestFile,
+          inputFiles: [],
+          judgeModelId: IDS.model,
+          primaryModelId: ENABLED_PRIMARY_MODEL_ID,
+        },
+        { json: true, debug: false },
+      );
+
+      const report = JSON.parse(stdout.value) as {
+        status: string;
+        checks: { id: string; status: string }[];
+      };
+      expect(report.status).toBe('ready');
+      expect(report.checks.find((check) => check.id === 'manifest')?.status).toBe('pass');
+      expect(report.checks.find((check) => check.id === `eval:${evalFile}`)?.status).toBe('pass');
+    } finally {
+      await suiteFiles.cleanup();
+    }
+  });
+
+  it.each([
+    ['an invalid UUID', 'not-a-model-uuid', 'must be a UUID'],
+    ['a disabled model', IDS.run, 'not enabled'],
+  ])('blocks %s supplied as a doctor model override', async (_label, judgeModelId, detail) => {
+    const evalFile = await writeTempJson('public-example.json', publicStyleEval());
+    const stdout = new MemoryStream();
+    try {
+      await expect(
+        createExecutorWithOutput(doctorFetch(), stdout).execute(
+          {
+            kind: 'doctor',
+            workspaceId: IDS.workspace,
+            inputFiles: [evalFile.path],
+            judgeModelId,
+          },
+          { json: true, debug: false },
+        ),
+      ).rejects.toMatchObject({ code: 'DOCTOR_BLOCKED' });
+
+      const report = JSON.parse(stdout.value) as {
+        checks: { id: string; status: string; detail: string }[];
+      };
+      const evalCheck = report.checks.find((check) => check.id.startsWith('eval:'));
+      expect(evalCheck).toMatchObject({ status: 'fail' });
+      expect(evalCheck?.detail).toContain(detail);
+    } finally {
+      await evalFile.cleanup();
+    }
+  });
+
+  it.each([
+    ['an invalid UUID', 'not-a-model-uuid', 'Invalid UUID'],
+    ['a disabled model', IDS.run, 'not enabled'],
+  ])(
+    'blocks %s supplied as a doctor primary-model override',
+    async (_label, primaryModelId, detail) => {
+      const evalFile = await writeTempJson('public-scenario.json', publicStyleScenario(IDS.model));
+      const stdout = new MemoryStream();
+      try {
+        await expect(
+          createExecutorWithOutput(doctorFetch(), stdout).execute(
+            {
+              kind: 'doctor',
+              workspaceId: IDS.workspace,
+              inputFiles: [evalFile.path],
+              primaryModelId,
+            },
+            { json: true, debug: false },
+          ),
+        ).rejects.toMatchObject({ code: 'DOCTOR_BLOCKED' });
+
+        const report = JSON.parse(stdout.value) as {
+          checks: { id: string; status: string; detail: string }[];
+        };
+        const evalCheck = report.checks.find((check) => check.id.startsWith('eval:'));
+        expect(evalCheck).toMatchObject({ status: 'fail' });
+        expect(evalCheck?.detail).toContain(detail);
+      } finally {
+        await evalFile.cleanup();
+      }
+    },
+  );
 
   it('still blocks the same public example when no override is given', async () => {
     const evalFile = await writeTempJson('public-example.json', publicStyleEval());
