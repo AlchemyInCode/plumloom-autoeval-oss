@@ -180,6 +180,8 @@ Store the key as the repository **secret** `AUTOEVAL_API_KEY` and the API origin
 **variable** `AUTOEVAL_API_BASE_URL`. The CLI reads both from the environment, so the key never
 appears on the command line or on disk.
 
+A ready-to-copy version of this workflow is committed at [`.github/workflows/autoeval-suite-gate.yml.example`](../../../.github/workflows/autoeval-suite-gate.yml.example).
+
 ```yaml
 # .github/workflows/autoeval-suite-gate.yml
 name: Autoeval suite gate
@@ -203,7 +205,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install --global @plumloom/cli@0.1.2
+      - run: npm install --global @plumloom/cli@0.1.3
       - name: Pre-flight
         run: autoeval doctor --manifest evals/autoeval.suite.yaml
       - name: Release gate
