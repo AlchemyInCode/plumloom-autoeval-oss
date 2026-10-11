@@ -4,6 +4,8 @@
 
 Autoeval is an open-source CLI and MCP server that turns committed evaluation files into versioned, gated checks on AI-agent behavior, scored by the Plumloom backend. It supports scenario, conversation, and agent-trace evaluation contexts from development through CI.
 
+LLM outputs and judge scores can vary between runs. For scenario evaluations, Autoeval supports multiple trials and reports reliability evidence such as confidence intervals and consistency statistics. This helps developers judge whether a release decision is supported by evidence beyond a single score.
+
 ## Architecture
 
 ```mermaid

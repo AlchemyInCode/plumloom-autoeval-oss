@@ -33,8 +33,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      # Pinned on purpose: a release gate must give the same answer on every
-      # run. Bump this deliberately, in its own pull request.
+      # Pinning prevents CLI-version drift and improves reproducibility, but model
+      # and judge behavior can still make evaluation results vary between runs.
       - run: npm install --global @plumloom/cli@0.1.3
       - name: Pre-flight
         run: autoeval doctor --manifest evals/autoeval.suite.yaml
