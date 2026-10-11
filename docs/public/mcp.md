@@ -7,8 +7,7 @@ execute shell commands or call model providers directly.
 
 ## Build and launch
 
-Requirements are the same as the CLI: Node.js 22.13 or newer, pnpm 11, an Autoeval API origin,
-and a Plumloom CLI key.
+Requirements are the same as the CLI: Node.js 22.13 or newer, pnpm 11, and a Plumloom CLI key.
 
 ```bash
 pnpm install --frozen-lockfile
@@ -27,8 +26,8 @@ The server resolves credentials non-interactively in this order:
 1. `AUTOEVAL_API_KEY`
 2. the Autoeval entry in the OS credential store
 
-`AUTOEVAL_API_BASE_URL` is required and must be passed to the MCP process. The MCP server never
-prompts and never persists an environment credential. Authenticate once with `autoeval login`, or
+Autoeval connects to [https://api.plumloom.ai](https://api.plumloom.ai) automatically. No API URL configuration is required.
+The MCP server never prompts and never persists an environment credential. Authenticate once with `autoeval login`, or
 inject `AUTOEVAL_API_KEY` through the MCP client's secret/environment configuration. Never place a
 real key in a checked-in MCP configuration.
 
@@ -43,8 +42,7 @@ Build Autoeval first, then configure a client to spawn the server with an absolu
   "mcpServers": {
     "plumloom-autoeval": {
       "command": "node",
-      "args": ["/absolute/path/to/autoeval/packages/cli/dist/mcp.js"],
-      "env": { "AUTOEVAL_API_BASE_URL": "<autoeval-api-origin>" }
+      "args": ["/absolute/path/to/autoeval/packages/cli/dist/mcp.js"]
     }
   }
 }
@@ -134,9 +132,9 @@ expectations are unchanged by it. See
 Repository CI boots this server over stdio on Linux, macOS, and Windows and asserts an
 `initialize` response. The server resolves credentials when it constructs its action context —
 before reading the first JSON-RPC message — and a CI runner has no keyring entry and no TTY to
-prompt, so the step sets a literal dummy `AUTOEVAL_API_KEY` and a non-routable example
-`AUTOEVAL_API_BASE_URL`, both scoped to that step. The key satisfies format validation only: the
-`initialize` handshake returns server capabilities and makes no API call, so neither placeholder
-is used for a request. They are not secrets and are not stored in GitHub secrets or variables.
+prompt, so the step sets a literal dummy `AUTOEVAL_API_KEY` scoped to that step. The key satisfies
+format validation only: the `initialize` handshake returns server capabilities and makes no API
+call, so the placeholder is not used for a request. It is not a secret and is not stored in GitHub
+secrets or variables.
 
 HTTPS enforcement, redirect rejection, response-size limits, request timeouts, API response validation, and result routing are inherited from the shared Autoeval implementation. MCP clients own run-status polling; deterministic CLI commands retain Autoeval's bounded internal polling.

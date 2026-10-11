@@ -33,7 +33,7 @@ function model(id: string, displayName: string): SupportedModel {
 function mcpContext(api = createApi(), contextTypeSignal?: AbortSignal): AutoevalMcpContext {
   return {
     actions: { api },
-    configuration: loadConfiguration({ AUTOEVAL_API_BASE_URL: 'https://api.example.test' }),
+    configuration: loadConfiguration(),
     clock: new FakeClock(),
     ...(contextTypeSignal ? { signal: contextTypeSignal } : {}),
   };

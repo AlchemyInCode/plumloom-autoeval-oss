@@ -29,7 +29,7 @@ sequenceDiagram
     alt AUTOEVAL_API_KEY is set
         CLI->>CLI: check key format
     else not set
-        CLI->>Store: read key for this API origin
+        CLI->>Store: read key for the Plumloom API
         alt a key is stored
             CLI->>CLI: check key format
         else nothing stored
@@ -92,16 +92,15 @@ sequenceDiagram
   key is never saved.
 - **Only a key from `--key` or the prompt is saved.** A key read from `AUTOEVAL_API_KEY` is never
   written to disk. That is why the environment variable is the right choice for CI.
-- **Stored keys are per API origin.** The key is saved under the service `Plumloom Autoeval` with the
-  account `api-key:<origin>`. If you change `AUTOEVAL_API_BASE_URL`, the key stored for the old
-  origin is not used, and you need to log in again.
+- **Stored keys are scoped to the fixed API endpoint.** The key is saved under the service
+  `Plumloom Autoeval` with the account `api-key:https://api.plumloom.ai`.
 - **A missing credential store is its own error.** A headless machine without an OS credential store
   fails with `CREDENTIAL_STORE_UNAVAILABLE`. Set `AUTOEVAL_API_KEY` instead.
 - **`logout` only removes the stored key.** It does not revoke the key in Plumloom and does not unset
   `AUTOEVAL_API_KEY`.
 
 **Implemented in:** `auth/credentials.ts` (resolution order and format check), `auth/login.ts`
-(validate, then persist), `auth/keyring-store.ts` (the per-origin credential store).
+(validate, then persist), `auth/keyring-store.ts` (the endpoint-scoped credential store).
 
 ## 2. Evaluation lifecycle
 

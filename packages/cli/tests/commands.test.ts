@@ -488,6 +488,8 @@ describe('deterministic command parsing', () => {
       expect(help).not.toContain(forbidden);
     }
     expect(help).toContain('autoeval quickstart');
+    expect(help).toContain('https://api.plumloom.ai (fixed; no configuration required)');
+    expect(help).not.toContain('AUTOEVAL_API_BASE_URL');
   });
 
   it('registers commands supplied by a composing distribution', async () => {

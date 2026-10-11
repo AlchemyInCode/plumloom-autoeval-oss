@@ -3,7 +3,7 @@
 **When you are done**, you have one scored agent-trace evaluation in your workspace. This is the
 shortest path from a new install to grading a recorded agent trace and reading its scorecard.
 
-**Time:** about five minutes. **Needs:** an installed CLI, an API origin, and a CLI key. If you do
+**Time:** about five minutes. **Needs:** an installed CLI and a CLI key. If you do
 not have these yet, do steps 1 to 3 of the [quickstart](../quickstart.md) first.
 
 ---

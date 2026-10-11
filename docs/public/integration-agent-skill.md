@@ -15,8 +15,8 @@ Autoeval execution from Gemini CLI is not currently supported.
 
 - Node.js 22.13 or newer and the published CLI: `npm install --global @plumloom/cli`. This
   installs the `autoeval` and `autoeval-mcp` executables the package relies on.
-- `AUTOEVAL_API_BASE_URL` in the shell your agent runs commands in. Plumloom's hosted service is
-  `https://api.plumloom.ai`; the manifests that register the MCP server pass the same value to it.
+- Autoeval connects to [https://api.plumloom.ai](https://api.plumloom.ai) automatically. No API URL
+  configuration is required.
 - One `autoeval login` on the machine. The key goes to the OS credential store, where both the CLI
   and the MCP server read it. The skill never asks for a key and never passes one on a command
   line.

@@ -29,10 +29,9 @@ autoeval [--json] [--debug] <command>
 
 ## Environment
 
-| Variable                | Purpose                                                      |
-| ----------------------- | ------------------------------------------------------------ |
-| `AUTOEVAL_API_KEY`      | CLI key (`pl_sk_…`), used instead of the OS credential store |
-| `AUTOEVAL_API_BASE_URL` | Required Autoeval API origin (https, no path)                |
+| Variable           | Purpose                                                      |
+| ------------------ | ------------------------------------------------------------ |
+| `AUTOEVAL_API_KEY` | CLI key (`pl_sk_…`), used instead of the OS credential store |
 
 See `.env.example`. Never commit a real key.
 
@@ -452,7 +451,6 @@ In GitHub Actions, pass the key as an environment variable only:
 - name: Gate the release on the suite
   env:
     AUTOEVAL_API_KEY: ${{ secrets.AUTOEVAL_API_KEY }}
-    AUTOEVAL_API_BASE_URL: ${{ vars.AUTOEVAL_API_BASE_URL }}
   run: autoeval suite gate --manifest autoeval.suite.yaml --json
 ```
 
@@ -493,9 +491,9 @@ The same deterministic surface is exposed over stdio for MCP clients:
 node packages/cli/dist/mcp.js
 ```
 
-Configure your client with the absolute path to `packages/cli/dist/mcp.js` and
-`AUTOEVAL_API_BASE_URL` in its environment. Provide `AUTOEVAL_API_KEY` there as well when the
-client cannot use the OS credential store. See [`mcp.md`](./mcp.md).
+Configure your client with the absolute path to `packages/cli/dist/mcp.js`. Autoeval uses its fixed
+Plumloom API endpoint automatically. Provide `AUTOEVAL_API_KEY` when the client cannot use the OS
+credential store. See [`mcp.md`](./mcp.md).
 
 ## Troubleshooting
 

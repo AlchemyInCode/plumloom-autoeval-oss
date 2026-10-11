@@ -15,7 +15,6 @@ immediately; the client polls
 
 - Node.js 22.13 or newer, pnpm 11.
 - A Plumloom CLI key beginning with `pl_sk_`.
-- The Autoeval API origin supplied as `AUTOEVAL_API_BASE_URL`.
 - Autoeval built from this repository:
 
   ```bash
@@ -43,8 +42,7 @@ Either path works:
 The key is used only for Autoeval's authenticated API requests. Tool input, output, errors,
 schemas, and descriptions never contain it.
 
-Unlike the key, `AUTOEVAL_API_BASE_URL` is always required and has no built-in default. Pass it in
-the MCP process environment regardless of which credential path you use.
+Autoeval connects to [https://api.plumloom.ai](https://api.plumloom.ai) automatically. No API URL configuration is required.
 
 ## 3. Register the server
 
@@ -54,7 +52,6 @@ From the project directory:
 
 ```bash
 claude mcp add plumloom-autoeval \
-  -e AUTOEVAL_API_BASE_URL=<autoeval-api-origin> \
   -- node /absolute/path/to/autoeval/packages/cli/dist/mcp.js
 ```
 
@@ -62,7 +59,6 @@ With an injected key instead of the OS credential store:
 
 ```bash
 claude mcp add plumloom-autoeval \
-  -e AUTOEVAL_API_BASE_URL=<autoeval-api-origin> \
   -e AUTOEVAL_API_KEY=<your-key> \
   -- node /absolute/path/to/autoeval/packages/cli/dist/mcp.js
 ```
@@ -75,8 +71,7 @@ The equivalent `.mcp.json` form is:
   "mcpServers": {
     "plumloom-autoeval": {
       "command": "node",
-      "args": ["/absolute/path/to/autoeval/packages/cli/dist/mcp.js"],
-      "env": { "AUTOEVAL_API_BASE_URL": "<autoeval-api-origin>" }
+      "args": ["/absolute/path/to/autoeval/packages/cli/dist/mcp.js"]
     }
   }
 }
@@ -91,8 +86,6 @@ Codex reads MCP servers from `~/.codex/config.toml`:
 command = "node"
 args = ["/absolute/path/to/autoeval/packages/cli/dist/mcp.js"]
 
-[mcp_servers.plumloom-autoeval.env]
-AUTOEVAL_API_BASE_URL = "<autoeval-api-origin>"
 ```
 
 With an injected key:
@@ -103,7 +96,6 @@ command = "node"
 args = ["/absolute/path/to/autoeval/packages/cli/dist/mcp.js"]
 
 [mcp_servers.plumloom-autoeval.env]
-AUTOEVAL_API_BASE_URL = "<autoeval-api-origin>"
 AUTOEVAL_API_KEY = "<your-key>"
 ```
 

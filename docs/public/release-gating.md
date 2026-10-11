@@ -32,9 +32,8 @@ gate when a release depends on a set of eval files reviewed alongside the code.
 ### Developer workflow
 
 1. Configure the evaluation once (in Plumloom, or locally with `autoeval eval run-configured`).
-2. Store the `pl_sk_` key as the repository secret `AUTOEVAL_API_KEY`, the API origin as the
-   repository variable `AUTOEVAL_API_BASE_URL`, and the evaluation UUID as the repository variable
-   `AUTOEVAL_EVALUATION_ID`.
+2. Store the `pl_sk_` key as the repository secret `AUTOEVAL_API_KEY` and the evaluation UUID as
+   the repository variable `AUTOEVAL_EVALUATION_ID`.
 3. Add the action to a workflow with thresholds.
 4. On each pull request the action requests the evaluation's run. If an existing completed run is
    available, the action reuses that Run ID and evaluates its result immediately. If the returned
@@ -64,10 +63,10 @@ report is blocked. It accepts the same `--judge-model-id` and `--primary-model-i
 
 ### Authentication
 
-The action passes the key to the CLI step as `AUTOEVAL_API_KEY` and the required API origin as
-`AUTOEVAL_API_BASE_URL`. The key is never placed on the command line, echoed, or persisted (see
-[ADR 0002](../internal/adr/0002-cli-credential-storage.md)). CI needs no credential store; the key
-environment variable takes precedence over it.
+The action passes the key to the CLI step as `AUTOEVAL_API_KEY`. Autoeval connects to its fixed
+Plumloom API endpoint automatically. The key is never placed on the command line, echoed, or
+persisted (see [ADR 0002](../internal/adr/0002-cli-credential-storage.md)). CI needs no credential
+store; the key environment variable takes precedence over it.
 
 ### Thresholds
 
@@ -156,7 +155,6 @@ jobs:
         with:
           evaluation-id: ${{ vars.AUTOEVAL_EVALUATION_ID }}
           api-key: ${{ secrets.AUTOEVAL_API_KEY }}
-          base-url: ${{ vars.AUTOEVAL_API_BASE_URL }}
           min-overall: '4.0'
           min-scenario: '3.5'
           metrics: |
@@ -510,7 +508,6 @@ jobs:
       - name: Gate the release on the suite
         env:
           AUTOEVAL_API_KEY: ${{ secrets.AUTOEVAL_API_KEY }}
-          AUTOEVAL_API_BASE_URL: ${{ vars.AUTOEVAL_API_BASE_URL }}
         run: autoeval suite gate --manifest autoeval.suite.yaml --json
 ```
 
@@ -610,15 +607,14 @@ The MCP stdio server resolves credentials when it boots its action context, befo
 first JSON-RPC message. A CI runner has no keyring entry (nobody ran `autoeval login`) and no
 TTY for the interactive prompt, so the server refuses to start and the step exits `1`.
 
-The step therefore sets `AUTOEVAL_API_KEY: pl_sk_ci_smoke_placeholder` and
-`AUTOEVAL_API_BASE_URL: https://api.example.test`: literal dummy values in the workflow YAML,
-scoped to that one step. They satisfy startup validation and are never used for a backend request —
-the `initialize` handshake returns server capabilities and makes no API call, and the assertion is
-only that the response contains `"result"`. They are not secrets and are not stored in GitHub
-secrets or repository variables. A real key was rejected as unnecessary credential exposure;
-skipping the step would leave the
-stdio server untested on Windows and macOS; deferring credential resolution would be a
-production behaviour change made to satisfy a smoke test.
+The step therefore sets `AUTOEVAL_API_KEY: pl_sk_ci_smoke_placeholder`, a literal dummy value in
+the workflow YAML scoped to that one step. It satisfies startup validation and is never used for a
+backend request — the `initialize` handshake returns server capabilities and makes no API call,
+and the assertion is only that the response contains `"result"`. It is not a secret and is not
+stored in GitHub secrets or repository variables. A real key was rejected as unnecessary
+credential exposure; skipping the step would leave the stdio server untested on Windows and macOS;
+deferring credential resolution would be a production behaviour change made to satisfy a smoke
+test.
 
 #### Release workflow requirements (`.github/workflows/release.yml`)
 

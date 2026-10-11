@@ -38,19 +38,11 @@ pnpm build
 
 From a checkout, run `node packages/cli/dist/cli.js` wherever these docs say `autoeval`.
 
-## 3. Configure
+## 3. Authenticate
 
-Do this before running any command, including `--help`:
+Autoeval connects to [https://api.plumloom.ai](https://api.plumloom.ai) automatically. No API URL configuration is required.
 
-```bash
-export AUTOEVAL_API_BASE_URL="https://api.plumloom.ai"
-```
-
-Every Autoeval command requires this variable, and there is no built-in default. It must be an
-`https` origin with no path, query, or fragment; plain `http` is accepted only for `localhost`
-development.
-
-Then give Autoeval your key. Choose one:
+Give Autoeval your key. Choose one:
 
 ```bash
 # Interactive: prompts for the key, validates it, then stores it in the OS credential store.
@@ -73,7 +65,7 @@ autoeval whoami
 ```
 
 `--help` confirms the install. `whoami` is the first command that talks to Plumloom, so it confirms
-the origin and the key together. If either fails, the
+connectivity and the key together. If it fails, the
 [troubleshooting guide](../../TROUBLESHOOTING.md) lists each error and its fix.
 
 ## 5. Create an evaluation from a file

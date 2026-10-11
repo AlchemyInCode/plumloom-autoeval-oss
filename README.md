@@ -30,7 +30,6 @@ Eval files and the suite manifest are the only inputs you author and commit; Aut
 
 - Node.js 22.13 or newer
 - A Plumloom CLI key beginning with `pl_sk_`
-- `AUTOEVAL_API_BASE_URL`
 
 pnpm 11 is needed only to build from source.
 
@@ -47,10 +46,11 @@ To build from source, run `pnpm install --frozen-lockfile && pnpm build`. In the
 1. [Connect an AI provider](https://app.plumloom.ai/ai-providers) so Plumloom can run evaluations. OpenAI and Together.ai are supported.
 2. [Create a Plumloom API key](https://app.plumloom.ai/api-keys) for authentication from your terminal, CI, or development tools.
 
+Autoeval connects to [https://api.plumloom.ai](https://api.plumloom.ai) automatically. No API URL configuration is required.
+
 ## Quickstart
 
 ```bash
-export AUTOEVAL_API_BASE_URL="https://api.plumloom.ai"
 autoeval login
 autoeval quickstart
 ```

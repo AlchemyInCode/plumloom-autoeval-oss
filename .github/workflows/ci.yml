@@ -68,8 +68,6 @@ jobs:
       - run: pnpm build:public
       - name: Run the CLI entry points
         shell: bash
-        env:
-          AUTOEVAL_API_BASE_URL: https://api.example.test
         run: |
           set -euo pipefail
           node packages/cli/dist/cli.js --version
@@ -82,7 +80,6 @@ jobs:
         # Only used so the MCP `initialize` handshake boots in CI; the
         # handshake returns server capabilities and makes no API call.
         env:
-          AUTOEVAL_API_BASE_URL: https://api.example.test
           AUTOEVAL_API_KEY: pl_sk_ci_smoke_placeholder
         run: |
           set -euo pipefail

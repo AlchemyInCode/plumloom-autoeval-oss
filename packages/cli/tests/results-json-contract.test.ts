@@ -67,7 +67,7 @@ function scenarioFetch(): typeof fetch {
 async function runResultsJson(): Promise<{ stdout: string; payload: JsonObject }> {
   const stdout = new MemoryStream();
   const executor = new RuntimeCommandExecutor({
-    configuration: loadConfiguration({ AUTOEVAL_API_BASE_URL: 'https://api.example.test' }),
+    configuration: loadConfiguration(),
     environment: { AUTOEVAL_API_KEY: VALID_KEY },
     fetchImplementation: scenarioFetch(),
     stdout,

@@ -16,7 +16,7 @@ Expect an acknowledgement within five business days and a remediation plan or an
 
 ## Security boundary
 
-Autoeval sends authenticated evaluation and account requests only to the configured Autoeval API origin. It does not call model providers or evaluation services directly; identity, ownership, entitlements, provider credentials, and evaluation-service access remain server-side.
+Autoeval sends authenticated evaluation and account requests only to its fixed endpoint at `https://api.plumloom.ai`. It does not call model providers or evaluation services directly; identity, ownership, entitlements, provider credentials, and evaluation-service access remain server-side.
 
 The CLI:
 
@@ -25,7 +25,7 @@ The CLI:
 - stores only successfully validated, interactively prompted keys;
 - never stores environment-provided keys;
 - never stores browser sessions or provider credentials;
-- rejects redirects and non-HTTPS non-localhost origins;
+- rejects redirects from the fixed HTTPS endpoint;
 - bounds request time, response size, read retries, and polling;
 - validates untrusted CLI and API values;
 - redacts credential patterns and credential-shaped fields from output.

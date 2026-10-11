@@ -17,9 +17,11 @@ pnpm install --frozen-lockfile
 
 Read `AGENTS.md`, `CODING_STANDARDS.md`, `README.md`, and the relevant files under `docs/`. Consequential changes to authentication, public interfaces, dependencies, network boundaries, data models, or operating cost require an approved plan and an ADR under `docs/internal/adr/`.
 
-Evaluation and account actions may call only the configured Autoeval API. Do not add direct
+Evaluation and account actions may call only the fixed Plumloom API endpoint. Do not add direct
 model-provider or evaluation-service integrations, and do not invent an API endpoint to complete a
 client feature.
+
+Autoeval connects to [https://api.plumloom.ai](https://api.plumloom.ai) automatically. No API URL configuration is required.
 
 ## Development guidelines
 
@@ -52,8 +54,8 @@ Tests must cover success, failure, validation, permission/security behavior, and
 
 ## Live smoke tests
 
-The optional live test targets the shell-provided Autoeval API origin and runs only when both
-`AUTOEVAL_API_BASE_URL` and `AUTOEVAL_API_KEY` are already present:
+The optional live test targets the fixed Plumloom API endpoint and runs only when
+`AUTOEVAL_API_KEY` is already present:
 
 ```bash
 pnpm test:live

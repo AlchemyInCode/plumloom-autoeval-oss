@@ -6,7 +6,7 @@ check that catches setup errors in seconds, and a CI job you can copy.
 
 **Needs:** one or more evaluation files that pass `autoeval eval validate`
 ([Example 2](./write-and-run-your-own-eval.md)), a workspace ID, an enabled judge-model ID, a CLI
-key, and the API origin. A scenario evaluation also needs an enabled primary-model ID when its
+key. A scenario evaluation also needs an enabled primary-model ID when its
 committed primary model ID must be overridden.
 
 ---
@@ -227,7 +227,6 @@ workspace and model IDs, so copied examples need runtime overrides for a real ac
 Configure these repository values:
 
 - **Secret** `AUTOEVAL_API_KEY`: your Plumloom CLI key.
-- **Variable** `AUTOEVAL_API_BASE_URL`: the Autoeval API origin, including `https` and no path.
 - **Variable** `AUTOEVAL_WORKSPACE_ID`: an accessible ID from `autoeval workspace list`.
 - **Variable** `AUTOEVAL_JUDGE_MODEL_ID`: an enabled ID from `autoeval models`.
 - **Optional variable** `AUTOEVAL_PRIMARY_MODEL_ID`: an enabled ID from `autoeval models`. Configure
@@ -257,7 +256,6 @@ jobs:
     runs-on: ubuntu-latest
     env:
       AUTOEVAL_API_KEY: ${{ secrets.AUTOEVAL_API_KEY }}
-      AUTOEVAL_API_BASE_URL: ${{ vars.AUTOEVAL_API_BASE_URL }}
       AUTOEVAL_WORKSPACE_ID: ${{ vars.AUTOEVAL_WORKSPACE_ID }}
       AUTOEVAL_JUDGE_MODEL_ID: ${{ vars.AUTOEVAL_JUDGE_MODEL_ID }}
       AUTOEVAL_PRIMARY_MODEL_ID: ${{ vars.AUTOEVAL_PRIMARY_MODEL_ID }}
@@ -272,7 +270,6 @@ jobs:
       - name: Verify runtime configuration
         run: |
           test -n "$AUTOEVAL_API_KEY"
-          test -n "$AUTOEVAL_API_BASE_URL"
           test -n "$AUTOEVAL_WORKSPACE_ID"
           test -n "$AUTOEVAL_JUDGE_MODEL_ID"
       - name: Pre-flight

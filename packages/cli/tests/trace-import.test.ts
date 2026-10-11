@@ -60,7 +60,7 @@ class MemoryStream {
 
 function localExecutor(): RuntimeCommandExecutor {
   return new RuntimeCommandExecutor({
-    configuration: loadConfiguration({ AUTOEVAL_API_BASE_URL: 'https://api.example.test' }),
+    configuration: loadConfiguration(),
     environment: {},
     stdout: new MemoryStream(),
     stderr: new MemoryStream(),

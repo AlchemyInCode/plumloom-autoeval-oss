@@ -11,7 +11,7 @@ import { FakeClock } from './helpers.js';
 function mcpContext() {
   return {
     actions: { api: createApi() },
-    configuration: loadConfiguration({ AUTOEVAL_API_BASE_URL: 'https://api.example.test' }),
+    configuration: loadConfiguration(),
     clock: new FakeClock(),
   };
 }

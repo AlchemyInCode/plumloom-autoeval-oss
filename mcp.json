@@ -3,10 +3,7 @@
   "mcpServers": {
     "plumloom-autoeval": {
       "type": "stdio",
-      "command": "autoeval-mcp",
-      "env": {
-        "AUTOEVAL_API_BASE_URL": "https://api.plumloom.ai"
-      }
+      "command": "autoeval-mcp"
     }
   }
 }

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import type { CredentialStore } from '../src/auth/credential-store.js';
-import { loadConfiguration } from '../src/config.js';
+import { AUTOEVAL_API_ORIGIN, loadConfiguration } from '../src/config.js';
 import { createAutoevalMcpContext } from '../src/mcp/context.js';
 import { createAutoevalMcpTools } from '../src/mcp/tools.js';
 import { VALID_KEY } from './helpers.js';
@@ -13,7 +13,9 @@ describe('Autoeval MCP authenticated context', () => {
       write: vi.fn(() => Promise.resolve()),
       delete: vi.fn(() => Promise.resolve(false)),
     };
-    const fetchMock = vi.fn<typeof fetch>((_input, init) => {
+    const fetchMock = vi.fn<typeof fetch>((input, init) => {
+      const requestUrl = input instanceof Request ? input.url : input;
+      expect(new URL(requestUrl).origin).toBe(AUTOEVAL_API_ORIGIN);
       expect(new Headers(init?.headers).get('authorization')).toBe(`Bearer ${VALID_KEY}`);
       return Promise.resolve(
         new Response(
@@ -27,9 +29,7 @@ describe('Autoeval MCP authenticated context', () => {
       );
     });
     const context = await createAutoevalMcpContext({
-      configuration: loadConfiguration({
-        AUTOEVAL_API_BASE_URL: 'https://api.example.test',
-      }),
+      configuration: loadConfiguration(),
       environment: { AUTOEVAL_API_KEY: VALID_KEY },
       store,
       fetchImplementation: fetchMock,

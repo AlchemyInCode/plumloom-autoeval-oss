@@ -50,7 +50,7 @@ function createExecutor(
 ): RuntimeCommandExecutor {
   const stderr = new MemoryStream();
   return new RuntimeCommandExecutor({
-    configuration: loadConfiguration({ AUTOEVAL_API_BASE_URL: 'https://api.example.test' }),
+    configuration: loadConfiguration(),
     environment: { AUTOEVAL_API_KEY: VALID_KEY },
     fetchImplementation,
     stdout,
