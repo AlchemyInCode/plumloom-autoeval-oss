@@ -128,8 +128,8 @@ gemini extensions install https://github.com/AlchemyInCode/plumloom-autoeval-oss
 
 Gemini CLI is skill-only for now: install and trigger are supported, but end-to-end Autoeval execution is not. See the [agent skill guide](docs/public/integration-agent-skill.md) and [agent skill security and permissions](docs/public/agent-skill-security.md).
 
-- Privacy policy: <!-- TODO(Plumloom): link to the privacy policy -->
-- Support: <!-- TODO(Plumloom): support link or email -->
+- Privacy policy: [Plumloom Privacy Policy](https://plumloom.ai/privacy-policy)
+- Support: [support@plumloom.ai](mailto:support@plumloom.ai)
 
 <!-- Kiro's power registry asks for a privacy policy link and a support contact in the README. -->
 
