@@ -11,6 +11,7 @@ supported command-line overrides where available.
 examples/
 ├── evals/         runnable eval files, one per context type
 ├── suite/         suite manifest for CI release gating
+├── ci-gate-demo/  matched PASS/FAIL manifests for the recorded agent traces
 ├── agent-skill/   three suites that show the PASS, FAIL and INCONCLUSIVE verdicts the agent skill reports
 ├── smoke/         end-to-end reference script and its fixtures
 ├── integrations/  third-party wiring (DeepSeek Harness via MCP)
@@ -55,6 +56,12 @@ autoeval suite gate --manifest examples/suite/autoeval.suite.yaml \
 ```
 
 See [Release gating](../docs/public/release-gating.md).
+
+## `ci-gate-demo/` — matched PASS and FAIL gates
+
+`ci-gate-demo/pass.suite.yaml` and `fail.suite.yaml` apply the same judge override and release
+criteria to the good and bad agent-trace fixtures. See [`ci-gate-demo/README.md`](./ci-gate-demo/README.md)
+for local and CI commands and the limits of the recorded results.
 
 ## `agent-skill/` — one suite per verdict
 

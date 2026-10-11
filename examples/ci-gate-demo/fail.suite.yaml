@@ -1,0 +1,8 @@
+# This ID is synthetic. Override it with --workspace at runtime.
+workspace: ffffffff-ffff-4fff-8fff-ffffffffffff
+gate:
+  metrics:
+    factuality: 4.0
+    helpfulness: 4.0
+evals:
+  - ../evals/agent-trace-bad-decision.json
