@@ -2,7 +2,7 @@
 name: autoeval
 description: Run Plumloom Autoeval evaluations and release gates for AI agents and LLM features from the terminal. Use when the user asks to evaluate or test an agent, prompt, model or RAG change, run evals or an eval suite, check whether a change is safe to release, gate a release, or read evaluation results, scores or a PASS / FAIL / INCONCLUSIVE verdict. Reports the verdict Autoeval returns and never edits evals or thresholds to change it.
 license: Apache-2.0
-compatibility: Requires the autoeval CLI (npm package @plumloom/cli, Node.js 22.13 or newer), AUTOEVAL_API_BASE_URL, a Plumloom CLI key, and network access to the Autoeval API.
+compatibility: Requires the autoeval CLI (npm package @plumloom/cli, Node.js 22.13 or newer), a Plumloom CLI key, and network access to the Autoeval API.
 ---
 
 # Autoeval
@@ -37,8 +37,7 @@ never from your own reading of the scores.
 
 ### 1. Check setup
 
-Every command needs `AUTOEVAL_API_BASE_URL`, including `--help`. If it is unset, ask the user to set
-it to `https://api.plumloom.ai`, Plumloom's hosted service, unless they target a different backend.
+Autoeval connects to `https://api.plumloom.ai` automatically. No API URL configuration is required.
 
 ```bash
 autoeval whoami

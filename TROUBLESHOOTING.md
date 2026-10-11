@@ -8,56 +8,14 @@ copied diagnostic.
 
 These are the errors a new setup is most likely to hit, in roughly the order you would meet them.
 
-### `AUTOEVAL_API_BASE_URL is not defined`
-
-```text
-Error: AUTOEVAL_API_BASE_URL is not defined. Set it to the Autoeval API origin to continue.
-```
-
-**Exit code `2`.** Every command needs this variable, including `--help` and `--version`, and there
-is no built-in default. Set it before running anything:
-
-```bash
-export AUTOEVAL_API_BASE_URL="https://api.plumloom.ai"
-```
-
-To make it permanent, add that line to your shell profile. In CI, set it as a pipeline variable.
-
-### `The Autoeval API must use HTTPS`
-
-```text
-Error: The Autoeval API must use HTTPS; HTTP is allowed only for localhost development.
-```
-
-**Exit code `2`.** The origin must start with `https://`. Plain `http://` is accepted only for a
-`localhost` origin during local development.
-
-### `AUTOEVAL_API_BASE_URL must be an origin without a path`
-
-```text
-Error: AUTOEVAL_API_BASE_URL must be an origin without a path.
-```
-
-**Exit code `2`.** Give the origin only: `https://api.plumloom.ai`, not
-`https://api.plumloom.ai/v1`. Autoeval adds the API path itself.
-
-### `AUTOEVAL_API_BASE_URL must not contain credentials, query parameters, or fragments`
-
-```text
-Error: AUTOEVAL_API_BASE_URL must not contain credentials, query parameters, or fragments.
-```
-
-**Exit code `2`.** Remove everything after the host, such as `?x=1` or `#section`, and any
-`user:password@` part.
-
 ### `Could not connect to the Autoeval API`
 
 ```text
 Error: Could not connect to the Autoeval API.
 ```
 
-**Exit code `4`.** The origin is well formed but could not be reached. Check your network, then
-check the origin for a typo.
+**Exit code `4`.** Autoeval could not reach its fixed endpoint at `https://api.plumloom.ai`. Check
+your network, proxy, and firewall settings, then retry.
 
 ### `The CLI key format is invalid`
 
@@ -78,10 +36,6 @@ Error: No Autoeval CLI key is available. Run `autoeval login` first.
 
 **Exit code `3`.** Neither `AUTOEVAL_API_KEY` nor the OS credential store holds a key. Run
 `autoeval login`, or set `AUTOEVAL_API_KEY`.
-
-If you have already logged in, check whether `AUTOEVAL_API_BASE_URL` has changed. Stored keys are
-saved per API origin, so a key saved while pointing at one origin is not used for another. Log in
-again against the new origin.
 
 ### `The OS credential store is unavailable`
 

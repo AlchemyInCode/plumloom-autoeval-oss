@@ -10,9 +10,10 @@ authorization, entitlements, billing, provider configuration, and evaluation-ser
 
 ## Decision
 
-Autoeval communicates only with configured Autoeval API HTTPS origins and the existing `/api/v1`
-routes. Runtime endpoint construction is centralized and does not accept arbitrary paths. Autoeval
-contains no evaluation-service credential or direct evaluation-service transport.
+Autoeval communicates only with the fixed Autoeval API HTTPS endpoint at `https://api.plumloom.ai`
+and its existing `/api/v1` routes. Runtime endpoint construction is centralized and does not accept
+arbitrary origins or paths. Autoeval contains no evaluation-service credential or direct
+evaluation-service transport.
 
 ## Consequences
 

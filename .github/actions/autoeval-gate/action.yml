@@ -8,9 +8,6 @@ inputs:
   api-key:
     description: Plumloom CLI key (pl_sk_...). Pass it from a repository secret; it is never logged or placed on the command line.
     required: true
-  base-url:
-    description: Autoeval API origin (https, no path).
-    required: true
   min-overall:
     description: Minimum overall score.
     required: false
@@ -78,7 +75,6 @@ runs:
       working-directory: ${{ inputs.working-directory }}
       env:
         AUTOEVAL_API_KEY: ${{ inputs.api-key }}
-        AUTOEVAL_API_BASE_URL: ${{ inputs.base-url }}
         EVALUATION_ID: ${{ inputs.evaluation-id }}
         MIN_OVERALL: ${{ inputs.min-overall }}
         MIN_SCENARIO: ${{ inputs.min-scenario }}

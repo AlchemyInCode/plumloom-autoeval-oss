@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { loadConfiguration, parseApiBaseUrl } from '../src/config.js';
+import { AUTOEVAL_API_ORIGIN, loadConfiguration } from '../src/config.js';
 import { AutoevalApiClient } from '../src/api/api.js';
 import { ApiClient } from '../src/api/client.js';
 import { apiEndpoints } from '../src/api/endpoints.js';
@@ -604,18 +604,12 @@ describe('API endpoint contracts', () => {
     });
   });
 
-  it('requires a configured Autoeval API origin', () => {
-    expect(() => loadConfiguration({})).toThrow(
-      'AUTOEVAL_API_BASE_URL is not defined. Set it to the Autoeval API origin to continue.',
-    );
-    expect(() => loadConfiguration({ AUTOEVAL_API_BASE_URL: '   ' })).toThrow(
-      'AUTOEVAL_API_BASE_URL is not defined. Set it to the Autoeval API origin to continue.',
-    );
-  });
-
-  it('rejects insecure and non-origin Autoeval API base URLs', () => {
-    expect(() => parseApiBaseUrl('http://api.example.test')).toThrow('HTTPS');
-    expect(() => parseApiBaseUrl('https://api.example.test/path')).toThrow('origin');
-    expect(parseApiBaseUrl('http://localhost:8000').origin).toBe('http://localhost:8000');
+  it('uses the fixed hosted API origin and ignores the former environment override', () => {
+    vi.stubEnv('AUTOEVAL_API_BASE_URL', 'http://localhost:8000');
+    try {
+      expect(loadConfiguration().apiBaseUrl.href).toBe(`${AUTOEVAL_API_ORIGIN}/`);
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 });

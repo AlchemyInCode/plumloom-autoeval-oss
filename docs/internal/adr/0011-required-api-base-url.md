@@ -1,24 +1,28 @@
-# ADR 0011: Require an explicit public API base URL
+# ADR 0011: Use one fixed public API endpoint
 
 ## Status
 
 Accepted.
 
+Date: 2026-10-11.
+
 ## Context
 
-The public CLI exposed an internal backend name through its API-origin environment variable and
-silently used a compiled-in development origin when that variable was absent. That coupled public
-builds to one deployment and made an omitted configuration look valid.
+The public CLI originally required users and integrations to configure an API origin. Autoeval is
+one hosted service, so exposing endpoint selection added setup, documentation, and CI surface area
+without a supported public use case. It also let a misspelled or untrusted environment value
+redirect authenticated requests away from Plumloom.
 
 ## Decision
 
-Use `AUTOEVAL_API_BASE_URL` as the only public API-origin variable. Require a non-empty value at
-startup, validate that it is an HTTPS origin (with the existing localhost HTTP exception), and
-provide no compiled-in origin or compatibility alias. Keep the existing internal transport types
-and modules because this decision changes public configuration, not the backend boundary.
+The public CLI and MCP server always connect to `https://api.plumloom.ai`. They expose no API URL
+setting, environment variable, flag, manifest input, or compatibility alias. Existing internal
+transport and client injection remains available only to keep automated tests deterministic and
+network-free; it is not a public endpoint override.
 
 ## Consequences
 
-CLI, MCP, CI, and integration users must provide the Autoeval API origin explicitly. Missing or
-empty configuration fails before authentication or network access with an actionable error. This
-is a pre-launch breaking change: the previous environment-variable name is not supported.
+CLI, MCP, CI, and integration users configure credentials but not an endpoint. The smaller public
+configuration surface prevents environment drift and prevents users from redirecting CLI keys to
+another host. Contributors test network behavior with injected mock transports rather than by
+changing the public endpoint, and local backend development must use backend-specific tooling.

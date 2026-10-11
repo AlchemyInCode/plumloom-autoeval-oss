@@ -9,7 +9,6 @@
 #
 # Prerequisites:
 #   - Node.js 22 and the `autoeval` command on PATH
-#   - AUTOEVAL_API_BASE_URL set to the Autoeval API origin
 #   - `autoeval login`, or AUTOEVAL_API_KEY in the environment
 #   - JUDGE_MODEL_ID and PRIMARY_MODEL_ID from `autoeval models`
 #

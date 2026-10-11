@@ -33,7 +33,6 @@ first:
 
 ```bash
 unset AUTOEVAL_API_KEY
-export AUTOEVAL_API_BASE_URL=https://api.plumloom.ai
 export AUTOEVAL_WORKSPACE_ID=<workspace-id>
 export AUTOEVAL_JUDGE_MODEL_ID=<enabled-judge-model-id>
 

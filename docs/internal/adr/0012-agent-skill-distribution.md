@@ -52,8 +52,5 @@ manifest carries a credential. All manifests share one package name and one vers
   as not enabled and exited blocked (seen 2026-10-06 on the hosted service). The examples stay
   portable and the skill still stops on a failed `doctor`; the fix is in the CLI, not a skill-side
   exception. This touches `packages/cli/src/commands`, agreed in review on 2026-10-06.
-- The manifests set `AUTOEVAL_API_BASE_URL` to the hosted origin, `https://api.plumloom.ai`, so the
-  MCP server starts without extra setup. Confirmed in review on 2026-10-06: for people using the
-  skill, the public docs and the published product are the source of truth, and both use the hosted
-  origin. ADR 0011 still governs the CLI, which keeps no compiled-in origin. Users set the variable
-  themselves only to extend Autoeval or to target a different backend.
+- The manifests do not configure an API URL. Under ADR 0011, the CLI and MCP server connect only to
+  the fixed hosted endpoint at `https://api.plumloom.ai`.

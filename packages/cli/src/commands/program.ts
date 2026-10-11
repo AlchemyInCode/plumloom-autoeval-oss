@@ -151,7 +151,7 @@ export function createProgram(
       '',
       'Environment:',
       '  AUTOEVAL_API_KEY          CLI key used instead of the OS credential store',
-      '  AUTOEVAL_API_BASE_URL     required Autoeval API origin (https, no path)',
+      '  API endpoint              https://api.plumloom.ai (fixed; no configuration required)',
       '',
     ].join('\n'),
   );

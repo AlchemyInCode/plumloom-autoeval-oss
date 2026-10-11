@@ -9,10 +9,6 @@ const HINTS_BY_CODE: Readonly<Record<string, string>> = {
     'Run `autoeval login` (it will prompt for a key), pass `autoeval login --key <pl_sk_...>`, or set AUTOEVAL_API_KEY',
   INVALID_CLI_KEY_FORMAT:
     'Create a current CLI key at https://app.plumloom.ai (it starts with pl_sk_), then run `autoeval login` or `autoeval login --key <key>`',
-  MISSING_API_BASE_URL: 'Set AUTOEVAL_API_BASE_URL to the Autoeval API origin',
-  INVALID_BASE_URL: 'Set AUTOEVAL_API_BASE_URL to an https origin without a path or query',
-  INSECURE_BASE_URL: 'Use an https origin; http is allowed only for localhost',
-  INVALID_ENVIRONMENT: 'Check the Autoeval environment variables listed in .env.example',
   RUN_POLL_TIMEOUT:
     'Check progress later with `autoeval status <evaluation-id> <run-id>`; the run keeps going server-side',
   RESULT_POLL_TIMEOUT:
@@ -37,7 +33,7 @@ const HINTS_BY_KIND: Readonly<Partial<Record<AutoevalErrorKind, string>>> = {
   authentication: 'Run `autoeval login`, or set AUTOEVAL_API_KEY in your environment',
   authorization: 'Confirm your account has access to this workspace or evaluation',
   plan_restriction: 'This action needs a different Plumloom plan; contact your workspace owner',
-  network: 'Check your connection and AUTOEVAL_API_BASE_URL, then retry',
+  network: 'Check your connection, then retry',
   timeout: 'The request timed out; retry, or poll status separately for long runs',
   usage: 'Run the command with --help to see required options and examples',
   validation: 'Run the command with --help to see required options and examples',

@@ -35,15 +35,12 @@ Add one config row per MCP server to the profile's `cordis.patch.yml`
     command: node
     args: ['/absolute/path/to/autoeval/packages/cli/dist/mcp.js']
     env:
-      AUTOEVAL_API_BASE_URL: !!js process.env.AUTOEVAL_API_BASE_URL
       AUTOEVAL_API_KEY: !!js process.env.AUTOEVAL_API_KEY
     toolCallTimeoutMs: 120000
 ```
 
 Three details matter:
 
-- **The API origin must be passed explicitly.** Set `AUTOEVAL_API_BASE_URL` in the Harness host
-  environment; Autoeval has no built-in origin.
 - **The key must be re-injected explicitly.** For stdio servers the Harness starts the child from a
   scrubbed parent environment: ambient names matching `KEY|PASSWORD|SECRET|TOKEN` and `DSH_*` are
   dropped. `AUTOEVAL_API_KEY` therefore does not pass through implicitly. Never put a real key in a

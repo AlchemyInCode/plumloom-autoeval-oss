@@ -2,9 +2,9 @@
 
 Plumloom Autoeval is a TypeScript command-line client for managing and running Plumloom evaluations from a terminal or script. The deterministic commands cover authentication, workspaces, evaluations, account-enabled models, quality standards, input validation, configured runs, existing runs, status, and context-aware results.
 
-Autoeval uses the configured API origin for authenticated evaluation and account requests. The CLI
-does not accept provider API keys, browser sessions, or evaluation-service credentials, and it does
-not call model providers directly.
+Autoeval uses its fixed Plumloom API endpoint for authenticated evaluation and account requests.
+The CLI does not accept provider API keys, browser sessions, or evaluation-service credentials,
+and it does not call model providers directly.
 
 ## Setup
 
@@ -18,11 +18,7 @@ Requirements:
   to save your key locally. With `AUTOEVAL_API_KEY` set, Autoeval runs without one, which is the
   normal case in CI and other headless environments.
 
-Configure the API origin first. Every command requires it, including `--help`:
-
-```bash
-export AUTOEVAL_API_BASE_URL="https://api.plumloom.ai"
-```
+Autoeval connects to [https://api.plumloom.ai](https://api.plumloom.ai) automatically. No API URL configuration is required.
 
 Install and build:
 
@@ -46,9 +42,9 @@ Every command except `login` looks for a key in this order, and never prompts:
 masked prompt in an interactive terminal.
 
 `login` validates the key with Plumloom before storing it, and stores only a key that came from
-`--key` or the prompt. An environment-provided key is never persisted. Stored keys are saved per API
-origin. `logout` removes only the local credential-store entry; it does not revoke the key or unset
-`AUTOEVAL_API_KEY`.
+`--key` or the prompt. An environment-provided key is never persisted. Stored keys are saved for
+the Plumloom API service. `logout` removes only the local credential-store entry; it does not revoke
+the key or unset `AUTOEVAL_API_KEY`.
 
 ```bash
 autoeval login
@@ -218,12 +214,9 @@ autoeval --json --debug results <evaluation-id> <run-id>
 
 ## Environment configuration
 
-| Variable                | Purpose                               | Default  |
-| ----------------------- | ------------------------------------- | -------- |
-| `AUTOEVAL_API_KEY`      | Non-persisted Plumloom CLI credential | unset    |
-| `AUTOEVAL_API_BASE_URL` | Autoeval API origin                   | required |
-
-The Autoeval API URL must use HTTPS. Plain HTTP is accepted only for an explicit localhost development origin. Paths, credentials, query strings, and fragments are rejected.
+| Variable           | Purpose                               | Default |
+| ------------------ | ------------------------------------- | ------- |
+| `AUTOEVAL_API_KEY` | Non-persisted Plumloom CLI credential | unset   |
 
 ## MCP and release gates
 

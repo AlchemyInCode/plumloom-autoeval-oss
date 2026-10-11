@@ -241,7 +241,7 @@ describe('authentication', () => {
   it('never prompts in non-interactive mode', async () => {
     const prompt = promptWith(VALID_KEY);
     const executor = new RuntimeCommandExecutor({
-      configuration: loadConfiguration({ AUTOEVAL_API_BASE_URL: 'https://api.example.test' }),
+      configuration: loadConfiguration(),
       environment: {},
       store: storeWith(),
       prompt,

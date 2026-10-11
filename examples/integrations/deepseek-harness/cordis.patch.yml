@@ -22,7 +22,6 @@
     command: node
     args: ['/absolute/path/to/autoeval/packages/cli/dist/mcp.js']
     env:
-      AUTOEVAL_API_BASE_URL: !!js process.env.AUTOEVAL_API_BASE_URL
       AUTOEVAL_API_KEY: !!js process.env.AUTOEVAL_API_KEY
     # Submitting a run returns immediately, but reading results can exceed the
     # 60s default.

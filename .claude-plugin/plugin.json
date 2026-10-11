@@ -12,10 +12,7 @@
   "keywords": ["autoeval", "plumloom", "evals", "evaluation", "release-gate", "ci", "mcp"],
   "mcpServers": {
     "plumloom-autoeval": {
-      "command": "autoeval-mcp",
-      "env": {
-        "AUTOEVAL_API_BASE_URL": "https://api.plumloom.ai"
-      }
+      "command": "autoeval-mcp"
     }
   }
 }

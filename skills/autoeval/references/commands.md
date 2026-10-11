@@ -47,4 +47,4 @@ you.
 ## Authentication
 
 `autoeval login` is interactive and is for the user to run. Credentials resolve from
-`AUTOEVAL_API_KEY`, then the OS credential store. `AUTOEVAL_API_BASE_URL` is always required.
+`AUTOEVAL_API_KEY`, then the OS credential store. The API endpoint is fixed and needs no setup.

@@ -90,10 +90,9 @@ to change a verdict, and it reports `INCONCLUSIVE` and `ERROR` as what they are,
 
 ## Network
 
-The MCP server sends its requests to the origin in `AUTOEVAL_API_BASE_URL`. That value must be an
-HTTPS origin (plain HTTP is accepted only for localhost), and the server rejects redirects and
-applies response-size limits and request timeouts. It does not run shell commands or call model
-providers directly.
+The MCP server sends requests only to Autoeval's fixed HTTPS endpoint at `https://api.plumloom.ai`.
+It rejects redirects and applies response-size limits and request timeouts. It does not run shell
+commands or call model providers directly.
 
 The skill fetches no outside documents. It reads only its two bundled reference files, and the
 package test fails if `SKILL.md` links to anything outside the skill folder.
@@ -104,7 +103,7 @@ package test fails if `SKILL.md` links to anything outside the skill folder.
 
 A skill that looks legitimate but carries a hidden payload, in code or in its instructions.
 
-- In this package: every file is plain text you can read in a few minutes (226 lines across the
+- In this package: every file is plain text you can read in a few minutes (225 lines across the
   skill and its two references). There are no scripts or binaries, and the only prerequisite is the
   public `@plumloom/cli` package from npm. The skill never asks the agent to write `AGENTS.md`,
   memory or identity files.
@@ -152,8 +151,8 @@ Names, descriptions or manifests that impersonate, understate permissions, or ex
 
 Instructions pulled from outside documents that can change after review.
 
-- In this package: the skill reads only its bundled references, and the test enforces that. The one
-  URL in the skill is the API origin, a configuration value, not something the agent reads.
+- In this package: the skill reads only its bundled references, and the test enforces that. The
+  Plumloom API URL is a fixed service endpoint, not a source of instructions the agent reads.
 - Evaluation content is treated as data. Transcripts, traces, model outputs and judge reasoning can
   contain instructions, and the skill tells the agent not to follow them.
 

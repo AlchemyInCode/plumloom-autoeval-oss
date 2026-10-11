@@ -1,6 +1,7 @@
 import type { Command } from 'commander';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { AUTOEVAL_API_ORIGIN } from '../src/config.js';
 import { CLI_VERSION } from '../src/version.js';
 import { runCli, shouldRenderCliSplash, type CliSplashIo } from '../src/run.js';
 
@@ -25,10 +26,6 @@ function setIsTTY(stream: object, value: boolean): () => void {
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllEnvs();
-});
-
-beforeEach(() => {
-  vi.stubEnv('AUTOEVAL_API_BASE_URL', 'https://api.example.test');
 });
 
 describe('shouldRenderCliSplash', () => {
@@ -82,26 +79,24 @@ describe('shouldRenderCliSplash', () => {
 });
 
 describe('runCli splash integration', () => {
-  it('reports a missing API base URL as a user-facing configuration error', async () => {
-    vi.stubEnv('AUTOEVAL_API_BASE_URL', '');
+  it('ignores the former API base URL environment override', async () => {
+    vi.stubEnv('AUTOEVAL_API_BASE_URL', 'http://localhost:8000');
     vi.stubEnv('CI', 'true');
-    const stderrWrites: string[] = [];
-    vi.spyOn(process.stderr, 'write').mockImplementation((chunk: unknown) => {
-      stderrWrites.push(String(chunk));
-      return true;
+    let configuredOrigin = '';
+
+    await runCli({
+      argv: ['node', 'autoeval', 'noop'],
+      extend: ({ configuration }) => {
+        configuredOrigin = configuration.apiBaseUrl.origin;
+        return [
+          (program) => {
+            program.command('noop').action(() => undefined);
+          },
+        ];
+      },
     });
 
-    const originalExitCode = process.exitCode;
-    try {
-      await runCli({ argv: ['node', 'autoeval', 'whoami'] });
-      expect(process.exitCode).toBe(2);
-    } finally {
-      process.exitCode = originalExitCode;
-    }
-
-    expect(stderrWrites.join('')).toContain(
-      'AUTOEVAL_API_BASE_URL is not defined. Set it to the Autoeval API origin to continue.',
-    );
+    expect(configuredOrigin).toBe(AUTOEVAL_API_ORIGIN);
   });
 
   it('does not print the splash before a subcommand', async () => {
