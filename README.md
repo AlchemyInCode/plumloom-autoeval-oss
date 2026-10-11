@@ -1,4 +1,4 @@
-![architecture](https://github.com/user-attachments/assets/6b10f903-03df-4048-8ac6-f69482601bfd)# Plumloom Autoeval
+# Plumloom Autoeval
 
 **The release-confidence layer for AI-agent changes.**
 
