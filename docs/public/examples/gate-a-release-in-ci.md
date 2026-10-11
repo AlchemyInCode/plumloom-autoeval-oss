@@ -5,8 +5,9 @@ configure it as a required check. You have a suite manifest with release criteri
 check that catches setup errors in seconds, and a CI job you can copy.
 
 **Needs:** one or more evaluation files that pass `autoeval eval validate`
-([Example 2](./write-and-run-your-own-eval.md)), a workspace ID, enabled judge- and primary-model
-IDs, a CLI key, and the API origin.
+([Example 2](./write-and-run-your-own-eval.md)), a workspace ID, an enabled judge-model ID, a CLI
+key, and the API origin. A scenario evaluation also needs an enabled primary-model ID when its
+committed primary model ID must be overridden.
 
 ---
 
@@ -65,9 +66,12 @@ blocks the release.
 autoeval doctor \
   --manifest evals/autoeval.suite.yaml \
   --workspace <workspace-id> \
-  --judge-model-id <model-uuid> \
-  --primary-model-id <model-uuid>
+  --judge-model-id <model-uuid>
 ```
+
+For a suite containing scenario evaluations with placeholder or otherwise unsuitable primary-model
+IDs, append `--primary-model-id <model-uuid>`. Conversation and agent-trace evaluations have no
+primary-model role and do not need that option.
 
 `doctor` is read-only and starts no run. It checks your key, your access to the workspace, your
 enabled models, and the manifest and its evaluation files. It reports every problem in one pass. If
@@ -123,9 +127,11 @@ Hint: Run the command with --help to see required options and examples
 autoeval suite gate \
   --manifest evals/autoeval.suite.yaml \
   --workspace <workspace-id> \
-  --judge-model-id <model-uuid> \
-  --primary-model-id <model-uuid>
+  --judge-model-id <model-uuid>
 ```
+
+As with `doctor`, add `--primary-model-id <model-uuid>` only when a scenario evaluation needs a
+runtime primary-model override.
 
 The gate runs every evaluation in the manifest, reads the results, and gives each evaluation a
 verdict. The suite verdict is the worst of them, in this order: `ERROR`, then `FAIL`, then
@@ -185,9 +191,38 @@ Hint: Inspect the failing metric with `autoeval results <evaluation-id> <run-id>
 
 ## 4. Add the CI job
 
-Commit the suite manifest and every evaluation, artifact, and reference file it names. Paths resolve
-relative to the file that contains them. The examples in this repository use synthetic workspace
-and model IDs, so copied examples need runtime overrides for your real account.
+Copy `.github/workflows/autoeval-suite-gate.yml.example` to
+`.github/workflows/autoeval-suite-gate.yml` in the adopter repository. The workflow intentionally
+reads `evals/autoeval.suite.yaml`. Commit that manifest and every evaluation, artifact, and reference
+file it names. Manifest paths resolve relative to `evals/`, and paths inside evaluation files resolve
+relative to those files.
+
+To adopt one of this repository's agent-trace demonstrations, copy exactly one matching pair:
+
+| Verdict | Source manifest                         | Adopter destination         | Source evaluation                              | Adopter destination                   |
+| ------- | --------------------------------------- | --------------------------- | ---------------------------------------------- | ------------------------------------- |
+| PASS    | `examples/ci-gate-demo/pass.suite.yaml` | `evals/autoeval.suite.yaml` | `examples/evals/agent-trace-basic.json`        | `evals/agent-trace-basic.json`        |
+| FAIL    | `examples/ci-gate-demo/fail.suite.yaml` | `evals/autoeval.suite.yaml` | `examples/evals/agent-trace-bad-decision.json` | `evals/agent-trace-bad-decision.json` |
+
+Because the manifest moves from `examples/ci-gate-demo/` to `evals/`, change its single eval entry
+from `../evals/<fixture>.json` to `./<fixture>.json`. The PASS copy must therefore end with:
+
+```yaml
+evals:
+  - ./agent-trace-basic.json
+```
+
+The FAIL copy uses `./agent-trace-bad-decision.json` instead. The resulting adopter layout is:
+
+```text
+evals/
+├── autoeval.suite.yaml
+└── agent-trace-basic.json          # PASS, or agent-trace-bad-decision.json for FAIL
+```
+
+For a different suite, keep the generic `evals/autoeval.suite.yaml` destination and make every
+referenced path correct relative to its copied location. The public examples use synthetic
+workspace and model IDs, so copied examples need runtime overrides for a real account.
 
 Configure these repository values:
 
@@ -195,8 +230,9 @@ Configure these repository values:
 - **Variable** `AUTOEVAL_API_BASE_URL`: the Autoeval API origin, including `https` and no path.
 - **Variable** `AUTOEVAL_WORKSPACE_ID`: an accessible ID from `autoeval workspace list`.
 - **Variable** `AUTOEVAL_JUDGE_MODEL_ID`: an enabled ID from `autoeval models`.
-- **Variable** `AUTOEVAL_PRIMARY_MODEL_ID`: an enabled ID from `autoeval models`, used by scenario
-  evaluations.
+- **Optional variable** `AUTOEVAL_PRIMARY_MODEL_ID`: an enabled ID from `autoeval models`. Configure
+  it only when a scenario evaluation's primary model must be overridden. Omit it for conversation-
+  or agent-trace-only suites.
 
 The CLI reads the key from the environment, so it never appears on the command line or on disk. The
 workflow passes the account-specific IDs as command-line overrides, so real IDs do not need to
@@ -239,22 +275,38 @@ jobs:
           test -n "$AUTOEVAL_API_BASE_URL"
           test -n "$AUTOEVAL_WORKSPACE_ID"
           test -n "$AUTOEVAL_JUDGE_MODEL_ID"
-          test -n "$AUTOEVAL_PRIMARY_MODEL_ID"
       - name: Pre-flight
-        run: >-
-          autoeval doctor
-          --manifest evals/autoeval.suite.yaml
-          --workspace "$AUTOEVAL_WORKSPACE_ID"
-          --judge-model-id "$AUTOEVAL_JUDGE_MODEL_ID"
-          --primary-model-id "$AUTOEVAL_PRIMARY_MODEL_ID"
+        shell: bash
+        run: |
+          set -euo pipefail
+          arguments=(
+            --manifest evals/autoeval.suite.yaml
+            --workspace "$AUTOEVAL_WORKSPACE_ID"
+            --judge-model-id "$AUTOEVAL_JUDGE_MODEL_ID"
+          )
+          if [[ -n "${AUTOEVAL_PRIMARY_MODEL_ID:-}" ]]; then
+            arguments+=(--primary-model-id "$AUTOEVAL_PRIMARY_MODEL_ID")
+          fi
+          autoeval doctor "${arguments[@]}"
       - name: Release gate
-        run: >-
-          autoeval suite gate
-          --manifest evals/autoeval.suite.yaml
-          --workspace "$AUTOEVAL_WORKSPACE_ID"
-          --judge-model-id "$AUTOEVAL_JUDGE_MODEL_ID"
-          --primary-model-id "$AUTOEVAL_PRIMARY_MODEL_ID"
+        shell: bash
+        run: |
+          set -euo pipefail
+          arguments=(
+            --manifest evals/autoeval.suite.yaml
+            --workspace "$AUTOEVAL_WORKSPACE_ID"
+            --judge-model-id "$AUTOEVAL_JUDGE_MODEL_ID"
+          )
+          if [[ -n "${AUTOEVAL_PRIMARY_MODEL_ID:-}" ]]; then
+            arguments+=(--primary-model-id "$AUTOEVAL_PRIMARY_MODEL_ID")
+          fi
+          autoeval suite gate "${arguments[@]}"
 ```
+
+An unset GitHub variable expands to an empty string. The Bash array adds the primary-model flag only
+for a non-empty value, matching the CLI's optional `--primary-model-id` behavior. A scenario fixture
+that still contains a synthetic primary-model ID will then fail during pre-flight with an actionable
+message; configure the variable for that case.
 
 The CLI version is pinned on purpose. Pinning prevents CLI-version drift and makes the execution
 environment more reproducible, but evaluation results can still vary because model and judge

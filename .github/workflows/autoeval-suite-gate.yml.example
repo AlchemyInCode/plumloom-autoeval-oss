@@ -4,19 +4,25 @@
 #   - variable AUTOEVAL_API_BASE_URL    the Autoeval API origin (https, no path)
 #   - variable AUTOEVAL_WORKSPACE_ID    the workspace returned by `autoeval workspace list`
 #   - variable AUTOEVAL_JUDGE_MODEL_ID  an enabled model returned by `autoeval models`
-#   - variable AUTOEVAL_PRIMARY_MODEL_ID an enabled model used by scenario evaluations
+#   - optional variable AUTOEVAL_PRIMARY_MODEL_ID  an enabled model used to override
+#     the primary model in scenario evaluations; omit it for conversation- or
+#     agent-trace-only suites
 # The CLI reads the key from the environment, so it never appears on the
 # command line or on disk. The runtime ID overrides keep real account IDs
 # out of committed example files.
 #
-# Before enabling this workflow, commit evals/autoeval.suite.yaml and every eval,
-# artifact, and reference file it names. Paths resolve relative to the manifest
-# or eval file that contains them. As a starting point, copy examples/suite/
-# autoeval.suite.yaml and the examples/smoke/fixtures files it references, then
-# adjust those paths for your repository. Those public examples contain
-# synthetic IDs; the runtime overrides below replace the manifest workspace
-# and every evaluation's judge model ID, plus the primary model used by any
-# scenario evaluations.
+# This workflow always reads evals/autoeval.suite.yaml. Commit that manifest and
+# every eval, artifact, and reference file it names. Paths in the manifest are
+# relative to evals/. For the agent-trace demo, copy one matching pair:
+#   PASS: examples/ci-gate-demo/pass.suite.yaml -> evals/autoeval.suite.yaml
+#         examples/evals/agent-trace-basic.json -> evals/agent-trace-basic.json
+#   FAIL: examples/ci-gate-demo/fail.suite.yaml -> evals/autoeval.suite.yaml
+#         examples/evals/agent-trace-bad-decision.json ->
+#           evals/agent-trace-bad-decision.json
+# In the copied manifest, change its eval entry from ../evals/<fixture>.json to
+# ./<fixture>.json. The runtime overrides below replace the synthetic workspace
+# and judge model IDs. Set AUTOEVAL_PRIMARY_MODEL_ID only when a scenario eval's
+# committed primary model ID also needs to be overridden.
 name: Autoeval suite gate
 
 on:
@@ -50,18 +56,29 @@ jobs:
           test -n "$AUTOEVAL_API_BASE_URL"
           test -n "$AUTOEVAL_WORKSPACE_ID"
           test -n "$AUTOEVAL_JUDGE_MODEL_ID"
-          test -n "$AUTOEVAL_PRIMARY_MODEL_ID"
       - name: Pre-flight
-        run: >-
-          autoeval doctor
-          --manifest evals/autoeval.suite.yaml
-          --workspace "$AUTOEVAL_WORKSPACE_ID"
-          --judge-model-id "$AUTOEVAL_JUDGE_MODEL_ID"
-          --primary-model-id "$AUTOEVAL_PRIMARY_MODEL_ID"
+        shell: bash
+        run: |
+          set -euo pipefail
+          arguments=(
+            --manifest evals/autoeval.suite.yaml
+            --workspace "$AUTOEVAL_WORKSPACE_ID"
+            --judge-model-id "$AUTOEVAL_JUDGE_MODEL_ID"
+          )
+          if [[ -n "${AUTOEVAL_PRIMARY_MODEL_ID:-}" ]]; then
+            arguments+=(--primary-model-id "$AUTOEVAL_PRIMARY_MODEL_ID")
+          fi
+          autoeval doctor "${arguments[@]}"
       - name: Release gate
-        run: >-
-          autoeval suite gate
-          --manifest evals/autoeval.suite.yaml
-          --workspace "$AUTOEVAL_WORKSPACE_ID"
-          --judge-model-id "$AUTOEVAL_JUDGE_MODEL_ID"
-          --primary-model-id "$AUTOEVAL_PRIMARY_MODEL_ID"
+        shell: bash
+        run: |
+          set -euo pipefail
+          arguments=(
+            --manifest evals/autoeval.suite.yaml
+            --workspace "$AUTOEVAL_WORKSPACE_ID"
+            --judge-model-id "$AUTOEVAL_JUDGE_MODEL_ID"
+          )
+          if [[ -n "${AUTOEVAL_PRIMARY_MODEL_ID:-}" ]]; then
+            arguments+=(--primary-model-id "$AUTOEVAL_PRIMARY_MODEL_ID")
+          fi
+          autoeval suite gate "${arguments[@]}"
