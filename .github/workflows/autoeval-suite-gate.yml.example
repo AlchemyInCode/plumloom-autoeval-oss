@@ -1,0 +1,42 @@
+# Copy to .github/workflows/autoeval-suite-gate.yml in your own repo and remove
+# the .example extension. Then set two repository values:
+#   - secret   AUTOEVAL_API_KEY       your Plumloom CLI key (pl_sk_...)
+#   - variable AUTOEVAL_API_BASE_URL  the Autoeval API origin (https, no path)
+# The CLI reads both from the environment, so the key never appears on the
+# command line or on disk.
+#
+# Before enabling this workflow, commit evals/autoeval.suite.yaml and every eval,
+# artifact, and reference file it names. Paths resolve relative to the manifest
+# or eval file that contains them. As a starting point, copy examples/suite/
+# autoeval.suite.yaml and the examples/smoke/fixtures files it references, then
+# adjust those paths for your repository. Those public examples contain
+# synthetic IDs; in your copies, use `autoeval workspace list` for the manifest
+# workspace and `autoeval models` for eval model UUIDs.
+name: Autoeval suite gate
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    # Pull requests from forks do not receive repository secrets.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    env:
+      AUTOEVAL_API_KEY: ${{ secrets.AUTOEVAL_API_KEY }}
+      AUTOEVAL_API_BASE_URL: ${{ vars.AUTOEVAL_API_BASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # Pinning prevents CLI-version drift and improves reproducibility, but model
+      # and judge behavior can still make evaluation results vary between runs.
+      - run: npm install --global @plumloom/cli@0.1.3
+      - name: Pre-flight
+        run: autoeval doctor --manifest evals/autoeval.suite.yaml
+      - name: Release gate
+        run: autoeval suite gate --manifest evals/autoeval.suite.yaml
