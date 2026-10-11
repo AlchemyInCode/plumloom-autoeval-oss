@@ -8,68 +8,7 @@ LLM outputs and judge scores can vary between runs. For scenario evaluations, Au
 
 ## Architecture
 
-![Uploading architecture.<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1760 600" width="1760" height="600" role="img" aria-label="How Autoeval works: a developer or agent writes eval files and a suite manifest; Autoeval (CLI or MCP) submits a run to the Plumloom backend, which scores it; scored results feed a release gate whose exit code is enforced in CI.">
-<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1,1 L9,5 L1,9" fill="none" stroke="context-stroke" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
-<rect x="10" y="10" width="1740" height="580" rx="20" fill="#F7F7F5" stroke="#E3E3DD" stroke-width="1.5"/>
-<text x="48" y="58" font-family="system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif" font-size="15" font-weight="700" letter-spacing="3" fill="#136D8C">HOW AUTOEVAL WORKS</text>
-<line x1="266" y1="172" x2="412" y2="172" stroke="#8A8A82" stroke-width="1.7" marker-end="url(#ah)"/>
-<line x1="670" y1="172" x2="822" y2="172" stroke="#8A8A82" stroke-width="1.7" marker-end="url(#ah)"/>
-<line x1="1040" y1="152" x2="1432" y2="152" stroke="#8A8A82" stroke-width="1.7" marker-end="url(#ah)"/>
-<line x1="1440" y1="194" x2="1048" y2="194" stroke="#8A8A82" stroke-width="1.7" marker-end="url(#ah)"/>
-<line x1="935" y1="224" x2="935" y2="402" stroke="#8A8A82" stroke-width="1.7" marker-end="url(#ah)"/>
-<line x1="1040" y1="462" x2="1132" y2="462" stroke="#8A8A82" stroke-width="1.7" marker-end="url(#ah)"/>
-<line x1="1396" y1="462" x2="1478" y2="462" stroke="#8A8A82" stroke-width="1.7" marker-end="url(#ah)"/>
-<text x="339" y="160" text-anchor="middle" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace" font-size="13" fill="#6E6E68">writes</text>
-<text x="746" y="160" text-anchor="middle" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace" font-size="13" fill="#6E6E68">runs</text>
-<text x="1236" y="140" text-anchor="middle" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace" font-size="13" fill="#6E6E68">submits run</text>
-<text x="1244" y="212" text-anchor="middle" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace" font-size="13" fill="#6E6E68">returns results</text>
-<text x="1086" y="450" text-anchor="middle" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace" font-size="13" fill="#6E6E68">thresholds</text>
-<text x="1437" y="450" text-anchor="middle" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace" font-size="13" fill="#6E6E68">exit code</text>
-<rect x="56" y="120" width="210" height="104" rx="12" fill="#ECECE7" stroke="#C9C9C1" stroke-width="1.5"/>
-<g transform="translate(125.0,138.0) scale(1.1667)" fill="none" stroke="#44443F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></g>
-<g transform="translate(169.0,138.0) scale(1.1667)" fill="none" stroke="#44443F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></g>
-<text x="161" y="188" text-anchor="middle" font-family="system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif" font-size="16" font-weight="600" fill="#44443F">Developer or agent</text>
-<text x="161" y="208" text-anchor="middle" font-family="system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif" font-size="12.5" fill="#6E6E68">you · Claude Code · Codex</text>
-<circle cx="78" cy="142" r="14" fill="#136D8C"/>
-<text x="78" y="147" text-anchor="middle" font-family="system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif" font-size="15" font-weight="700" fill="#FFFFFF">1</text>
-<rect x="420" y="120" width="250" height="104" rx="12" fill="#ECECE7" stroke="#C9C9C1" stroke-width="1.5"/>
-<text x="545" y="168" text-anchor="middle" font-family="system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif" font-size="17" font-weight="600" fill="#44443F">Eval files + manifest</text>
-<text x="545" y="192" text-anchor="middle" font-family="system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif" font-size="13" fill="#6E6E68">JSON + YAML, in your repo</text>
-<circle cx="442" cy="142" r="14" fill="#136D8C"/>
-<text x="442" y="147" text-anchor="middle" font-family="system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif" font-size="15" font-weight="700" fill="#FFFFFF">2</text>
-<rect x="830" y="120" width="210" height="104" rx="12" fill="#E1EDF1" stroke="#136D8C" stroke-width="1.5"/>
-<text x="935" y="168" text-anchor="middle" font-family="system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif" font-size="17" font-weight="600" fill="#0E5468">Autoeval</text>
-<text x="935" y="192" text-anchor="middle" font-family="system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif" font-size="13" fill="#2A7590">CLI · MCP server</text>
-<circle cx="852" cy="142" r="14" fill="#136D8C"/>
-<text x="852" y="147" text-anchor="middle" font-family="system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif" font-size="15" font-weight="700" fill="#FFFFFF">3</text>
-<rect x="1440" y="120" width="252" height="104" rx="12" fill="#F1E5EE" stroke="#8C3074" stroke-width="1.5"/>
-<text x="1566" y="168" text-anchor="middle" font-family="system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif" font-size="17" font-weight="600" fill="#6E265A">Plumloom backend</text>
-<text x="1566" y="192" text-anchor="middle" font-family="system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif" font-size="13" fill="#9A4A82">runs &amp; scores the eval</text>
-<circle cx="1462" cy="142" r="14" fill="#136D8C"/>
-<text x="1462" y="147" text-anchor="middle" font-family="system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif" font-size="15" font-weight="700" fill="#FFFFFF">4</text>
-<rect x="830" y="410" width="210" height="104" rx="12" fill="#ECECE7" stroke="#C9C9C1" stroke-width="1.5"/>
-<text x="935" y="458" text-anchor="middle" font-family="system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif" font-size="17" font-weight="600" fill="#44443F">Scored results</text>
-<text x="935" y="482" text-anchor="middle" font-family="system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif" font-size="13" fill="#6E6E68">+ reliability evidence</text>
-<circle cx="852" cy="432" r="14" fill="#136D8C"/>
-<text x="852" y="437" text-anchor="middle" font-family="system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif" font-size="15" font-weight="700" fill="#FFFFFF">5</text>
-<rect x="1140" y="410" width="256" height="104" rx="12" fill="#EEF0DC" stroke="#6B740F" stroke-width="1.5"/>
-<text x="1268" y="458" text-anchor="middle" font-family="system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif" font-size="17" font-weight="600" fill="#51580B">Release gate</text>
-<text x="1268" y="482" text-anchor="middle" font-family="system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif" font-size="13" fill="#7E8718">PASS · FAIL · INCONCLUSIVE</text>
-<circle cx="1162" cy="432" r="14" fill="#136D8C"/>
-<text x="1162" y="437" text-anchor="middle" font-family="system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif" font-size="15" font-weight="700" fill="#FFFFFF">6</text>
-<rect x="1486" y="410" width="206" height="104" rx="12" fill="#E1EDF1" stroke="#136D8C" stroke-width="1.5"/>
-<text x="1589" y="458" text-anchor="middle" font-family="system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif" font-size="17" font-weight="600" fill="#0E5468">CI / terminal</text>
-<text x="1589" y="482" text-anchor="middle" font-family="system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif" font-size="13" fill="#2A7590">exit code blocks merge</text>
-<circle cx="1508" cy="432" r="14" fill="#136D8C"/>
-<text x="1508" y="437" text-anchor="middle" font-family="system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif" font-size="15" font-weight="700" fill="#FFFFFF">7</text>
-<circle cx="56" cy="552" r="7" fill="#136D8C"/>
-<text x="72" y="557" font-family="system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif" font-size="13" fill="#6E6E68">Autoeval — you run it</text>
-<circle cx="360" cy="552" r="7" fill="#8C3074"/>
-<text x="376" y="557" font-family="system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif" font-size="13" fill="#6E6E68">Plumloom — hosted</text>
-<circle cx="640" cy="552" r="7" fill="#6B740F"/>
-<text x="656" y="557" font-family="system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif" font-size="13" fill="#6E6E68">Gate → CI exit code</text>
-</svg>svg…]()
-
+<img width="1766" height="606" alt="image" src="https://github.com/user-attachments/assets/4dfac43a-3934-463d-a8d8-4516fd625004" />
 
 Eval files and the suite manifest are the only inputs you author and commit; Autoeval submits runs to Plumloom, reads back scored results, and the gate turns them into a CI pass/fail.
 
