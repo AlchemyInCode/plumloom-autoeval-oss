@@ -29,8 +29,8 @@
   },
   "type": "module",
   "bin": {
-    "autoeval": "dist/cli.js",
-    "autoeval-mcp": "dist/mcp.js"
+    "autoeval": "./dist/cli.js",
+    "autoeval-mcp": "./dist/mcp.js"
   },
   "exports": {
     ".": {
