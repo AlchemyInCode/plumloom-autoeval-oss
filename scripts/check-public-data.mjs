@@ -54,11 +54,19 @@ const EXCLUDED_PATHS = new Set([
 ]);
 
 /**
- * Temporary, narrowly scoped exceptions for deferred OSS test-data sanitization.
+ * Narrowly scoped exceptions for intentional public metadata and deferred OSS test data.
  * Each exception requires the exact file, scanner rule, matched value, and
  * occurrence count so any additional or changed finding remains an error.
  */
-const TEMPORARY_DEFERRED_TEST_FINDINGS = new Map([
+const APPROVED_PUBLIC_FINDINGS = new Map([
+  [
+    'README.md',
+    new Map([
+      ['non-synthetic UUID', new Map([['4dfac43a-3934-463d-a8d8-4516fd625004', 1]])],
+      ['non-reserved email domain', new Map([['support@plumloom.ai', 2]])],
+    ]),
+  ],
+  ['plugin.json', new Map([['non-reserved email domain', new Map([['support@plumloom.ai', 1]])]])],
   [
     'packages/cli/tests/auth.test.ts',
     new Map([
@@ -189,16 +197,16 @@ function matchedValue(match) {
   return quotedValue ?? match;
 }
 
-function isTemporarilyDeferredFinding(file, rule, match, deferredFindingCounts) {
+function isApprovedFinding(file, rule, match, approvedFindingCounts) {
   const value = matchedValue(match);
-  const allowedCount = TEMPORARY_DEFERRED_TEST_FINDINGS.get(file)?.get(rule)?.get(value) ?? 0;
+  const allowedCount = APPROVED_PUBLIC_FINDINGS.get(file)?.get(rule)?.get(value) ?? 0;
   if (allowedCount === 0) return false;
 
   const key = `${file}\0${rule}\0${value}`;
-  const seenCount = deferredFindingCounts.get(key) ?? 0;
+  const seenCount = approvedFindingCounts.get(key) ?? 0;
   if (seenCount >= allowedCount) return false;
 
-  deferredFindingCounts.set(key, seenCount + 1);
+  approvedFindingCounts.set(key, seenCount + 1);
   return true;
 }
 
@@ -213,7 +221,7 @@ export function scanPublicData(root) {
     ...[...PUBLIC_DATA_DIRS, ...PUBLIC_DOC_DIRS].flatMap((dir) => listFiles(root, dir)),
   ];
   const violations = [];
-  const deferredFindingCounts = new Map();
+  const approvedFindingCounts = new Map();
 
   for (const file of files) {
     const contents = readFileSync(join(root, file), 'utf8');
@@ -221,10 +229,7 @@ export function scanPublicData(root) {
 
     for (const match of contents.matchAll(UUID)) {
       if (isSyntheticUuid(match[0])) continue;
-      if (
-        isTemporarilyDeferredFinding(posix, 'non-synthetic UUID', match[0], deferredFindingCounts)
-      )
-        continue;
+      if (isApprovedFinding(posix, 'non-synthetic UUID', match[0], approvedFindingCounts)) continue;
       violations.push({
         file: posix,
         line: lineOf(contents, match.index ?? 0),
@@ -234,14 +239,7 @@ export function scanPublicData(root) {
 
     for (const match of contents.matchAll(EMAIL)) {
       if (RESERVED_EMAIL_DOMAIN.test(match[0])) continue;
-      if (
-        isTemporarilyDeferredFinding(
-          posix,
-          'non-reserved email domain',
-          match[0],
-          deferredFindingCounts,
-        )
-      )
+      if (isApprovedFinding(posix, 'non-reserved email domain', match[0], approvedFindingCounts))
         continue;
       violations.push({
         file: posix,
@@ -253,7 +251,7 @@ export function scanPublicData(root) {
     for (const { name, pattern, allow } of CREDENTIAL_PATTERNS) {
       for (const match of contents.matchAll(pattern)) {
         if (allow?.test(match[0])) continue;
-        if (isTemporarilyDeferredFinding(posix, name, match[0], deferredFindingCounts)) continue;
+        if (isApprovedFinding(posix, name, match[0], approvedFindingCounts)) continue;
         violations.push({
           file: posix,
           line: lineOf(contents, match.index ?? 0),

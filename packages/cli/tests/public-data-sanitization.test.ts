@@ -82,7 +82,7 @@ describe('public data sanitization', () => {
     );
   });
 
-  it('limits deferred test-data exceptions to an exact file, rule, and value', () => {
+  it('limits approved findings to an exact file, rule, value, and occurrence count', () => {
     const root = mkdtempSync(join(tmpdir(), 'public-data-deferred-'));
     mkdirSync(join(root, 'packages/cli/tests'), { recursive: true });
     writeFileSync(
@@ -105,6 +105,22 @@ describe('public data sanitization', () => {
         rule: 'Plumloom CLI key',
       }),
     );
+  });
+
+  it('allows only the expected occurrences of approved public publisher metadata', () => {
+    const root = mkdtempSync(join(tmpdir(), 'public-data-metadata-'));
+    writeFileSync(
+      join(root, 'README.md'),
+      'Image 4dfac43a-3934-463d-a8d8-4516fd625004. Contact support@plumloom.ai or support@plumloom.ai. Duplicate support@plumloom.ai.',
+    );
+    writeFileSync(join(root, 'plugin.json'), '{"email":"support@plumloom.ai"}');
+
+    expect(scan(root)).toEqual([
+      expect.objectContaining({
+        file: 'README.md',
+        rule: 'non-reserved email domain',
+      }),
+    ]);
   });
 
   it('scans the agent skill package files', () => {
