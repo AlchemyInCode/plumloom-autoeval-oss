@@ -29,7 +29,7 @@
       "interface": {
         "displayName": "Plumloom Autoeval",
         "shortDescription": "Evals and release gates",
-        "longDescription": "Run Plumloom Autoeval evaluations and release gates for AI agents and LLM features. The skill checks setup, validates evaluation files without spending a run, runs an evaluation or a suite gate, and reports the PASS, FAIL, INCONCLUSIVE or ERROR verdict exactly as Autoeval returns it. It never edits evaluations or thresholds to change a verdict. Requires the autoeval CLI and a Plumloom CLI key.",
+        "longDescription": "Run Plumloom Autoeval evaluations and release gates for AI agents and LLM features. The skill checks that your setup and evaluation files are ready, runs an evaluation or a suite gate, and reports the PASS, FAIL, INCONCLUSIVE or ERROR verdict exactly as Autoeval returns it. It never edits evaluations or thresholds to change a verdict. Requires the autoeval CLI and a Plumloom CLI key.",
         "developerName": "Plumloom",
         "category": "Developer Tools",
         "websiteURL": "https://github.com/AlchemyInCode/plumloom-autoeval-oss#readme",
