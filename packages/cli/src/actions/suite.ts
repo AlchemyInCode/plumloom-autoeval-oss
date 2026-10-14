@@ -1,5 +1,6 @@
 import type { JsonObject } from '../domain/common.js';
 import type { EvaluationContextType, EvaluationResults, RunStatus } from '../domain/types.js';
+import { jsonObjectSchema } from '../api/schemas.js';
 import {
   applyModelOverrides,
   requireModelOverridesForPublicPlaceholders,
@@ -7,6 +8,7 @@ import {
   type ParsedConfiguredRunInput,
 } from '../configured-run/validation.js';
 import type { PollClock } from '../polling/clock.js';
+import { extractRunStandardEvidence, type RunStandardEvidence } from '../reliability/evidence.js';
 import { runTwoPlaneSuite, type SuiteEvalRecord, type SuiteItem } from '../suite/execution.js';
 import { runConfiguredEvaluation, validateConfiguredEvaluation } from './configured-runs.js';
 import type { ActionContext } from './context.js';
@@ -23,6 +25,8 @@ export type SuiteEvalExecution = {
   elapsedMs: number;
   /** Terminal run-status payload, kept for the gate plane. */
   statusRaw: JsonObject;
+  /** Public-safe metadata from the exact methodology/configuration used by this run. */
+  standard?: RunStandardEvidence;
 };
 
 export type SuiteEvalEntry = SuiteEvalRecord<SuiteEvalExecution, EvaluationResults>;
@@ -51,6 +55,7 @@ export type RunSuiteInput = {
   signal?: AbortSignal;
   onStatus?: (item: SuiteItem, status: RunStatus) => void;
   modelOverrides?: ConfiguredRunModelOverrides;
+  includeReliabilityEvidence?: boolean;
 };
 
 /**
@@ -95,6 +100,28 @@ export async function runSuite(
           ? { onStatus: (status: RunStatus) => input.onStatus?.(item, status) }
           : {}),
       });
+      let standard: RunStandardEvidence | undefined;
+      if (input.includeReliabilityEvidence === true) {
+        let exactConfiguration: JsonObject | undefined;
+        try {
+          const response = await context.api.getEvaluationConfiguration(
+            evaluation.evaluationId,
+            execution.run.methodologyVersionId,
+            execution.run.configVersionId,
+            input.signal,
+          );
+          if (
+            response.evaluation_id === evaluation.evaluationId &&
+            response.methodology_version_id === execution.run.methodologyVersionId &&
+            response.config_version_id === execution.run.configVersionId
+          ) {
+            exactConfiguration = jsonObjectSchema.parse(response);
+          }
+        } catch {
+          // Reporting metadata is optional and must never alter execution or gate behavior.
+        }
+        standard = extractRunStandardEvidence(configuredRun, exactConfiguration);
+      }
       return {
         evaluationId: evaluation.evaluationId,
         evaluationName,
@@ -103,6 +130,7 @@ export async function runSuite(
         state: execution.outcome.status.state,
         elapsedMs: execution.outcome.elapsedMs,
         statusRaw: execution.outcome.status.raw,
+        ...(standard === undefined ? {} : { standard }),
       };
     },
     fetchResults: (execution) =>

@@ -29,6 +29,8 @@ on:
 
 permissions:
   contents: read
+  # Required only for the same-repository reliability report comment.
+  pull-requests: write
 
 jobs:
   gate:
@@ -40,6 +42,10 @@ jobs:
       AUTOEVAL_WORKSPACE_ID: ${{ vars.AUTOEVAL_WORKSPACE_ID }}
       AUTOEVAL_JUDGE_MODEL_ID: ${{ vars.AUTOEVAL_JUDGE_MODEL_ID }}
       AUTOEVAL_PRIMARY_MODEL_ID: ${{ vars.AUTOEVAL_PRIMARY_MODEL_ID }}
+      AUTOEVAL_PR_RELIABILITY_COMMENT: 'true'
+      # Use a stable, unique value per matrix cell when adding a matrix strategy.
+      AUTOEVAL_REPORT_MATRIX_ID: default
+      GITHUB_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
