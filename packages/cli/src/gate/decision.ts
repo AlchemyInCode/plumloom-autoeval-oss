@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 import type { JsonObject } from '../domain/common.js';
 import type { EvaluationContextType, EvaluationResults } from '../domain/types.js';
-import { isEmptyPolicy, type SuiteGatePolicy } from './policy.js';
+import type { SuiteGatePolicy } from './policy.js';
 
 /**
  * Gate plane.
@@ -539,16 +539,16 @@ export function decideEvalGate(input: GateEvalInput): EvalGateDecision {
     const payload =
       results.contextType === 'conversation' ? results.conversation : results.agentTrace;
     const checks = sessionChecks(payload, input.policy);
-    const decision = isEmptyPolicy(input.policy)
-      ? 'INCONCLUSIVE'
-      : worstDecision(checks.map((check) => check.decision));
+    const decision =
+      checks.length === 0 ? 'INCONCLUSIVE' : worstDecision(checks.map((check) => check.decision));
     return {
       ...identity,
       decision,
       checks,
-      reason: isEmptyPolicy(input.policy)
-        ? 'no metric thresholds are configured for this eval'
-        : summarize(decision, checks),
+      reason:
+        checks.length === 0
+          ? 'no applicable metric thresholds are configured for this eval'
+          : summarize(decision, checks),
       evidence: {
         runMode: 'single_run',
         ...(input.runState ? { runState: input.runState } : {}),
@@ -577,12 +577,16 @@ export function decideEvalGate(input: GateEvalInput): EvalGateDecision {
     ...(convergence ? { convergence } : {}),
   };
 
-  if (isEmptyPolicy(input.policy)) {
+  if (checks.length === 0) {
+    const hasApplicableThreshold =
+      input.policy.minOverall !== undefined || input.policy.minScenario !== undefined;
     return {
       ...identity,
       decision: 'INCONCLUSIVE',
       checks,
-      reason: 'no score thresholds are configured for this eval',
+      reason: hasApplicableThreshold
+        ? 'configured score thresholds produced no applicable gate checks'
+        : 'no applicable score thresholds are configured for this eval',
       evidence,
     };
   }
