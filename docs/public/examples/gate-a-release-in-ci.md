@@ -272,7 +272,7 @@ jobs:
           node-version: 22
       # Pinning prevents CLI-version drift and improves reproducibility, but model
       # and judge behavior can still make evaluation results vary between runs.
-      - run: npm install --global @plumloom/cli@0.1.4
+      - run: npm install --global @plumloom/cli@0.1.5
       - name: Verify runtime configuration
         run: |
           test -n "$AUTOEVAL_API_KEY"
