@@ -309,7 +309,9 @@ confidence intervals are not used.
 | `INCONCLUSIVE` | evidence exists but cannot decide — missing score, straddling interval, unmet convergence, or **no thresholds configured for this eval** |
 | `ERROR`        | execution failed, results could not be fetched, or the run reported a failure                                                            |
 
-An eval with no configured threshold is `INCONCLUSIVE`, never a silent pass.
+An eval with no threshold applicable to its context, or whose applicable thresholds produce no
+gate checks, is `INCONCLUSIVE`, never a silent pass. A mixed policy can contain both scenario and
+session-metric thresholds; each eval uses only the thresholds for its own context.
 
 #### 2.7 Suite roll-up and CI exit codes
 
