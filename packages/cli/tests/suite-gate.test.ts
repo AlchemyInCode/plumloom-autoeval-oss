@@ -332,6 +332,76 @@ describe.each(['conversation', 'agent_trace'] as const)('%s metric gating', (con
     expect(decision.decision).toBe('PASS');
     expect(JSON.stringify(decision.checks)).not.toContain('outcome');
   });
+
+  it('is inconclusive when only scenario thresholds are configured', () => {
+    const decision = decide({
+      results: sessionResults(contextType, { factuality: { score: 4.5 } }),
+      policy: { minOverall: 4.0, minScenario: 3.5 },
+      runStatusRaw: singleRunStatus(),
+    });
+
+    expect(decision.decision).toBe('INCONCLUSIVE');
+    expect(decision.checks).toEqual([]);
+    expect(decision.reason).toBe('no applicable metric thresholds are configured for this eval');
+  });
+});
+
+describe('context-applicable policies', () => {
+  const mixedPolicy: SuiteGatePolicy = {
+    minOverall: 4.0,
+    minScenario: 3.5,
+    metrics: { factuality: 4.0 },
+  };
+
+  it('is inconclusive when a scenario has only session-metric thresholds', () => {
+    const decision = decide({
+      results: scenarioResults({ mean: 4.9 }, { Checkout: { mean: 4.8 } }),
+      policy: { metrics: { factuality: 4.0 } },
+      runStatusRaw: singleRunStatus(),
+    });
+
+    expect(decision.decision).toBe('INCONCLUSIVE');
+    expect(decision.checks).toEqual([]);
+    expect(decision.reason).toBe('no applicable score thresholds are configured for this eval');
+  });
+
+  it('is inconclusive when minScenario produces no scenario checks', () => {
+    const decision = decide({
+      results: scenarioResults({ mean: 4.9 }),
+      policy: { minScenario: 3.5 },
+      runStatusRaw: singleRunStatus(),
+    });
+
+    expect(decision.decision).toBe('INCONCLUSIVE');
+    expect(decision.checks).toEqual([]);
+    expect(decision.reason).toBe('configured score thresholds produced no applicable gate checks');
+  });
+
+  it('uses the applicable portion of a mixed policy and preserves roll-up precedence', () => {
+    const scenario = decide({
+      results: scenarioResults({ mean: 4.5 }, { Checkout: { mean: 4.1 } }),
+      policy: mixedPolicy,
+      runStatusRaw: singleRunStatus(),
+    });
+    const conversation = decide({
+      results: sessionResults('conversation', { factuality: { score: 3.5 } }),
+      policy: mixedPolicy,
+      runStatusRaw: singleRunStatus(),
+    });
+    const agentTrace = decide({
+      results: sessionResults('agent_trace', {}),
+      policy: mixedPolicy,
+      runStatusRaw: singleRunStatus(),
+    });
+
+    expect(scenario.decision).toBe('PASS');
+    expect(scenario.checks).toHaveLength(2);
+    expect(conversation.decision).toBe('FAIL');
+    expect(conversation.checks).toHaveLength(1);
+    expect(agentTrace.decision).toBe('INCONCLUSIVE');
+    expect(agentTrace.checks).toHaveLength(1);
+    expect(rollUpSuiteDecision([scenario, conversation, agentTrace]).suiteDecision).toBe('FAIL');
+  });
 });
 
 describe('unusable evidence', () => {
@@ -515,5 +585,6 @@ describe('suite manifest gate policies', () => {
       runStatusRaw: singleRunStatus(),
     });
     expect(decision.decision).toBe('INCONCLUSIVE');
+    expect(decision.reason).toBe('no applicable score thresholds are configured for this eval');
   });
 });
