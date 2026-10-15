@@ -27,7 +27,14 @@ export const importCommandSchema = z.discriminatedUnion('operation', [
     })
     .strict(),
   z.object({ operation: z.literal('list') }).strict(),
-  z.object({ operation: z.literal('evals'), workspaceId: z.uuid(), ...pageOptions }).strict(),
+  z
+    .object({
+      operation: z.literal('evals'),
+      workspaceId: z.uuid(),
+      ...pageOptions,
+      size: z.number().int().min(1).max(200).default(50),
+    })
+    .strict(),
   z
     .object({
       operation: z.literal('show'),
@@ -101,6 +108,27 @@ export const importReviewSchema = z.preprocess((input: unknown) => {
   };
 }, normalizedImportReviewSchema);
 export type ImportReview = z.infer<typeof importReviewSchema>;
+export const importWorkspaceEvalsSchema = z
+  .object({
+    page: z.number().int().positive(),
+    page_size: z.number().int().positive(),
+    total: importCountSchema,
+    workspace: z.object({ workspace_id: z.uuid(), name: z.string() }).loose(),
+    items: z.array(
+      z
+        .object({
+          eval_id: z.uuid(),
+          openai_eval_id: openaiEvalIdSchema,
+          name: z.string(),
+          openai_created_at: z.union([z.string(), z.number()]).nullable().optional(),
+          imported_at: z.union([z.string(), z.number()]).nullable().optional(),
+          run_count: importCountSchema.nullable().optional(),
+          last_run_at: z.union([z.string(), z.number()]).nullable().optional(),
+        })
+        .loose(),
+    ),
+  })
+  .loose();
 function sourceEvaluationId(evaluation: ImportReview['evals'][number]): string {
   const id = evaluation.openai_eval_id ?? evaluation.id;
   if (id === undefined) {
@@ -122,7 +150,7 @@ export const importBatchSchema = z
   })
   .loose();
 export type ImportBatch = z.infer<typeof importBatchSchema>;
-export function importEntryCount(entries: ImportBatch['imported']): number {
+export function importEntryCount(entries: number | readonly unknown[]): number {
   return typeof entries === 'number' ? entries : entries.length;
 }
 const normalizedImportStatusSchema = z
@@ -360,12 +388,9 @@ export async function executeImport(
         z.union([z.array(jsonRecord), z.object({ workspaces: z.array(jsonRecord) }).loose()]),
       );
     case 'evals':
-      return request(
-        'GET',
-        `/workspaces/${input.workspaceId}`,
-        z.object({ evals: z.array(jsonRecord), total: z.number().int().nonnegative() }).loose(),
-        { query: { page: input.page, size: input.size, search: input.search } },
-      );
+      return request('GET', `/workspaces/${input.workspaceId}`, importWorkspaceEvalsSchema, {
+        query: { page: input.page, page_size: input.size, search: input.search ?? '' },
+      });
     case 'show':
       return request('GET', `/evaluations/${input.evaluationId}`, jsonRecord, {
         query: { run_id: input.run, page: input.page, size: input.size },

@@ -75,10 +75,10 @@ export function registerImportCommands(program: Command, executor: CommandExecut
       { json: global.json === true, debug: global.debug === true },
     );
   };
-  const pagination = (command: Command): Command =>
+  const pagination = (command: Command, maximumSize = 100): Command =>
     command
       .option('--page <number>', 'page number (1-1000)', positiveInteger, 1)
-      .option('--size <number>', 'page size (1-100)', positiveInteger, 50);
+      .option('--size <number>', `page size (1-${maximumSize})`, positiveInteger, 50);
   group
     .command('status')
     .description('check server-side OpenAI key and Evals access')
@@ -140,7 +140,7 @@ export function registerImportCommands(program: Command, executor: CommandExecut
     .command('list')
     .description('list imported workspaces')
     .action(async (_options: object, command: Command) => execute({ operation: 'list' }, command));
-  pagination(group.command('evals').description('list imported evaluations in a workspace'))
+  pagination(group.command('evals').description('list imported evaluations in a workspace'), 200)
     .requiredOption('--workspace <uuid>', 'Plumloom workspace UUID')
     .option('--search <text>', 'filter imported evaluations')
     .action(

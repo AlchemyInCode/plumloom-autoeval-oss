@@ -642,7 +642,7 @@ export class RuntimeCommandExecutor implements CommandExecutor {
         const parsed = importCommandSchema.safeParse(input);
         if (!parsed.success)
           throw new AutoevalError(
-            'Invalid import arguments. Check IDs, page (1-1000), and size (1-100).',
+            "Invalid import arguments. Check IDs, page (1-1000), and the command's --size limit.",
             { kind: 'usage', code: 'INVALID_IMPORT_ARGUMENTS' },
           );
         let validated: ParsedImportCommand = parsed.data;

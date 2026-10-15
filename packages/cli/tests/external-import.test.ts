@@ -276,7 +276,13 @@ describe('import action boundaries', () => {
       status: { key_present: true, evals_access: 'ready', cache_status: 'warm' },
       connect: { total: 4 },
       list: { workspaces: [] },
-      evals: { evals: [], total: 0 },
+      evals: {
+        items: [],
+        total: 0,
+        page: 1,
+        page_size: 50,
+        workspace: { workspace_id: IDS.workspace, name: 'Imported from OpenAI' },
+      },
       show: { raw_json: { preserved: true } },
       insights: { derived_by: 'Plumloom' },
       remove: undefined,
@@ -710,6 +716,152 @@ describe('import runtime and output', () => {
     } finally {
       await rm(directory, { recursive: true, force: true });
     }
+  });
+});
+
+describe('imported workspace evaluations', () => {
+  it('accepts a 200-item workspace page without changing discovery limits', async () => {
+    const execute = vi.fn<CommandExecutor['execute']>().mockResolvedValue(undefined);
+    await createProgram({ execute }).parseAsync([
+      'node',
+      'autoeval',
+      'import',
+      'evals',
+      '--workspace',
+      IDS.workspace,
+      '--size',
+      '200',
+    ]);
+    expect(execute).toHaveBeenCalledWith(
+      expect.objectContaining({
+        input: { operation: 'evals', workspaceId: IDS.workspace, page: 1, size: 200 },
+      }),
+      { json: false, debug: false },
+    );
+    expect(
+      importCommandSchema.safeParse({ operation: 'evals', workspaceId: IDS.workspace, size: 200 })
+        .success,
+    ).toBe(true);
+    expect(
+      importCommandSchema.safeParse({ operation: 'evals', workspaceId: IDS.workspace, size: 201 })
+        .success,
+    ).toBe(false);
+    expect(importCommandSchema.safeParse({ operation: 'review', size: 200 }).success).toBe(false);
+  });
+
+  const item = {
+    eval_id: IDS.evaluation,
+    openai_eval_id: 'eval_example_imported',
+    name: 'Example imported rubric',
+    openai_created_at: '2026-10-01T01:00:00Z',
+    imported_at: '2026-10-15T01:00:00Z',
+    run_count: 1,
+    last_run_at: '2026-10-01T01:00:00Z',
+  };
+  const envelope = {
+    page: 1,
+    page_size: 200,
+    total: 1,
+    workspace: { workspace_id: IDS.workspace, name: 'Imported from OpenAI' },
+    items: [item],
+  };
+
+  it.each([50, 200])(
+    'uses page_size=%s and preserves the complete backend envelope in JSON',
+    async (size) => {
+      const fetchImplementation = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(envelope));
+      const { executor, stdout, stderr } = runtime(fetchImplementation);
+      await executor.execute(
+        {
+          kind: 'external-import',
+          input: { operation: 'evals', workspaceId: IDS.workspace, page: 1, size },
+        },
+        { json: true, debug: false },
+      );
+      expect(fetchImplementation.mock.calls[0]?.[0]).toEqual(
+        new URL(
+          `/api/v1/import/external/evals/workspaces/${IDS.workspace}?page=1&page_size=${size}&search=`,
+          loadConfiguration().apiBaseUrl,
+        ),
+      );
+      expect(fetchImplementation.mock.calls[0]?.[1]?.method).toBe('GET');
+      expect(fetchImplementation).toHaveBeenCalledOnce();
+      expect(JSON.parse(stdout.value)).toEqual(envelope);
+      expect(stderr.value).toBe('');
+    },
+  );
+
+  it('shows both complete IDs, workspace context, runs, and last run in human output', () => {
+    const human = renderImport(
+      importCommandSchema.parse({ operation: 'evals', workspaceId: IDS.workspace }),
+      envelope,
+    );
+    for (const expected of [
+      'Imported from OpenAI',
+      IDS.workspace,
+      'EVAL ID (plumloom)',
+      IDS.evaluation,
+      'OPENAI EVAL ID',
+      item.openai_eval_id,
+      'LAST RUN',
+      '2026-10-01',
+      'Showing 1-1 of 1.',
+    ])
+      expect(human).toContain(expected);
+  });
+
+  it('uses returned pagination rather than the requested size in the summary', () => {
+    const human = renderImport(
+      importCommandSchema.parse({
+        operation: 'evals',
+        workspaceId: IDS.workspace,
+        page: 2,
+        size: 10,
+      }),
+      { ...envelope, page: 2, page_size: 50, total: 200 },
+    );
+    expect(human).toContain('Showing 51-51 of 200. --page 3');
+  });
+
+  it('renders null run metadata and empty result sets without inventing values', () => {
+    const command = importCommandSchema.parse({ operation: 'evals', workspaceId: IDS.workspace });
+    expect(
+      renderImport(command, {
+        ...envelope,
+        items: [{ ...item, run_count: null, last_run_at: null }],
+      }),
+    ).toContain('\u2014');
+    expect(renderImport(command, { ...envelope, total: 0, items: [] })).toContain(
+      'No imported evaluations found.\nShowing 0-0 of 0.',
+    );
+  });
+
+  it('preserves page and search parameters', async () => {
+    const externalImport = vi.fn<AutoevalApi['externalImport']>().mockResolvedValue(envelope);
+    await executeImport(
+      { api: createApi({ externalImport }) },
+      { operation: 'evals', workspaceId: IDS.workspace, page: 2, size: 10, search: 'rubric' },
+    );
+    expect(externalImport).toHaveBeenCalledWith({
+      method: 'GET',
+      path: `/workspaces/${IDS.workspace}`,
+      query: { page: 2, page_size: 10, search: 'rubric' },
+    });
+  });
+
+  it.each([
+    { ...envelope, page_size: '200' },
+    { ...envelope, items: {} },
+    { ...envelope, items: [{ ...item, eval_id: 'eval_not_a_uuid' }] },
+    { ...envelope, items: [{ ...item, openai_eval_id: IDS.evaluation }] },
+    { ...envelope, items: [{ ...item, run_count: -1 }] },
+  ])('rejects malformed imported-eval metadata: %j', async (response) => {
+    const api = createApi({
+      externalImport: vi.fn<AutoevalApi['externalImport']>().mockResolvedValue(response),
+    });
+    await expect(
+      executeImport({ api }, { operation: 'evals', workspaceId: IDS.workspace }),
+    ).rejects.toMatchObject({ code: 'INVALID_IMPORT_RESPONSE' });
   });
 });
 

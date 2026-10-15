@@ -88,7 +88,7 @@ export function renderImport(command: ParsedImportCommand, response: unknown): s
       return (
         formatTable(
           [
-            { header: 'OPENAI EVAL ID', maxWidth: 32 },
+            { header: 'OPENAI EVAL ID' },
             { header: 'NAME', maxWidth: 36 },
             { header: 'CREATED', minWidth: 10 },
             { header: 'LAST RUN', minWidth: 10 },
@@ -144,19 +144,41 @@ export function renderImport(command: ParsedImportCommand, response: unknown): s
           date(workspace.created_at),
         ]),
       );
-    case 'evals':
+    case 'evals': {
+      const page = {
+        page: typeof envelope.page === 'number' ? envelope.page : command.page,
+        page_size: typeof envelope.page_size === 'number' ? envelope.page_size : command.size,
+        total: typeof envelope.total === 'number' ? envelope.total : 0,
+        workspace: record(envelope.workspace),
+        items: records(envelope.items),
+      };
+      const heading = `${text(page.workspace.name)} (${text(page.workspace.workspace_id)})\n`;
+      if (page.items.length === 0) {
+        return `${heading}No imported evaluations found.\nShowing 0-0 of ${page.total}.${page.total > 0 ? ' Try an earlier page or adjust --search.' : ''}\n`;
+      }
+      const start = (page.page - 1) * page.page_size + 1;
+      const rows: string[][] = page.items.map((evaluation): string[] => [
+        text(evaluation.eval_id),
+        text(evaluation.name),
+        text(evaluation.run_count),
+        date(evaluation.last_run_at),
+        text(evaluation.openai_eval_id),
+      ]);
       return (
-        table(
-          ['EVAL ID (plumloom)', 'NAME', 'RUNS', 'LAST RUN', 'OPENAI EVAL ID'],
-          records(envelope.evals).map((evaluation) => [
-            evaluation.eval_id,
-            evaluation.name,
-            evaluation.run_count,
-            date(evaluation.last_run_at),
-            evaluation.openai_eval_id,
-          ]),
-        ) + `Page ${command.page}; ${text(envelope.total)} evaluation(s).\n`
+        heading +
+        formatTable(
+          [
+            { header: 'EVAL ID (plumloom)', atomic: true },
+            { header: 'NAME', maxWidth: 32 },
+            { header: 'RUNS', align: 'right' },
+            { header: 'LAST RUN', minWidth: 10 },
+            { header: 'OPENAI EVAL ID', atomic: true },
+          ],
+          rows,
+        ) +
+        `\nShowing ${start}-${start + page.items.length - 1} of ${page.total}.${page.page * page.page_size < page.total ? ` --page ${page.page + 1} for more, or --search <text>.` : ''}\n`
       );
+    }
     case 'remove':
       return `Removed. (eval_id ${command.evaluationId})\n`;
     case 'show':
