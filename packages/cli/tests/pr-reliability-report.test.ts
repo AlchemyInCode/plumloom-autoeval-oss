@@ -301,6 +301,30 @@ describe('PR reliability report evidence', () => {
     expect(rendered).not.toContain('Unknown context | Live scenario');
   });
 
+  it('escapes HTML without adding literal Markdown escapes to summary headings', () => {
+    const fixture = mixedFixture();
+    const decision = fixture.gate.perEvalDecisions[0];
+    const execution = fixture.summary.evals[0]?.execution;
+    if (!decision || !execution) throw new Error('Expected scenario fixture.');
+    decision.evaluationName = '[Scenario] Sign in (multi-run) <unsafe>';
+    execution.evaluationName = decision.evaluationName;
+
+    const rendered = renderReliabilityReport({
+      ...fixture,
+      marker: createReliabilityReportMarker('summary-heading'),
+    }).markdown;
+
+    const summaryLine = rendered
+      .split('\n')
+      .find((line) => line.startsWith('<summary>INCONCLUSIVE'));
+    expect(summaryLine).toBe(
+      '<summary>INCONCLUSIVE — [Scenario] Sign in (multi-run) &lt;unsafe&gt; (Live scenario)</summary>',
+    );
+    expect(summaryLine).not.toContain('\\[Scenario\\]');
+    expect(summaryLine).not.toContain('\\(multi-run\\)');
+    expect(summaryLine).not.toContain('<unsafe>');
+  });
+
   it('redacts credentials and removes details before truncating a row', () => {
     const fixture = mixedFixture();
     const template = fixture.gate.perEvalDecisions[0];

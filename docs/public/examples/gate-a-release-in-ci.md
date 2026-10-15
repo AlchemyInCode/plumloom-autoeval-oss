@@ -227,7 +227,9 @@ workspace and model IDs, so copied examples need runtime overrides for a real ac
 Configure these repository values:
 
 - **Secret** `AUTOEVAL_API_KEY`: your Plumloom CLI key.
-- **Variable** `AUTOEVAL_WORKSPACE_ID`: an accessible ID from `autoeval workspace list`.
+- **Secret** `AUTOEVAL_WORKSPACE_ID`: an accessible ID from `autoeval workspace list`. The human
+  gate output includes the workspace ID, so storing it as a secret lets GitHub mask it in public
+  workflow logs.
 - **Variable** `AUTOEVAL_JUDGE_MODEL_ID`: an enabled ID from `autoeval models`.
 - **Optional variable** `AUTOEVAL_PRIMARY_MODEL_ID`: an enabled ID from `autoeval models`. Configure
   it only when a scenario evaluation's primary model must be overridden. Omit it for conversation-
@@ -257,7 +259,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       AUTOEVAL_API_KEY: ${{ secrets.AUTOEVAL_API_KEY }}
-      AUTOEVAL_WORKSPACE_ID: ${{ vars.AUTOEVAL_WORKSPACE_ID }}
+      AUTOEVAL_WORKSPACE_ID: ${{ secrets.AUTOEVAL_WORKSPACE_ID }}
       AUTOEVAL_JUDGE_MODEL_ID: ${{ vars.AUTOEVAL_JUDGE_MODEL_ID }}
       AUTOEVAL_PRIMARY_MODEL_ID: ${{ vars.AUTOEVAL_PRIMARY_MODEL_ID }}
       AUTOEVAL_PR_RELIABILITY_COMMENT: 'true'

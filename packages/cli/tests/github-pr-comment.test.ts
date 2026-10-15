@@ -99,6 +99,12 @@ describe('GitHub pull-request context', () => {
       });
       expect(resolved.context?.reportIdentity).toContain('evals/suite.yaml');
       expect(resolved.context?.reportIdentity).toContain('node-22');
+
+      const equivalentPath = await resolveGithubPullRequestContext({
+        environment: environment(event.path),
+        manifestFile: './evals/suite.yaml',
+      });
+      expect(equivalentPath.context?.reportIdentity).toBe(resolved.context?.reportIdentity);
     } finally {
       await event.cleanup();
     }

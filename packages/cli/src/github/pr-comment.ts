@@ -1,4 +1,5 @@
 import { open } from 'node:fs/promises';
+import { posix } from 'node:path';
 
 import type { SuiteGateResult } from '../actions/suite-gate.js';
 import type { SuiteSummary } from '../actions/suite.js';
@@ -87,6 +88,10 @@ function normalizedHttpsUrl(input: string): string | undefined {
   }
 }
 
+function normalizedManifestIdentity(input: string): string {
+  return posix.normalize(input.replaceAll('\\', '/'));
+}
+
 export async function resolveGithubPullRequestContext(input: {
   environment: Readonly<Record<string, string | undefined>>;
   manifestFile: string;
@@ -146,7 +151,12 @@ export async function resolveGithubPullRequestContext(input: {
     expectedAuthorValue === undefined || expectedAuthorValue === ''
       ? 'github-actions[bot]'
       : expectedAuthorValue;
-  const reportIdentity = [repository, input.manifestFile, job, matrixIdentity].join('\n');
+  const reportIdentity = [
+    repository,
+    normalizedManifestIdentity(input.manifestFile),
+    job,
+    matrixIdentity,
+  ].join('\n');
 
   return {
     context: {

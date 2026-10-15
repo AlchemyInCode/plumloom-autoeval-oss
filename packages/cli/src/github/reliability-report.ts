@@ -42,7 +42,7 @@ export type RenderedReliabilityReport = {
   detailLevel: 'full' | 'summary' | 'critical' | 'minimal';
 };
 
-function clean(input: string, maxChars = 1_000): string {
+function sanitizedText(input: string, maxChars: number): string {
   const withoutControls = Array.from(redactText(input), (character) => {
     const codePoint = character.codePointAt(0) ?? 0;
     return codePoint <= 31 || (codePoint >= 127 && codePoint <= 159) ? ' ' : character;
@@ -51,11 +51,11 @@ function clean(input: string, maxChars = 1_000): string {
     withoutControls.length > maxChars
       ? `${withoutControls.slice(0, maxChars - 1)}…`
       : withoutControls;
-  return clipped
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replace(/([\\`*_[\]{}()#+.!|])/gu, '\\$1');
+  return clipped.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+}
+
+function clean(input: string, maxChars = 1_000): string {
+  return sanitizedText(input, maxChars).replace(/([\\`*_[\]{}()#+.!|])/gu, '\\$1');
 }
 
 function cell(input: string): string {
@@ -287,7 +287,7 @@ function missingEvidence(evaluation: ReportEvaluation): string[] {
 function details(evaluation: ReportEvaluation, actionsRunUrl: string | undefined): string[] {
   const lines = [
     '<details>',
-    `<summary>${evaluation.decision} — ${clean(evaluation.name, 200)} (${contextLabel(evaluation.context)})</summary>`,
+    `<summary>${evaluation.decision} — ${sanitizedText(evaluation.name, 200)} (${contextLabel(evaluation.context)})</summary>`,
     '',
     `- **Standard:** ${clean(standardSummary(evaluation.standard), 500)}`,
   ];
