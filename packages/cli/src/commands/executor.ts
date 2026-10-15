@@ -31,6 +31,10 @@ import { runSuite, type SuiteSummary } from '../actions/suite.js';
 import { gateSuite, suiteGateExitError } from '../actions/suite-gate.js';
 import { doctorExitError, runDoctor } from '../actions/doctor.js';
 import { clusterExecutionFailures, clusterSuiteFailures } from '../suite/reporting.js';
+import {
+  githubReliabilityReportingEnabled,
+  publishGithubReliabilityReport,
+} from '../github/pr-comment.js';
 import { evaluateGate, type GateThresholds } from '../actions/gate.js';
 import { getRunStatus, runEvaluation } from '../actions/runs.js';
 import { createWorkspace, listWorkspaces } from '../actions/workspaces.js';
@@ -797,7 +801,9 @@ export class RuntimeCommandExecutor implements CommandExecutor {
       }
       case 'suite-gate': {
         const manifest = await readSuiteManifest(command.manifestFile);
-        const summary = await this.#runSuiteFromManifest(context, manifest, command, options);
+        const summary = await this.#runSuiteFromManifest(context, manifest, command, options, {
+          includeReliabilityEvidence: githubReliabilityReportingEnabled(this.#environment),
+        });
         const policyByFile = new Map(manifest.entries.map((entry) => [entry.file, entry.gate]));
         const gateResult = gateSuite({ summary, policyByFile });
         const failureClusters = clusterSuiteFailures(gateResult);
@@ -806,6 +812,19 @@ export class RuntimeCommandExecutor implements CommandExecutor {
           renderSuiteGateReport(gateResult, failureClusters),
           options.json,
         );
+        const commentResult = await publishGithubReliabilityReport({
+          environment: this.#environment,
+          manifestFile: command.manifestFile,
+          gate: gateResult,
+          summary,
+          ...(this.#fetchImplementation ? { fetchImplementation: this.#fetchImplementation } : {}),
+          ...(this.#signal ? { signal: this.#signal } : {}),
+        });
+        if (!options.json && commentResult.status === 'failed') {
+          this.#stderr.write(
+            `Warning: Autoeval reliability comment was not updated. ${commentResult.reason}\n`,
+          );
+        }
         const gateError = suiteGateExitError(gateResult);
         if (gateError !== undefined) throw gateError;
         return;
@@ -1372,6 +1391,7 @@ export class RuntimeCommandExecutor implements CommandExecutor {
       primaryModelId?: string;
     },
     options: ExecutionOptions,
+    reporting: { includeReliabilityEvidence?: boolean } = {},
   ): Promise<SuiteSummary> {
     const progress = this.#createProgressReporter('Suite', options);
     try {
@@ -1394,6 +1414,9 @@ export class RuntimeCommandExecutor implements CommandExecutor {
             ? {}
             : { primaryModelId: command.primaryModelId }),
         },
+        ...(reporting.includeReliabilityEvidence === true
+          ? { includeReliabilityEvidence: true }
+          : {}),
         onStatus: (item, status) =>
           progress.update(`eval ${item.index + 1}: ${formatStatusProgress(status)}`),
         ...(this.#signal ? { signal: this.#signal } : {}),

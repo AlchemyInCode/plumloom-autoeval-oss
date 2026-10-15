@@ -145,6 +145,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: write
 
 jobs:
   evaluate:
@@ -510,6 +511,9 @@ jobs:
       - name: Gate the release on the suite
         env:
           AUTOEVAL_API_KEY: ${{ secrets.AUTOEVAL_API_KEY }}
+          AUTOEVAL_PR_RELIABILITY_COMMENT: 'true'
+          AUTOEVAL_REPORT_MATRIX_ID: default
+          GITHUB_TOKEN: ${{ github.token }}
         run: autoeval suite gate --manifest autoeval.suite.yaml --json
 ```
 
@@ -519,23 +523,35 @@ persisted (see [ADR 0002](../internal/adr/0002-cli-credential-storage.md)). A no
 action in `.github/actions/autoeval-gate/` covers the single-evaluation `autoeval gate` flow and
 is documented in the [release gate guide](#single-evaluation-gate-autoeval-gate).
 
+For a same-repository pull request, the opt-in reporting variables make `suite gate` create or
+update one context-aware PR comment for the manifest, job, and matrix identity. Give each matrix
+cell a stable, unique `AUTOEVAL_REPORT_MATRIX_ID`. The report displays the existing gate verdict
+and only the reliability evidence applicable to each evaluation context; it does not pool evidence
+across contexts. Fork pull requests are ineligible, and comment permission or API failures never
+change the gate verdict or exit code. Use the guarded adopter workflow in
+`.github/workflows/autoeval-suite-gate.yml.example` rather than granting write access to untrusted
+fork code.
+
 ---
 
 ### 4. Implementation map
 
-| File                                         | Responsibility                                                                                      |
-| -------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `packages/cli/src/suite/manifest.ts`         | Parse and validate YAML/JSON manifests, resolve eval paths, merge suite and per-eval gate policies. |
-| `packages/cli/src/gate/policy.ts`            | `SuiteGatePolicy` schema, emptiness check, field-by-field policy merge.                             |
-| `packages/cli/src/suite/execution.ts`        | Generic two-plane engine: bounded execution pool, stagger, off-plane result pool, per-eval records. |
-| `packages/cli/src/actions/suite.ts`          | Wires the engine to real actions and produces `SuiteSummary`.                                       |
-| `packages/cli/src/gate/decision.ts`          | Pure gate plane: run-mode detection, mean and CI checks, convergence classification, roll-up.       |
-| `packages/cli/src/actions/suite-gate.ts`     | Applies policies to a `SuiteSummary`, produces the report and the CI exit error.                    |
-| `packages/cli/src/output/human.ts`           | `renderSuiteSummary` and `renderSuiteGateReport`.                                                   |
-| `packages/cli/src/commands/program.ts`       | `suite run` / `suite gate` command definitions and option parsing.                                  |
-| `packages/cli/src/commands/executor.ts`      | Command dispatch, concurrency/stagger defaults (`3` / `250 ms`), JSON versus human output.          |
-| `packages/cli/tests/suite-two-plane.test.ts` | Plane behaviour: concurrency, stagger, off-plane fetching, failure isolation.                       |
-| `packages/cli/tests/suite-gate.test.ts`      | Gating contract: every decision rule, roll-up precedence, exit codes, manifest policy merging.      |
+| File                                            | Responsibility                                                                                      |
+| ----------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `packages/cli/src/suite/manifest.ts`            | Parse and validate YAML/JSON manifests, resolve eval paths, merge suite and per-eval gate policies. |
+| `packages/cli/src/gate/policy.ts`               | `SuiteGatePolicy` schema, emptiness check, field-by-field policy merge.                             |
+| `packages/cli/src/suite/execution.ts`           | Generic two-plane engine: bounded execution pool, stagger, off-plane result pool, per-eval records. |
+| `packages/cli/src/actions/suite.ts`             | Wires the engine to real actions and produces `SuiteSummary`.                                       |
+| `packages/cli/src/gate/decision.ts`             | Pure gate plane: run-mode detection, mean and CI checks, convergence classification, roll-up.       |
+| `packages/cli/src/actions/suite-gate.ts`        | Applies policies to a `SuiteSummary`, produces the report and the CI exit error.                    |
+| `packages/cli/src/reliability/evidence.ts`      | Extracts public-safe, context-aware reliability evidence from exact-run and result payloads.        |
+| `packages/cli/src/github/reliability-report.ts` | Renders deterministic PR Markdown without changing gate decisions.                                  |
+| `packages/cli/src/github/pr-comment.ts`         | Resolves eligible same-repository PRs and upserts one bot-owned REST issue comment per identity.    |
+| `packages/cli/src/output/human.ts`              | `renderSuiteSummary` and `renderSuiteGateReport`.                                                   |
+| `packages/cli/src/commands/program.ts`          | `suite run` / `suite gate` command definitions and option parsing.                                  |
+| `packages/cli/src/commands/executor.ts`         | Command dispatch, concurrency/stagger defaults (`3` / `250 ms`), JSON versus human output.          |
+| `packages/cli/tests/suite-two-plane.test.ts`    | Plane behaviour: concurrency, stagger, off-plane fetching, failure isolation.                       |
+| `packages/cli/tests/suite-gate.test.ts`         | Gating contract: every decision rule, roll-up precedence, exit codes, manifest policy merging.      |
 
 #### Reuse of existing paths
 

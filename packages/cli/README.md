@@ -43,6 +43,12 @@ Eval decisions roll up with precedence `ERROR > FAIL > INCONCLUSIVE > PASS`, so 
 configured threshold blocks the release as `INCONCLUSIVE` rather than passing silently. For a
 single evaluation, `autoeval gate <evaluation-id>` applies flag-based thresholds instead.
 
+In an eligible same-repository GitHub pull request, set
+`AUTOEVAL_PR_RELIABILITY_COMMENT=true` and provide the workflow `GITHUB_TOKEN` with
+`pull-requests: write` to have `suite gate` create or update a context-aware reliability report
+comment. The report presents the existing verdict and available Standard, Judgment, and
+Repeatability evidence; reporting failures are non-blocking and never alter the gate exit code.
+
 ## Documentation
 
 - [Quickstart](https://github.com/plumloom-org/plumloom-autoeval/blob/main/docs/public/quickstart.md) —

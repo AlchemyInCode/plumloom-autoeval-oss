@@ -96,6 +96,12 @@ autoeval suite gate --manifest autoeval.suite.yaml
 
 Copy [`.github/workflows/autoeval-suite-gate.yml.example`](.github/workflows/autoeval-suite-gate.yml.example) into your repository for a ready-to-use adopter workflow. See [Gate a release in CI](docs/public/examples/gate-a-release-in-ci.md) and [Release gating for CI](docs/public/release-gating.md) for setup and policy details.
 
+For same-repository pull requests, the example workflow also updates one context-aware Autoeval
+Reliability Report comment per suite and matrix job. It shows the existing gate verdict alongside
+available Standard, Judgment, and Repeatability evidence; comment failures never replace the gate
+verdict or exit code. Fork pull requests remain excluded because they do not receive repository
+secrets.
+
 Common commands include:
 
 ```text
