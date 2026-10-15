@@ -48,7 +48,7 @@ try {
   const tarCommand = process.platform === 'win32' ? 'C:\\Windows\\System32\\tar.exe' : 'tar';
 
   const listing = await execFileAsync(tarCommand, ['-tzf', tarball]);
-  const entries = listing.stdout.split('\n').filter((entry) => entry.length > 0);
+  const entries = listing.stdout.split(/\r?\n/u).filter((entry) => entry.length > 0);
 
   const violations = entries
     .filter((entry) => FORBIDDEN_ENTRIES.some((pattern) => pattern.test(entry)))

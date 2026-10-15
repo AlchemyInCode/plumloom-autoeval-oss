@@ -2,6 +2,16 @@ import { open, readFile, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 
 import { z } from 'zod';
+import {
+  executeImport,
+  importCommandSchema,
+  importEntryCount,
+  importOutcomeExitCode,
+  type ParsedImportCommand,
+} from '../actions/imports.js';
+import { renderImport } from '../output/imports.js';
+import { safeTerminalText } from '../output/safe-text.js';
+import { confirmImportRemoval, readImportIds } from './imports.js';
 
 import {
   createEvaluation,
@@ -182,6 +192,7 @@ export type RuntimeDependencies = {
   signal?: AbortSignal;
   /** Injected so the quickstart evaluation name is deterministic in tests. */
   now?: () => Date;
+  confirmImportRemoval?: (question: string, signal?: AbortSignal) => Promise<boolean>;
 };
 
 const qualityStandardFileSchema = z
@@ -518,6 +529,7 @@ export class RuntimeCommandExecutor implements CommandExecutor {
   readonly #stdin: RuntimeInput;
   readonly #stderr: OutputStream;
   readonly #signal: AbortSignal | undefined;
+  readonly #confirmImportRemoval: (question: string, signal?: AbortSignal) => Promise<boolean>;
   #lastCreateFromRuns: { evaluationId: string; runId: string }[] = [];
 
   constructor(dependencies: RuntimeDependencies) {
@@ -536,6 +548,7 @@ export class RuntimeCommandExecutor implements CommandExecutor {
     this.#writer = new OutputWriter(stdout, this.#stderr);
     this.#stdin = dependencies.stdin ?? process.stdin;
     this.#signal = dependencies.signal;
+    this.#confirmImportRemoval = dependencies.confirmImportRemoval ?? confirmImportRemoval;
   }
 
   async execute(command: DeterministicCommand, options: ExecutionOptions): Promise<void> {
@@ -615,6 +628,67 @@ export class RuntimeCommandExecutor implements CommandExecutor {
     const context = this.#createContext(credential.apiKey, options);
 
     switch (command.kind) {
+      case 'external-import': {
+        let input = command.input;
+        if (command.inputFile !== undefined) {
+          if (input.operation !== 'run' || input.allNew || input.evalIds !== undefined) {
+            throw new AutoevalError('Choose exactly one of --eval, --input, or --all-new.', {
+              kind: 'usage',
+              code: 'INVALID_IMPORT_ARGUMENTS',
+            });
+          }
+          input = { ...input, evalIds: await readImportIds(command.inputFile) };
+        }
+        const parsed = importCommandSchema.safeParse(input);
+        if (!parsed.success)
+          throw new AutoevalError(
+            'Invalid import arguments. Check IDs, page (1-1000), and size (1-100).',
+            { kind: 'usage', code: 'INVALID_IMPORT_ARGUMENTS' },
+          );
+        let validated: ParsedImportCommand = parsed.data;
+        if (validated.operation === 'remove' && !validated.yes) {
+          if (options.json || !this.#stdin.isTTY || !this.#stderr.isTTY) {
+            throw new AutoevalError('Non-interactive removal requires --yes.', {
+              kind: 'usage',
+              code: 'IMPORT_CONFIRMATION_REQUIRED',
+            });
+          }
+          const detail = await executeImport(
+            context,
+            { operation: 'show', evaluationId: validated.evaluationId },
+            this.#signal ? { signal: this.#signal } : {},
+          );
+          const envelope = z.record(z.string(), z.unknown()).parse(detail);
+          const evaluation = z
+            .record(z.string(), z.unknown())
+            .parse(envelope.evaluation ?? envelope);
+          const evaluationName =
+            typeof evaluation.name === 'string' ? evaluation.name : validated.evaluationId;
+          const question = `Remove "${safeTerminalText(evaluationName)}" and its runs/results?`;
+          if (!(await this.#confirmImportRemoval(question, this.#signal))) {
+            this.#writer.writeResult({ removed: false }, 'Removal canceled.\n', options.json);
+            return;
+          }
+          validated = { ...validated, yes: true };
+        }
+        const result = await executeImport(context, validated, {
+          ...(this.#signal ? { signal: this.#signal } : {}),
+          onBatch: (batch, index, total) => {
+            if (!options.json)
+              this.#stderr.write(
+                `Batch ${index}/${total}: imported ${importEntryCount(batch.imported)}, skipped ${importEntryCount(batch.skipped)}, failed ${batch.failed.length}.\n`,
+              );
+          },
+        });
+        this.#writer.writeResult(
+          result,
+          options.json ? '' : renderImport(validated, result),
+          options.json,
+        );
+        const exitCode = importOutcomeExitCode(validated, result);
+        if (exitCode !== 0) process.exitCode = exitCode;
+        return;
+      }
       case 'whoami': {
         const result = await whoAmI(context, this.#signal);
         this.#writer.writeResult(result, renderIdentity(result), options.json);
