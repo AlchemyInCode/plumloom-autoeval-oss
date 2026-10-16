@@ -138,7 +138,8 @@ run, or use an OpenAI run ID from the JSON run history, not an `eval_...` source
 Insights use spaced sections and readiness markers. The human flaky-graders panel shows only
 backend-flagged entries; JSON retains the full insights envelope and grader evaluation IDs.
 
-Interactive `import review`, `import run`, and `import show` display loading progress on stderr;
+Interactive `import review`, `import run`, `import show`, and `import evals` display loading
+progress on stderr;
 `--json` stays machine-readable. Import runs show batch progress for IDs, text files, and
 all-new selections.
 Expanded detail output uses terminal-width input/expected/output columns with wrapped content.

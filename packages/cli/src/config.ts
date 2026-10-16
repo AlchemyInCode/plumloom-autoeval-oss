@@ -1,4 +1,4 @@
-export const AUTOEVAL_API_ORIGIN = 'https://pl-be-dev3-billing-updates-5b0fc2eb261a.herokuapp.com';
+export const AUTOEVAL_API_ORIGIN = 'https://api.plumloom.ai';
 
 export type AutoevalConfiguration = {
   apiBaseUrl: URL;
