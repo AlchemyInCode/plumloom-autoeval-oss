@@ -11,6 +11,8 @@ const HINTS_BY_CODE: Readonly<Record<string, string>> = {
     'Create a current CLI key at https://app.plumloom.ai (it starts with pl_sk_), then run `autoeval login` or `autoeval login --key <key>`',
   INVALID_IMPORT_RESPONSE:
     'Check the import endpoint response contract; --debug shows request metadata, not the response body',
+  INVALID_IMPORT_RUN_ID:
+    'Use --json with import show to find runs[].openai_run_id; --run does not accept the source evaluation ID',
   IMPORT_METHOD_NOT_ALLOWED:
     'Confirm the deployed backend discovery route supports GET; reconnecting or retrying the same method will not fix HTTP 405',
   NO_KEY:

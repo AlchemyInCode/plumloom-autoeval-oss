@@ -14,6 +14,7 @@ import { AutoevalApiClient } from '../src/api/api.js';
 import { ApiClient } from '../src/api/client.js';
 import { ApiError } from '../src/api/errors.js';
 import { hintForError } from '../src/errors/hints.js';
+import { safeMultilineTerminalText } from '../src/output/safe-text.js';
 import * as progressOutput from '../src/output/progress.js';
 import {
   executeImport,
@@ -329,6 +330,379 @@ describe('import action boundaries', () => {
 });
 
 describe('import runtime and output', () => {
+  it.each(['success', 'failure', 'cancelled'] as const)(
+    'clears workspace-evals loading on %s',
+    async (outcome) => {
+      const controller = new AbortController();
+      const update = vi.fn();
+      const stop = vi.fn();
+      const progress = vi
+        .spyOn(progressOutput, 'createProgressReporter')
+        .mockReturnValue({ update, stop, reportStatus: vi.fn() });
+      const fetchImplementation = vi.fn<typeof fetch>().mockImplementation(() => {
+        expect(update).toHaveBeenCalledWith('Loading imported evaluations...');
+        if (outcome === 'cancelled') controller.abort();
+        return Promise.resolve(
+          outcome === 'failure'
+            ? jsonResponse({ code: 'NO_KEY' })
+            : jsonResponse({
+                page: 1,
+                page_size: 50,
+                total: 0,
+                items: [],
+                workspace: { workspace_id: IDS.workspace, name: 'Imported from OpenAI' },
+              }),
+        );
+      });
+      const { executor, stdout } = runtime(
+        fetchImplementation,
+        true,
+        vi.fn().mockResolvedValue(false),
+        controller.signal,
+      );
+      const write = vi.spyOn(stdout, 'write').mockImplementation((chunk: string) => {
+        expect(stop).toHaveBeenCalledOnce();
+        stdout.value += chunk;
+        return true;
+      });
+      try {
+        const execution = executor.execute(
+          { kind: 'external-import', input: { operation: 'evals', workspaceId: IDS.workspace } },
+          { json: false, debug: false },
+        );
+        if (outcome === 'success') {
+          await execution;
+          expect(stdout.value).toContain('No imported evaluations found.');
+        } else {
+          await expect(execution).rejects.toMatchObject({
+            code: outcome === 'failure' ? 'NO_KEY' : 'REQUEST_ABORTED',
+          });
+          expect(stdout.value).toBe('');
+        }
+        expect(progress).toHaveBeenCalledWith(
+          expect.objectContaining({ label: 'Imported evaluations', enabled: true }),
+        );
+        expect(stop).toHaveBeenCalledOnce();
+      } finally {
+        progress.mockRestore();
+        write.mockRestore();
+      }
+    },
+  );
+
+  it.each([true, false])(
+    'keeps workspace-evals progress quiet for JSON or pipes (json=%s)',
+    async (json) => {
+      const envelope = {
+        page: 1,
+        page_size: 50,
+        total: 0,
+        items: [],
+        workspace: { workspace_id: IDS.workspace, name: 'Imported from OpenAI' },
+      };
+      const progress = vi.spyOn(progressOutput, 'createProgressReporter');
+      const { executor, stdout, stderr } = runtime(
+        vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(envelope)),
+        json,
+      );
+      try {
+        await executor.execute(
+          { kind: 'external-import', input: { operation: 'evals', workspaceId: IDS.workspace } },
+          { json, debug: false },
+        );
+        expect(progress).toHaveBeenCalledWith(
+          expect.objectContaining({ label: 'Imported evaluations', enabled: false }),
+        );
+        expect(stderr.value).toBe('');
+        if (json) expect(JSON.parse(stdout.value)).toEqual(envelope);
+      } finally {
+        progress.mockRestore();
+      }
+    },
+  );
+
+  it.each(['success', 'failure', 'cancelled'] as const)(
+    'clears detail loading before %s completes',
+    async (outcome) => {
+      const controller = new AbortController();
+      const phases: string[] = [];
+      const update = vi.fn((message: string) => {
+        phases.push(message);
+      });
+      const stop = vi.fn(() => {
+        phases.push('stopped');
+      });
+      const progress = vi
+        .spyOn(progressOutput, 'createProgressReporter')
+        .mockReturnValue({ update, stop, reportStatus: vi.fn() });
+      const fetchImplementation = vi.fn<typeof fetch>().mockImplementation(() => {
+        phases.push('request');
+        if (outcome === 'cancelled') controller.abort();
+        return Promise.resolve(
+          outcome === 'failure'
+            ? jsonResponse({ code: 'NO_KEY' })
+            : jsonResponse({
+                eval: IMPORTED_EVAL,
+                runs: [],
+                results: { page: 1, page_size: 50, total: 0, items: [] },
+              }),
+        );
+      });
+      const { executor, stdout } = runtime(
+        fetchImplementation,
+        true,
+        vi.fn().mockResolvedValue(false),
+        controller.signal,
+      );
+      const write = vi.spyOn(stdout, 'write').mockImplementation((chunk: string) => {
+        phases.push('output');
+        stdout.value += chunk;
+        return true;
+      });
+      try {
+        const execution = executor.execute(
+          {
+            kind: 'external-import',
+            input: { operation: 'show', evaluationId: IDS.evaluation, showOutputs: true },
+          },
+          { json: false, debug: false },
+        );
+        if (outcome === 'success') {
+          await execution;
+          expect(phases).toEqual([
+            'Loading evaluation details and run results...',
+            'request',
+            'stopped',
+            'output',
+          ]);
+        } else {
+          await expect(execution).rejects.toMatchObject({
+            code: outcome === 'failure' ? 'NO_KEY' : 'REQUEST_ABORTED',
+          });
+          expect(phases).toEqual([
+            'Loading evaluation details and run results...',
+            'request',
+            'stopped',
+          ]);
+          expect(stdout.value).toBe('');
+        }
+        expect(progress).toHaveBeenCalledWith(
+          expect.objectContaining({ label: 'Import details', enabled: true }),
+        );
+        expect(stop).toHaveBeenCalledOnce();
+      } finally {
+        progress.mockRestore();
+        write.mockRestore();
+      }
+    },
+  );
+
+  it.each([true, false])('keeps detail loading quiet for JSON or pipes (json=%s)', async (json) => {
+    const envelope = {
+      eval: IMPORTED_EVAL,
+      runs: [],
+      results: { page: 1, page_size: 50, total: 0, items: [] },
+      raw_json: { preserved: true },
+    };
+    const progress = vi.spyOn(progressOutput, 'createProgressReporter');
+    const { executor, stdout, stderr } = runtime(
+      vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(envelope)),
+      json,
+    );
+    try {
+      await executor.execute(
+        { kind: 'external-import', input: { operation: 'show', evaluationId: IDS.evaluation } },
+        { json, debug: false },
+      );
+      expect(progress).toHaveBeenCalledWith(
+        expect.objectContaining({ label: 'Import details', enabled: false }),
+      );
+      expect(stderr.value).toBe('');
+      if (json) expect(JSON.parse(stdout.value)).toEqual(envelope);
+    } finally {
+      progress.mockRestore();
+    }
+  });
+
+  it.each([60, 80, 120, 160])('fits expanded result columns to a %s-column terminal', (width) => {
+    const descriptor = Object.getOwnPropertyDescriptor(process.stdout, 'columns');
+    Object.defineProperty(process.stdout, 'columns', { configurable: true, value: width });
+    try {
+      for (const expected of [
+        '',
+        'An expected answer with enough detail to wrap across several lines',
+      ]) {
+        const human = renderImport(
+          importCommandSchema.parse({
+            operation: 'show',
+            evaluationId: IDS.evaluation,
+            showOutputs: true,
+          }),
+          {
+            eval: IMPORTED_EVAL,
+            runs: [],
+            results: {
+              page: 1,
+              page_size: 50,
+              total: 1,
+              items: [
+                {
+                  input:
+                    'A detailed input request that should use the available terminal width instead of a tiny fixed column',
+                  expected,
+                  output:
+                    'A detailed output response that should wrap within its expanded column without being truncated',
+                  passed: true,
+                },
+              ],
+            },
+          },
+        );
+        const plain = safeMultilineTerminalText(human);
+        const border = plain.split('\n').find((line) => line.startsWith('\u250c'));
+        expect(border?.length).toBe(width - 1);
+        const tableLines = plain
+          .split('\n')
+          .filter((line) => /^[\u250c\u251c\u2514\u2502]/u.test(line));
+        expect(tableLines.every((line) => line.length <= width)).toBe(true);
+        expect(plain.includes('EXPECTED')).toBe(expected !== '');
+        expect(plain).toContain('truncated');
+      }
+    } finally {
+      if (descriptor) Object.defineProperty(process.stdout, 'columns', descriptor);
+      else Reflect.deleteProperty(process.stdout, 'columns');
+    }
+  });
+
+  it('renders nested results.items with pass/fail rows and preserves the full JSON page', async () => {
+    const envelope = {
+      eval: IMPORTED_EVAL,
+      runs: [
+        {
+          openai_run_id: 'evalrun_nested',
+          run_created_at: '2026-10-01',
+          model: null,
+          passed_count: 2,
+          total_count: 3,
+        },
+      ],
+      results: {
+        run_id: IDS.run,
+        page: 1,
+        page_size: 50,
+        total: 3,
+        items: [
+          {
+            input: 'Example billing question',
+            expected: 'Helpful billing reply',
+            output: null,
+            passed: true,
+            grader_type: 'example_grader',
+          },
+          {
+            input: 'Example order question',
+            expected: 'Helpful order reply',
+            output: null,
+            passed: true,
+            grader_type: 'example_grader',
+          },
+          {
+            input: 'Example account question',
+            expected: 'Helpful account reply',
+            output: null,
+            passed: false,
+            grader_type: 'example_grader',
+          },
+        ],
+      },
+      raw_json: { testing_criteria: [] },
+    };
+    for (const json of [false, true]) {
+      const { executor, stdout } = runtime(
+        vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(envelope)),
+      );
+      await executor.execute(
+        { kind: 'external-import', input: { operation: 'show', evaluationId: IDS.evaluation } },
+        { json, debug: false },
+      );
+      if (json) expect(JSON.parse(stdout.value)).toEqual(envelope);
+      else {
+        expect(stdout.value).toContain('\u2713 pass  Example billing question');
+        expect(stdout.value).toContain('\u2713 pass  Example order question');
+        expect(stdout.value).toContain('\u2717 fail  Example account question');
+        expect(stdout.value).toContain('Showing 1-3 of 3 results.');
+        expect(stdout.value).not.toContain('No results on this page.');
+      }
+    }
+  });
+
+  it('uses nested result pagination and expands null outputs without losing expected values', () => {
+    const command = importCommandSchema.parse({
+      operation: 'show',
+      evaluationId: IDS.evaluation,
+      showOutputs: true,
+      page: 1,
+      size: 50,
+    });
+    const envelope = {
+      eval: IMPORTED_EVAL,
+      runs: [],
+      page: 1,
+      page_size: 50,
+      results: {
+        run_id: IDS.run,
+        page: 2,
+        page_size: 1,
+        total: 3,
+        items: [
+          { input: 'Example request', expected: 'Expected response', output: null, passed: true },
+        ],
+      },
+    };
+    const human = renderImport(command, envelope);
+    expect(human).toContain('EXPECTED');
+    expect(human).toContain('Expected');
+    expect(human).toContain('\u2014');
+    expect(human).toContain('Showing 2-2 of 3 results. --page 3 for more.');
+    expect(human).toContain('Page 2; size 1.');
+    expect(
+      renderImport(command, {
+        ...envelope,
+        results: {
+          ...envelope.results,
+          items: [{ input: 'Example request', expected: '', output: null, passed: true }],
+        },
+      }),
+    ).not.toContain('EXPECTED');
+    expect(
+      renderImport(command, {
+        ...envelope,
+        results: { ...envelope.results, items: [], total: 0, page: 1 },
+      }),
+    ).toContain('No results on this page.');
+  });
+
+  it.each(['eval_example_not_a_run', IDS.run, '../invalid', ''])(
+    'rejects an invalid --run value with specific guidance: %s',
+    async (run) => {
+      const fetchImplementation = vi.fn<typeof fetch>();
+      const { executor } = runtime(fetchImplementation);
+      await expect(
+        executor.execute(
+          {
+            kind: 'external-import',
+            input: { operation: 'show', evaluationId: IDS.evaluation, run },
+          },
+          { json: false, debug: false },
+        ),
+      ).rejects.toMatchObject({ code: 'INVALID_IMPORT_RUN_ID', exitCode: 2 });
+      expect(fetchImplementation).not.toHaveBeenCalled();
+      expect(hintForError({ kind: 'usage', code: 'INVALID_IMPORT_RUN_ID' })).toContain(
+        'runs[].openai_run_id',
+      );
+    },
+  );
+
   it('shows loading before importing text-file IDs and advances between batches', async () => {
     const directory = await mkdtemp(join(tmpdir(), 'autoeval-import-progress-'));
     const filename = join(directory, 'ids.txt');

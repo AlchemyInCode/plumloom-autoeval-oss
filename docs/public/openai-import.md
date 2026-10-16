@@ -107,9 +107,21 @@ untrusted upstream error text is not printed by the import actions.
 Human detail output separates graders, run history, and results. Runs are numbered
 chronologically (`run 1` is oldest) and displayed newest first. Missing, null, or blank model
 names display as `unknown`; empty grader/run/result sections are reported explicitly.
-Use `--run <openai-run-id>` to select a specific run, not its display number. `--show-outputs`
-expands input/expected/output, omitting the expected column when it is blank. The footer points
+Use `--run <openai-run-id>` to select a specific run, not its display number. Copy the value
+from `runs[].openai_run_id` in `--json` output (`evalrun_...` or `run_...`); an `eval_...`
+source evaluation ID or the UUID under `results.run_id` is not accepted. Omit `--run` for
+the newest run. `--show-outputs`
+expands input/expected/output across the available terminal width, wrapping long content
+instead of truncating it and omitting the expected column when it is blank. Columns share
+the available space; non-TTY output uses a 100-column fallback when no terminal width is known.
+Interactive `import show` displays loading feedback on stderr while fetching details/results
+and preparing human output, then clears it before printing the results or an error.
+The indicator is disabled for JSON/non-TTY output. The footer points
 to `--json` for the complete redacted record, including `raw_json` and full OpenAI run IDs.
+The backend's result page is nested under `results`, with `run_id`, `page`, `page_size`,
+`total`, and `items`. Human output reads `results.items` and uses the nested page metadata
+for result counts and next-page hints. Null outputs remain unknown rather than invented.
+JSON preserves the complete nested result page unchanged.
 
 Human insights output separates the totals and each derived panel with blank lines, aligns
 evaluation names with reasons/dates, and marks ready/not-ready evaluations with ticks/crosses.

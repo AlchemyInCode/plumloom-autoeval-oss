@@ -640,11 +640,24 @@ export class RuntimeCommandExecutor implements CommandExecutor {
           input = { ...input, evalIds: await readImportIds(command.inputFile) };
         }
         const parsed = importCommandSchema.safeParse(input);
-        if (!parsed.success)
+        if (!parsed.success) {
+          if (
+            input.operation === 'show' &&
+            parsed.error.issues.some((issue) => issue.path[0] === 'run')
+          ) {
+            throw new AutoevalError(
+              '--run must be an OpenAI run ID (evalrun_... or run_...), not an eval_... evaluation ID or Plumloom UUID. Omit --run to show the newest run.',
+              {
+                kind: 'usage',
+                code: 'INVALID_IMPORT_RUN_ID',
+              },
+            );
+          }
           throw new AutoevalError(
             "Invalid import arguments. Check IDs, page (1-1000), and the command's --size limit.",
             { kind: 'usage', code: 'INVALID_IMPORT_ARGUMENTS' },
           );
+        }
         let validated: ParsedImportCommand = parsed.data;
         if (validated.operation === 'remove' && !validated.yes) {
           if (options.json || !this.#stdin.isTTY || !this.#stderr.isTTY) {
@@ -670,13 +683,23 @@ export class RuntimeCommandExecutor implements CommandExecutor {
           validated = { ...validated, yes: true };
         }
         const progress =
-          validated.operation === 'review' || validated.operation === 'run'
+          validated.operation === 'review' ||
+          validated.operation === 'run' ||
+          validated.operation === 'show' ||
+          validated.operation === 'evals'
             ? this.#createProgressReporter(
-                validated.operation === 'run' ? 'Import run' : 'Import review',
+                validated.operation === 'run'
+                  ? 'Import run'
+                  : validated.operation === 'show'
+                    ? 'Import details'
+                    : validated.operation === 'evals'
+                      ? 'Imported evaluations'
+                      : 'Import review',
                 options,
               )
             : undefined;
         let result: unknown;
+        let rendered: string;
         try {
           if (validated.operation === 'run') {
             const selectedCount = new Set(validated.evalIds ?? []).size;
@@ -685,6 +708,10 @@ export class RuntimeCommandExecutor implements CommandExecutor {
                 ? 'Finding and importing new OpenAI evaluations...'
                 : `Importing ${selectedCount} evaluation(s), batch 1/${Math.max(1, Math.ceil(selectedCount / 25))}...`,
             );
+          } else if (validated.operation === 'show') {
+            progress?.update('Loading evaluation details and run results...');
+          } else if (validated.operation === 'evals') {
+            progress?.update('Loading imported evaluations...');
           } else {
             progress?.update(
               validated.operation === 'review' && validated.all
@@ -710,14 +737,11 @@ export class RuntimeCommandExecutor implements CommandExecutor {
               code: 'REQUEST_ABORTED',
             });
           }
+          rendered = options.json ? '' : renderImport(validated, result);
         } finally {
           progress?.stop();
         }
-        this.#writer.writeResult(
-          result,
-          options.json ? '' : renderImport(validated, result),
-          options.json,
-        );
+        this.#writer.writeResult(result, rendered, options.json);
         const exitCode = importOutcomeExitCode(validated, result);
         if (exitCode !== 0) process.exitCode = exitCode;
         return;

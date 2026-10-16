@@ -132,12 +132,16 @@ confirms `deleted: true`.
 
 Human detail output uses numbered runs and shows `unknown` for missing model names. Add
 `--json` for the full redacted record, including `raw_json` and OpenAI run IDs.
+Result rows come from the backend's nested `results.items` page. Omit `--run` for the newest
+run, or use an OpenAI run ID from the JSON run history, not an `eval_...` source evaluation ID.
 
 Insights use spaced sections and readiness markers. The human flaky-graders panel shows only
 backend-flagged entries; JSON retains the full insights envelope and grader evaluation IDs.
 
-Interactive `import review` and `import run` show loading progress on stderr; `--json` stays
-machine-readable. Import runs show batch progress for IDs, text files, and all-new selections.
+Interactive `import review`, `import run`, and `import show` display loading progress on stderr;
+`--json` stays machine-readable. Import runs show batch progress for IDs, text files, and
+all-new selections.
+Expanded detail output uses terminal-width input/expected/output columns with wrapped content.
 Ctrl+C cancels review without displaying a late response.
 
 ## MCP server

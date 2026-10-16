@@ -36,11 +36,24 @@ function timestamp(input: unknown): number {
     typeof input === 'number' ? input * 1000 : typeof input === 'string' ? Date.parse(input) : 0;
   return Number.isFinite(parsed) ? parsed : 0;
 }
-function table(head: string[], rows: unknown[][]): string {
+function table(head: string[], rows: unknown[][], width?: number): string {
+  const available =
+    width === undefined
+      ? undefined
+      : Math.max(head.length * 10, Math.floor(width) - head.length - 2);
   const output = new Table({
     head,
     wordWrap: true,
-    colWidths: head.map((heading) => (heading.includes('ID') ? 40 : heading === 'NAME' ? 32 : 16)),
+    wrapOnWordBoundary: true,
+    colWidths: head.map((heading, index) =>
+      available === undefined
+        ? heading.includes('ID')
+          ? 40
+          : heading === 'NAME'
+            ? 32
+            : 16
+        : Math.floor(available / head.length) + (index < available % head.length ? 1 : 0),
+    ),
   });
   rows.forEach((row) => output.push(row.map(text)));
   return `${output.toString()}\n`;
@@ -228,7 +241,8 @@ function renderImportedEvaluation(
       : -1;
   const selectedLabel =
     selectedIndex >= 0 ? `run ${runs.length - selectedIndex}` : text(command.run ?? 'no run');
-  const results = records(envelope.results);
+  const resultPage = record(envelope.results);
+  const results = records(Array.isArray(envelope.results) ? envelope.results : resultPage.items);
   lines.push(
     '',
     `Results (${selectedLabel})${command.showOutputs ? '' : '  [--show-outputs for input/expected/output]'}`,
@@ -247,12 +261,30 @@ function renderImportedEvaluation(
         result.output,
       ];
       const headings = cells.length === 2 ? ['INPUT', 'OUTPUT'] : ['INPUT', 'EXPECTED', 'OUTPUT'];
-      lines.push(table(headings, [cells]).trimEnd());
+      lines.push(
+        table(headings, [cells], process.stdout.columns ?? process.stderr.columns ?? 100).trimEnd(),
+      );
     }
   }
   if (!results.length) lines.push('  No results on this page.');
-  const pageNumber = typeof envelope.page === 'number' ? envelope.page : command.page;
-  const pageSize = typeof envelope.page_size === 'number' ? envelope.page_size : command.size;
+  const pageNumber =
+    typeof resultPage.page === 'number'
+      ? resultPage.page
+      : typeof envelope.page === 'number'
+        ? envelope.page
+        : command.page;
+  const pageSize =
+    typeof resultPage.page_size === 'number'
+      ? resultPage.page_size
+      : typeof envelope.page_size === 'number'
+        ? envelope.page_size
+        : command.size;
+  if (typeof resultPage.total === 'number') {
+    const start = results.length ? (pageNumber - 1) * pageSize + 1 : 0;
+    lines.push(
+      `Showing ${start}-${results.length ? start + results.length - 1 : 0} of ${resultPage.total} results.${pageNumber * pageSize < resultPage.total ? ` --page ${pageNumber + 1} for more.` : ''}`,
+    );
+  }
   lines.push(
     '',
     `Page ${pageNumber}; size ${pageSize}.`,
