@@ -49,6 +49,13 @@ Use `eval_...` IDs for source selection. Use Plumloom UUIDs for workspace option
 - Each write contains at most 25 unique IDs. Batch progress goes to stderr in human mode.
   Per-evaluation failures are collected; subsequent batches continue. An all-new selection
   with no new evaluations succeeds without a write.
+- Interactive `import run` shows an animated loading indicator for `--eval`, `--input`, and
+  `--all-new`. Explicit/file selections show the unique eval count and current batch number;
+  all-new selections show discovery/import activity. The indicator pauses before each batch
+  summary, resumes for the next batch, and clears on completion, failure, or cancellation.
+  JSON has no progress text; non-TTY human output keeps the existing plain batch summaries.
+  Cancellation does not roll back completed batches, and an already-submitted request may
+  finish server-side. Loading feedback does not introduce automatic retries of writes.
 - GETs use the existing bounded retry policy. Import writes and deletions are never retried
   automatically. Transport/authentication failures stop subsequent batches. Earlier successful
   batches remain imported: rerun the selection to have the backend skip existing copies.

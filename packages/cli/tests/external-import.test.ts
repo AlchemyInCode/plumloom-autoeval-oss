@@ -329,6 +329,148 @@ describe('import action boundaries', () => {
 });
 
 describe('import runtime and output', () => {
+  it('shows loading before importing text-file IDs and advances between batches', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'autoeval-import-progress-'));
+    const filename = join(directory, 'ids.txt');
+    const ids = Array.from({ length: 26 }, (_, index) => `eval_progress${index}`);
+    const phases: string[] = [];
+    const update = vi.fn((message: string) => {
+      phases.push(message);
+    });
+    const stop = vi.fn(() => {
+      phases.push('stopped');
+    });
+    const progress = vi
+      .spyOn(progressOutput, 'createProgressReporter')
+      .mockReturnValue({ update, stop, reportStatus: vi.fn() });
+    const fetchImplementation = vi.fn<typeof fetch>().mockImplementation(() => {
+      phases.push('request');
+      return Promise.resolve(jsonResponse(EMPTY_BATCH));
+    });
+    const { executor, stdout, stderr } = runtime(fetchImplementation, true);
+    try {
+      await writeFile(filename, [...ids, ids[0]].join('\r\n'));
+      await executor.execute(
+        { kind: 'external-import', input: { operation: 'run' }, inputFile: filename },
+        { json: false, debug: false },
+      );
+      expect(progress).toHaveBeenCalledWith(
+        expect.objectContaining({ label: 'Import run', enabled: true }),
+      );
+      expect(update.mock.calls.map(([message]) => message)).toEqual([
+        'Importing 26 evaluation(s), batch 1/2...',
+        'Importing batch 2/2...',
+      ]);
+      expect(phases).toEqual([
+        'Importing 26 evaluation(s), batch 1/2...',
+        'request',
+        'stopped',
+        'Importing batch 2/2...',
+        'request',
+        'stopped',
+        'stopped',
+      ]);
+      expect(fetchImplementation).toHaveBeenCalledTimes(2);
+      expect(stderr.value).toContain('Batch 1/2:');
+      expect(stderr.value).toContain('Batch 2/2:');
+      expect(stdout.value).toContain('Imported 0, skipped 0, failed 0.');
+    } finally {
+      progress.mockRestore();
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  it.each(['failure', 'cancelled'] as const)(
+    'clears import-run loading on %s without printing results',
+    async (outcome) => {
+      const controller = new AbortController();
+      const update = vi.fn();
+      const stop = vi.fn();
+      const progress = vi
+        .spyOn(progressOutput, 'createProgressReporter')
+        .mockReturnValue({ update, stop, reportStatus: vi.fn() });
+      const fetchImplementation = vi.fn<typeof fetch>().mockImplementation(() => {
+        if (outcome === 'cancelled') controller.abort();
+        return Promise.resolve(
+          outcome === 'failure' ? jsonResponse({ code: 'NO_KEY' }) : jsonResponse(EMPTY_BATCH),
+        );
+      });
+      const { executor, stdout } = runtime(
+        fetchImplementation,
+        true,
+        vi.fn().mockResolvedValue(false),
+        controller.signal,
+      );
+      try {
+        await expect(
+          executor.execute(
+            { kind: 'external-import', input: { operation: 'run', evalIds: ['eval_progress'] } },
+            { json: false, debug: false },
+          ),
+        ).rejects.toMatchObject({ code: outcome === 'failure' ? 'NO_KEY' : 'REQUEST_ABORTED' });
+        expect(update).toHaveBeenCalledWith('Importing 1 evaluation(s), batch 1/1...');
+        expect(stop).toHaveBeenCalledOnce();
+        expect(stdout.value).toBe('');
+        expect(fetchImplementation).toHaveBeenCalledOnce();
+      } finally {
+        progress.mockRestore();
+      }
+    },
+  );
+
+  it.each([true, false])(
+    'keeps import-run progress disabled for JSON or pipes (json=%s)',
+    async (json) => {
+      const progress = vi.spyOn(progressOutput, 'createProgressReporter');
+      const { executor, stdout, stderr } = runtime(
+        vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(EMPTY_BATCH)),
+        json,
+      );
+      try {
+        await executor.execute(
+          { kind: 'external-import', input: { operation: 'run', evalIds: ['eval_progress'] } },
+          { json, debug: false },
+        );
+        expect(progress).toHaveBeenCalledWith(
+          expect.objectContaining({ label: 'Import run', enabled: false }),
+        );
+        if (json) {
+          expect(JSON.parse(stdout.value)).toMatchObject(EMPTY_BATCH);
+          expect(stderr.value).toBe('');
+        } else {
+          expect(stderr.value).toBe('Batch 1/1: imported 0, skipped 0, failed 0.\n');
+        }
+      } finally {
+        progress.mockRestore();
+      }
+    },
+  );
+
+  it('keeps --all-new discovery visibly loading when there are no new evaluations', async () => {
+    const update = vi.fn();
+    const stop = vi.fn();
+    const progress = vi
+      .spyOn(progressOutput, 'createProgressReporter')
+      .mockReturnValue({ update, stop, reportStatus: vi.fn() });
+    const fetchImplementation = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(jsonResponse({ items: [], total: 0, page: 1, page_size: 100 }));
+    const { executor, stdout } = runtime(fetchImplementation, true);
+    try {
+      await executor.execute(
+        { kind: 'external-import', input: { operation: 'run', allNew: true } },
+        { json: false, debug: false },
+      );
+      expect(update).toHaveBeenCalledWith('Finding and importing new OpenAI evaluations...');
+      expect(stop).toHaveBeenCalledOnce();
+      expect(fetchImplementation).toHaveBeenCalledOnce();
+      expect(fetchImplementation.mock.calls[0]?.[1]?.method).toBe('GET');
+      expect(stdout.value).toContain('Imported 0, skipped 0, failed 0.');
+    } finally {
+      progress.mockRestore();
+    }
+  });
+
   it.each(['success', 'failure', 'cancelled'] as const)(
     'clears review progress before %s completes',
     async (outcome) => {

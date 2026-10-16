@@ -136,7 +136,8 @@ Human detail output uses numbered runs and shows `unknown` for missing model nam
 Insights use spaced sections and readiness markers. The human flaky-graders panel shows only
 backend-flagged entries; JSON retains the full insights envelope and grader evaluation IDs.
 
-Interactive `import review` shows loading progress on stderr; `--json` stays machine-readable.
+Interactive `import review` and `import run` show loading progress on stderr; `--json` stays
+machine-readable. Import runs show batch progress for IDs, text files, and all-new selections.
 Ctrl+C cancels review without displaying a late response.
 
 ## MCP server

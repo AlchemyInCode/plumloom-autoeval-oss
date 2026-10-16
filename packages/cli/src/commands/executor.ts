@@ -670,23 +670,38 @@ export class RuntimeCommandExecutor implements CommandExecutor {
           validated = { ...validated, yes: true };
         }
         const progress =
-          validated.operation === 'review'
-            ? this.#createProgressReporter('Import review', options)
+          validated.operation === 'review' || validated.operation === 'run'
+            ? this.#createProgressReporter(
+                validated.operation === 'run' ? 'Import run' : 'Import review',
+                options,
+              )
             : undefined;
         let result: unknown;
         try {
-          progress?.update(
-            validated.operation === 'review' && validated.all
-              ? 'Loading all cached OpenAI evaluations...'
-              : 'Loading cached OpenAI evaluations...',
-          );
+          if (validated.operation === 'run') {
+            const selectedCount = new Set(validated.evalIds ?? []).size;
+            progress?.update(
+              validated.allNew
+                ? 'Finding and importing new OpenAI evaluations...'
+                : `Importing ${selectedCount} evaluation(s), batch 1/${Math.max(1, Math.ceil(selectedCount / 25))}...`,
+            );
+          } else {
+            progress?.update(
+              validated.operation === 'review' && validated.all
+                ? 'Loading all cached OpenAI evaluations...'
+                : 'Loading cached OpenAI evaluations...',
+            );
+          }
           result = await executeImport(context, validated, {
             ...(this.#signal ? { signal: this.#signal } : {}),
             onBatch: (batch, index, total) => {
-              if (!options.json)
+              if (!options.json) {
+                progress?.stop();
                 this.#stderr.write(
                   `Batch ${index}/${total}: imported ${importEntryCount(batch.imported)}, skipped ${importEntryCount(batch.skipped)}, failed ${batch.failed.length}.\n`,
                 );
+                if (index < total) progress?.update(`Importing batch ${index + 1}/${total}...`);
+              }
             },
           });
           if (this.#signal?.aborted) {
