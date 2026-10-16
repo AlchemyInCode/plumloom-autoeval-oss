@@ -659,9 +659,7 @@ export class RuntimeCommandExecutor implements CommandExecutor {
             this.#signal ? { signal: this.#signal } : {},
           );
           const envelope = z.record(z.string(), z.unknown()).parse(detail);
-          const evaluation = z
-            .record(z.string(), z.unknown())
-            .parse(envelope.evaluation ?? envelope);
+          const evaluation = z.record(z.string(), z.unknown()).parse(envelope.eval);
           const evaluationName =
             typeof evaluation.name === 'string' ? evaluation.name : validated.evaluationId;
           const question = `Remove "${safeTerminalText(evaluationName)}" and its runs/results?`;
@@ -671,15 +669,35 @@ export class RuntimeCommandExecutor implements CommandExecutor {
           }
           validated = { ...validated, yes: true };
         }
-        const result = await executeImport(context, validated, {
-          ...(this.#signal ? { signal: this.#signal } : {}),
-          onBatch: (batch, index, total) => {
-            if (!options.json)
-              this.#stderr.write(
-                `Batch ${index}/${total}: imported ${importEntryCount(batch.imported)}, skipped ${importEntryCount(batch.skipped)}, failed ${batch.failed.length}.\n`,
-              );
-          },
-        });
+        const progress =
+          validated.operation === 'review'
+            ? this.#createProgressReporter('Import review', options)
+            : undefined;
+        let result: unknown;
+        try {
+          progress?.update(
+            validated.operation === 'review' && validated.all
+              ? 'Loading all cached OpenAI evaluations...'
+              : 'Loading cached OpenAI evaluations...',
+          );
+          result = await executeImport(context, validated, {
+            ...(this.#signal ? { signal: this.#signal } : {}),
+            onBatch: (batch, index, total) => {
+              if (!options.json)
+                this.#stderr.write(
+                  `Batch ${index}/${total}: imported ${importEntryCount(batch.imported)}, skipped ${importEntryCount(batch.skipped)}, failed ${batch.failed.length}.\n`,
+                );
+            },
+          });
+          if (this.#signal?.aborted) {
+            throw new AutoevalError('Import request was canceled.', {
+              kind: 'network',
+              code: 'REQUEST_ABORTED',
+            });
+          }
+        } finally {
+          progress?.stop();
+        }
         this.#writer.writeResult(
           result,
           options.json ? '' : renderImport(validated, result),

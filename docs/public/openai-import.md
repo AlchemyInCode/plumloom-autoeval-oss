@@ -37,6 +37,10 @@ Use `eval_...` IDs for source selection. Use Plumloom UUIDs for workspace option
   default 50. Discovery ordering comes from the backend.
 - `review --all` starts at page 1 even when `--page` is supplied. It preserves the first page's
   envelope and aggregates/deduplicates both the backend `items` list and normalized `evals` list.
+- Interactive human review shows a loading indicator on stderr while cached evaluations load.
+  It is cleared before the table or an error is displayed. JSON and non-TTY output remain quiet.
+  Ctrl+C cancels the request; responses arriving after cancellation are not displayed. The
+  indicator does not change backend latency or trigger a discovery refresh.
 - All-pages discovery and explicit selections are capped at 25,000 unique evaluations.
   Explicit input is validated before deduplication and may contain at most 25,000 lines/IDs.
 - ID files must be regular UTF-8 files of at most 1 MiB. BOM, CRLF, whitespace, empty lines,
@@ -82,14 +86,32 @@ fixture is shipped with this repository.
 | Commit          | `POST /run`                       | Body `{ "eval_ids": ["eval_synthetic"] }`; response `imported`, `skipped` (item lists or counts), `failed` (list), optional `workspace_id`. Single-batch fields are retained; multiple batches aggregate counts/lists and retain each envelope under `batches`.                                                                                                  |
 | Workspaces      | `GET /workspaces`                 | Workspace array or `{ "workspaces": [...] }`.                                                                                                                                                                                                                                                                                                                    |
 | Imported evals  | `GET /workspaces/{uuid}`          | Query `page`, `page_size`, `search`; envelope `page`, `page_size`, `total`, `workspace`, `items`. Workspace has `workspace_id`/`name`; items have Plumloom UUID `eval_id`, source `openai_eval_id`, `name`, `openai_created_at`, `imported_at`, nullable `run_count`/`last_run_at`. JSON preserves the envelope; human output includes both full IDs and paging. |
-| Detail          | `GET /evaluations/{uuid}`         | Query `page`, `size`, optional `run_id`; detail object, optionally nested under `evaluation`, plus `runs`, `results`, and `raw_json`.                                                                                                                                                                                                                            |
-| Insights        | `GET /workspaces/{uuid}/insights` | JSON envelope with `derived_by: "Plumloom"`; no client recomputation. Human panels read `totals`, `migration_readiness`, `going_stale`, `pass_rate_trend`, and `flaky_graders`.                                                                                                                                                                                  |
-| Remove          | `DELETE /evaluations/{uuid}`      | JSON object or empty success.                                                                                                                                                                                                                                                                                                                                    |
+| Detail          | `GET /evaluations/{uuid}`         | Query `page`, `page_size`, optional `run_id`; metadata under `eval`, plus `runs`, `results`, and `raw_json`. Runs use `run_created_at`, `passed_count`, and `total_count`; newest run is selected by `run_created_at`.                                                                                                                                           |
+| Insights        | `GET /workspaces/{uuid}/insights` | JSON envelope with `derived_by: "Plumloom"`; panels use `migration_readiness.ready`, `totals.last_run`, and `pass_rate_trend[].points[]` (each point's `pass_rate`, ordered by `run_created_at`). Null pass rates remain unknown.                                                                                                                                |
+| Remove          | `DELETE /evaluations/{uuid}`      | Requires a JSON object with `deleted: true` before reporting success. `false`, a missing field, a string value, or an empty response fails validation.                                                                                                                                                                                                           |
 | Disconnect      | `POST /disconnect`                | JSON object or empty success.                                                                                                                                                                                                                                                                                                                                    |
 
-Empty removal/disconnect responses become `{ "removed": true, "eval_id": "..." }` or
-`{ "disconnected": true }` in JSON. Provider error codes are mapped to fixed actionable hints;
+Removal preserves the backend's `deleted: true` envelope in JSON and never synthesizes success.
+Interactive confirmation reads the evaluation name from `eval.name`. Declining confirmation sends
+no DELETE request. Empty disconnect responses become `{ "disconnected": true }` in JSON.
+Provider error codes are mapped to fixed actionable hints;
 untrusted upstream error text is not printed by the import actions.
+
+Human detail output separates graders, run history, and results. Runs are numbered
+chronologically (`run 1` is oldest) and displayed newest first. Missing, null, or blank model
+names display as `unknown`; empty grader/run/result sections are reported explicitly.
+Use `--run <openai-run-id>` to select a specific run, not its display number. `--show-outputs`
+expands input/expected/output, omitting the expected column when it is blank. The footer points
+to `--json` for the complete redacted record, including `raw_json` and full OpenAI run IDs.
+
+Human insights output separates the totals and each derived panel with blank lines, aligns
+evaluation names with reasons/dates, and marks ready/not-ready evaluations with ticks/crosses.
+Stale evaluations have bullet markers; trend points use arrows, retaining unknown pass rates
+as an em dash rather than zero. The flaky-graders panel lists only entries with backend
+`flagged: true`, using `grader_type` when no display name is supplied, and formats `swing` as
+percentage points. If none are flagged, it shows `none flagged`. This does not recompute the
+backend's flags. JSON preserves the complete redacted insights envelope, including unflagged
+grader entries, each grader's `evals[].eval_id` links, and `derived_by: "Plumloom"`.
 
 Provider errors (`NO_KEY`, `INVALID_KEY`, `EVALS_FORBIDDEN`, `OPENAI_UNREACHABLE`) are handled
 even when the backend returns HTTP `200`. Connect and refresh never print **Connected** or an

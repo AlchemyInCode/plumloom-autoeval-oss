@@ -31,6 +31,11 @@ function date(input: unknown): string {
 function percent(input: unknown): string {
   return typeof input === 'number' ? `${(input * 100).toFixed(1)}%` : '\u2014';
 }
+function timestamp(input: unknown): number {
+  const parsed =
+    typeof input === 'number' ? input * 1000 : typeof input === 'string' ? Date.parse(input) : 0;
+  return Number.isFinite(parsed) ? parsed : 0;
+}
 function table(head: string[], rows: unknown[][]): string {
   const output = new Table({
     head,
@@ -192,39 +197,46 @@ function renderImportedEvaluation(
   command: Extract<ParsedImportCommand, { operation: 'show' }>,
   envelope: RecordValue,
 ): string {
-  const evaluation = record(envelope.evaluation ?? envelope);
+  const evaluation = record(envelope.eval);
   const lines = [
     text(evaluation.name),
-    `Source: OpenAI (${text(evaluation.openai_eval_id)})   Imported: ${date(evaluation.imported_at ?? evaluation.created_at)}`,
+    `Source: OpenAI (${text(evaluation.openai_eval_id)})   Imported: ${date(evaluation.imported_at)}`,
   ];
   if (evaluation.description) lines.push(text(evaluation.description));
-  lines.push('Graders');
-  const graders = evaluation.graders ?? record(evaluation.raw_json).testing_criteria;
-  for (const grader of records(graders))
-    lines.push(`  ${text(grader.name)} (${text(grader.type)})`);
-  const runs = records(envelope.runs ?? evaluation.runs).sort((left, right) => {
-    const timestamp = (run: RecordValue): number =>
-      typeof run.created_at === 'number'
-        ? run.created_at * 1000
-        : Date.parse(String(run.created_at)) || 0;
-    return timestamp(right) - timestamp(left);
-  });
-  lines.push('Run history');
-  for (const run of runs)
+  lines.push('', 'Graders');
+  const graders = records(
+    evaluation.graders ?? record(evaluation.raw_json ?? envelope.raw_json).testing_criteria,
+  );
+  for (const grader of graders) lines.push(`  ${text(grader.name)} (${text(grader.type)})`);
+  if (graders.length === 0) lines.push('  None reported.');
+  const runs = records(envelope.runs).sort(
+    (left, right) => timestamp(right.run_created_at) - timestamp(left.run_created_at),
+  );
+  lines.push('', 'Run history');
+  runs.forEach((run, index) => {
+    const model =
+      typeof run.model === 'string' && run.model.trim() !== '' ? text(run.model) : 'unknown';
     lines.push(
-      `  ${text(run.openai_run_id ?? run.id)}  ${text(run.model)}  ${date(run.created_at)}  ${text(run.passed_count)} / ${text(run.result_count)} passed`,
+      `  run ${runs.length - index}   ${model}   ${date(run.run_created_at)}   ${text(run.passed_count)}/${text(run.total_count)} passed`,
     );
-  const selected = command.run
-    ? runs.find((run) => (run.openai_run_id ?? run.id) === command.run)
-    : runs[0];
-  const results = records(envelope.results ?? selected?.results);
+  });
+  if (runs.length === 0) lines.push('  No runs available.');
+  const selectedIndex = command.run
+    ? runs.findIndex((run) => (run.openai_run_id ?? run.id) === command.run)
+    : runs.length
+      ? 0
+      : -1;
+  const selectedLabel =
+    selectedIndex >= 0 ? `run ${runs.length - selectedIndex}` : text(command.run ?? 'no run');
+  const results = records(envelope.results);
   lines.push(
-    `Results (${text(command.run ?? selected?.openai_run_id ?? selected?.id ?? 'newest run')})${command.showOutputs ? '' : ' [--show-outputs for input/expected/output]'}`,
+    '',
+    `Results (${selectedLabel})${command.showOutputs ? '' : '  [--show-outputs for input/expected/output]'}`,
   );
   for (const result of results) {
     const passed = result.passed ?? result.pass;
     lines.push(
-      `  ${passed === true ? 'OK pass' : passed === false ? 'FAIL' : '-'}  ${text(result.name ?? result.input).slice(0, 90)}`,
+      `  ${passed === true ? '\u2713 pass' : passed === false ? '\u2717 fail' : '-'}  ${text(result.name ?? result.input).slice(0, 90)}`,
     );
     if (command.showOutputs) {
       const cells = [
@@ -239,55 +251,82 @@ function renderImportedEvaluation(
     }
   }
   if (!results.length) lines.push('  No results on this page.');
-  lines.push(`Page ${command.page}; size ${command.size}.`);
+  const pageNumber = typeof envelope.page === 'number' ? envelope.page : command.page;
+  const pageSize = typeof envelope.page_size === 'number' ? envelope.page_size : command.size;
+  lines.push(
+    '',
+    `Page ${pageNumber}; size ${pageSize}.`,
+    'Hint: Use --json for the full record, including raw_json and OpenAI run IDs.',
+  );
   return `${lines.join('\n')}\n`;
 }
 
 function renderImportInsights(envelope: RecordValue): string {
   const totals = record(envelope.totals);
   const readiness = record(envelope.migration_readiness);
+  const row = (marker: string, name: unknown, detail = ''): string =>
+    `  ${marker ? `${marker} ` : ''}${text(name).padEnd(36)}${detail ? `  ${detail}` : ''}`.trimEnd();
   const lines = [
-    `${text(envelope.workspace_name ?? 'Imported from OpenAI')} - insights (Derived by Plumloom)`,
-    `Totals  Evals ${text(totals.evals ?? totals.eval_count)}   Runs ${text(totals.runs ?? totals.run_count)}   Results ${text(totals.results ?? totals.result_count)}   Pass rate ${percent(totals.pass_rate)}   Last run ${date(totals.last_run_at)}`,
-    `Migration readiness  ${text(readiness.ready_count)} of ${text(readiness.total ?? totals.evals ?? totals.eval_count)} ready`,
+    `${text(envelope.workspace_name ?? 'Imported from OpenAI')} \u2014 insights            (Derived by Plumloom)`,
+    '',
+    'Totals',
+    `  Evals ${text(totals.evals ?? totals.eval_count)}   Runs ${text(totals.runs ?? totals.run_count)}   Results ${text(totals.results ?? totals.result_count)}   Pass rate ${percent(totals.pass_rate)}   Last run ${date(totals.last_run)}`,
+    '',
+    `Migration readiness   ${text(readiness.ready)} of ${text(readiness.total ?? totals.evals ?? totals.eval_count)} ready`,
   ];
   for (const evaluation of records(
     Array.isArray(envelope.migration_readiness) ? envelope.migration_readiness : readiness.evals,
   ))
     lines.push(
-      `  ${evaluation.ready ? 'OK' : 'NOT READY'} ${text(evaluation.name)} ${text(evaluation.reason ?? '')}`,
+      row(
+        evaluation.ready === true ? '\u2713' : '\u2717',
+        evaluation.name,
+        evaluation.reason ? text(evaluation.reason) : '',
+      ),
     );
-  lines.push('Going stale (>30d or never run)');
+  lines.push('', 'Going stale (>30d or never run)');
   const stale = records(envelope.going_stale);
   lines.push(
     ...(stale.length
-      ? stale.map(
-          (evaluation) => `  ${text(evaluation.name)} last run ${date(evaluation.last_run_at)}`,
+      ? stale.map((evaluation) =>
+          row('\u2022', evaluation.name, `last run ${date(evaluation.last_run_at)}`),
         )
       : ['  none flagged']),
   );
-  lines.push('Pass-rate trend');
+  lines.push('', 'Pass-rate trend');
   const trends = records(envelope.pass_rate_trend);
   lines.push(
     ...(trends.length
-      ? trends.map(
-          (evaluation) =>
-            `  ${text(evaluation.name)} ${percent(evaluation.previous_pass_rate)} -> ${percent(evaluation.pass_rate ?? evaluation.latest_pass_rate)}`,
-        )
+      ? trends.map((evaluation) => {
+          const points = records(evaluation.points).sort(
+            (left, right) => timestamp(left.run_created_at) - timestamp(right.run_created_at),
+          );
+          const rates = points.map((point) => percent(point.pass_rate));
+          return row(
+            '',
+            evaluation.name,
+            `${rates.length ? rates.join(' \u2192 ') : 'no runs available'}${rates.length === 1 ? ' (single run)' : ''}`,
+          );
+        })
       : ['  single run or no trend available']),
   );
-  lines.push('Flaky graders (swing >= 25pts)');
-  const flaky = records(envelope.flaky_graders);
+  lines.push('', 'Flaky graders (swing \u2265 25pts)');
+  const flaky = records(envelope.flaky_graders).filter((grader) => grader.flagged === true);
   lines.push(
     ...(flaky.length
-      ? flaky.map(
-          (grader) =>
-            `  ${text(grader.name ?? grader.grader_name)} ${percent(grader.swing)}  evals: ${records(
-              grader.evals,
-            )
-              .map((evaluation) => text(evaluation.eval_id))
-              .join(', ')}`,
-        )
+      ? flaky.flatMap((grader) => {
+          const swing =
+            typeof grader.swing === 'number' ? `${(grader.swing * 100).toFixed(1)} pts` : '\u2014';
+          const evalIds = records(grader.evals).map((evaluation) => text(evaluation.eval_id));
+          return [
+            row(
+              '\u2022',
+              grader.name ?? grader.grader_name ?? grader.grader_type ?? 'Unknown grader',
+              `swing ${swing}`,
+            ),
+            ...(evalIds.length ? [`    Evals: ${evalIds.join(', ')}`] : []),
+          ];
+        })
       : ['  none flagged']),
   );
   return `${lines.join('\n')}\n`;

@@ -126,6 +126,19 @@ Imports create a Plumloom copy and never write back to OpenAI. See the
 [OpenAI import guide](docs/public/openai-import.md) for every command, exit code, safety limit,
 and local/staging verification commands. This import surface is CLI-only.
 
+Detail results use `--page` and `--size` (sent as backend `page_size`). Imported-run histories
+show the backend's run dates and result totals. Removal reports success only after the backend
+confirms `deleted: true`.
+
+Human detail output uses numbered runs and shows `unknown` for missing model names. Add
+`--json` for the full redacted record, including `raw_json` and OpenAI run IDs.
+
+Insights use spaced sections and readiness markers. The human flaky-graders panel shows only
+backend-flagged entries; JSON retains the full insights envelope and grader evaluation IDs.
+
+Interactive `import review` shows loading progress on stderr; `--json` stays machine-readable.
+Ctrl+C cancels review without displaying a late response.
+
 ## MCP server
 
 Autoeval includes a local stdio MCP server that exposes the same action layer as the CLI. It resolves credentials from `AUTOEVAL_API_KEY` and then the OS credential store, and it never prompts. See the [MCP server guide](docs/public/mcp.md) and [Autoeval with Codex and Claude Code](docs/public/integration-codex-and-claude-code.md).

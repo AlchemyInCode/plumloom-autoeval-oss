@@ -14,6 +14,7 @@ import { AutoevalApiClient } from '../src/api/api.js';
 import { ApiClient } from '../src/api/client.js';
 import { ApiError } from '../src/api/errors.js';
 import { hintForError } from '../src/errors/hints.js';
+import * as progressOutput from '../src/output/progress.js';
 import {
   executeImport,
   importCommandSchema,
@@ -22,6 +23,13 @@ import {
 import { createApi, IDS, VALID_KEY } from './helpers.js';
 
 const EMPTY_BATCH = { imported: [], skipped: [], failed: [] };
+const IMPORTED_EVAL = {
+  eval_id: IDS.evaluation,
+  openai_eval_id: 'eval_example_imported',
+  name: 'Imported eval',
+  openai_created_at: '2026-10-01T01:00:00Z',
+  imported_at: '2026-10-15T01:00:00Z',
+};
 function sourceEvaluation(index: number, imported = false) {
   return {
     id: `eval_test${index}`,
@@ -41,6 +49,7 @@ function runtime(
   fetchImplementation: typeof fetch,
   interactive = false,
   confirm = vi.fn().mockResolvedValue(false),
+  signal?: AbortSignal,
 ) {
   const stdout = {
     value: '',
@@ -65,6 +74,7 @@ function runtime(
     stderr,
     stdin: { isTTY: interactive },
     confirmImportRemoval: confirm,
+    ...(signal ? { signal } : {}),
   });
   return { executor, stdout, stderr, confirm };
 }
@@ -249,6 +259,22 @@ describe('import action boundaries', () => {
     expect(api.externalImport).not.toHaveBeenCalled();
   });
 
+  it('does not release late review results after cancellation', async () => {
+    const controller = new AbortController();
+    const externalImport = vi.fn<AutoevalApi['externalImport']>().mockImplementation(() => {
+      controller.abort();
+      return Promise.resolve({ items: [sourceEvaluation(1)], total: 1, page: 1, page_size: 50 });
+    });
+    await expect(
+      executeImport(
+        { api: createApi({ externalImport }) },
+        { operation: 'review' },
+        { signal: controller.signal },
+      ),
+    ).rejects.toMatchObject({ code: 'REQUEST_ABORTED' });
+    expect(externalImport).toHaveBeenCalledOnce();
+  });
+
   it.each([
     [{ operation: 'status' }, 'GET', '/connect/status'],
     [{ operation: 'connect' }, 'POST', '/connect'],
@@ -283,9 +309,9 @@ describe('import action boundaries', () => {
         page_size: 50,
         workspace: { workspace_id: IDS.workspace, name: 'Imported from OpenAI' },
       },
-      show: { raw_json: { preserved: true } },
+      show: { eval: IMPORTED_EVAL, runs: [], results: [], raw_json: { preserved: true } },
       insights: { derived_by: 'Plumloom' },
-      remove: undefined,
+      remove: { deleted: true, eval_id: IDS.evaluation },
       disconnect: undefined,
     };
     const externalImport = vi
@@ -297,12 +323,99 @@ describe('import action boundaries', () => {
       expect(externalImport.mock.calls[0]?.[0].query).toEqual({
         run_id: 'evalrun_sample',
         page: 2,
-        size: 10,
+        page_size: 10,
       });
   });
 });
 
 describe('import runtime and output', () => {
+  it.each(['success', 'failure', 'cancelled'] as const)(
+    'clears review progress before %s completes',
+    async (outcome) => {
+      const phases: string[] = [];
+      const controller = new AbortController();
+      const update = vi.fn(() => {
+        phases.push('loading');
+      });
+      const stop = vi.fn(() => {
+        phases.push('stopped');
+      });
+      const progress = vi
+        .spyOn(progressOutput, 'createProgressReporter')
+        .mockReturnValue({ update, stop, reportStatus: vi.fn() });
+      const fetchImplementation = vi.fn<typeof fetch>().mockImplementation(() => {
+        phases.push('request');
+        if (outcome === 'cancelled') controller.abort();
+        return Promise.resolve(
+          outcome === 'failure'
+            ? jsonResponse({ code: 'IMPORT_CACHE_COLD' }, 409)
+            : jsonResponse({ items: [], total: 0, page: 1, page_size: 50 }),
+        );
+      });
+      const { executor, stdout } = runtime(
+        fetchImplementation,
+        true,
+        vi.fn().mockResolvedValue(false),
+        controller.signal,
+      );
+      const write = vi.spyOn(stdout, 'write').mockImplementation((chunk: string) => {
+        phases.push('output');
+        stdout.value += chunk;
+        return true;
+      });
+      try {
+        const execution = executor.execute(
+          { kind: 'external-import', input: { operation: 'review' } },
+          { json: false, debug: false },
+        );
+        if (outcome === 'success') {
+          await execution;
+          expect(phases).toEqual(['loading', 'request', 'stopped', 'output']);
+          expect(stdout.value).toContain('No OpenAI evaluations found.');
+        } else {
+          await expect(execution).rejects.toMatchObject({
+            code: outcome === 'failure' ? 'IMPORT_CACHE_COLD' : 'REQUEST_ABORTED',
+          });
+          expect(phases).toEqual(['loading', 'request', 'stopped']);
+          expect(stdout.value).toBe('');
+        }
+        expect(progress).toHaveBeenCalledWith(
+          expect.objectContaining({ label: 'Import review', enabled: true }),
+        );
+        expect(update).toHaveBeenCalledWith('Loading cached OpenAI evaluations...');
+        expect(stop).toHaveBeenCalledOnce();
+      } finally {
+        progress.mockRestore();
+        write.mockRestore();
+      }
+    },
+  );
+
+  it.each([true, false])(
+    'keeps progress disabled for JSON or noninteractive review (json=%s)',
+    async (json) => {
+      const progress = vi.spyOn(progressOutput, 'createProgressReporter');
+      const { executor, stdout, stderr } = runtime(
+        vi
+          .fn<typeof fetch>()
+          .mockResolvedValue(jsonResponse({ items: [], total: 0, page: 1, page_size: 50 })),
+        json,
+      );
+      try {
+        await executor.execute(
+          { kind: 'external-import', input: { operation: 'review' } },
+          { json, debug: false },
+        );
+        expect(progress).toHaveBeenCalledWith(expect.objectContaining({ enabled: false }));
+        expect(stderr.value).toBe('');
+        if (json) expect(JSON.parse(stdout.value)).toMatchObject({ items: [], total: 0 });
+        else expect(stdout.value).toContain('No OpenAI evaluations found.');
+      } finally {
+        progress.mockRestore();
+      }
+    },
+  );
+
   it.each([
     ['NO_KEY', 'AI Providers & Models'],
     ['INVALID_KEY', 'Replace the OpenAI key'],
@@ -567,7 +680,9 @@ describe('import runtime and output', () => {
   it('preserves raw detail in JSON, redacts secrets, and emits no human text', async () => {
     const fetchImplementation = vi.fn<typeof fetch>().mockResolvedValue(
       jsonResponse({
-        name: 'Imported eval',
+        eval: IMPORTED_EVAL,
+        runs: [],
+        results: [],
         raw_json: { api_key: 'synthetic-provider-credential', input: 'Record', trace: VALID_KEY },
       }),
     );
@@ -577,7 +692,9 @@ describe('import runtime and output', () => {
       { json: true, debug: false },
     );
     expect(JSON.parse(stdout.value)).toEqual({
-      name: 'Imported eval',
+      eval: IMPORTED_EVAL,
+      runs: [],
+      results: [],
       raw_json: { api_key: '[REDACTED]', input: 'Record', trace: 'pl_sk_[REDACTED]' },
     });
     expect(stderr.value).toBe('');
@@ -586,8 +703,44 @@ describe('import runtime and output', () => {
   it('preserves the full insights envelope and grader navigation IDs in JSON', async () => {
     const envelope = {
       derived_by: 'Plumloom',
-      totals: { pass_rate: null },
-      flaky_graders: [{ name: 'Rubric', evals: [{ eval_id: IDS.evaluation }] }],
+      workspace_name: 'Imported from OpenAI',
+      totals: { evals: 2, runs: 3, results: 4, pass_rate: null, last_run: '2026-10-02T12:00:00Z' },
+      migration_readiness: {
+        ready: 1,
+        total: 2,
+        evals: [
+          { eval_id: IDS.evaluation, name: 'Ready rubric', ready: true, reason: null },
+          { eval_id: IDS.run, name: 'Stale rubric', ready: false, reason: 'no recent run' },
+        ],
+      },
+      going_stale: [{ eval_id: IDS.run, name: 'Stale rubric', last_run_at: null }],
+      pass_rate_trend: [
+        {
+          eval_id: IDS.evaluation,
+          name: 'Ready rubric',
+          points: [
+            {
+              openai_run_id: 'evalrun_new',
+              run_created_at: '2026-10-02T12:00:00Z',
+              pass_rate: 0.96,
+            },
+            {
+              openai_run_id: 'evalrun_old',
+              run_created_at: '2026-10-01T12:00:00Z',
+              pass_rate: 0.95,
+            },
+          ],
+        },
+      ],
+      flaky_graders: [
+        {
+          grader_type: 'score_model',
+          swing: 0.3,
+          flagged: true,
+          evals: [{ eval_id: IDS.evaluation }],
+        },
+        { grader_type: 'string_check', swing: 0.01, flagged: false, evals: [{ eval_id: IDS.run }] },
+      ],
     };
     const { executor, stdout } = runtime(
       vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(envelope)),
@@ -597,18 +750,36 @@ describe('import runtime and output', () => {
       { json: true, debug: false },
     );
     expect(JSON.parse(stdout.value)).toEqual(envelope);
-    expect(
-      renderImport(
-        importCommandSchema.parse({ operation: 'insights', workspaceId: IDS.workspace }),
-        envelope,
-      ),
-    ).not.toContain('Pass rate 0.0%');
+    const human = renderImport(
+      importCommandSchema.parse({ operation: 'insights', workspaceId: IDS.workspace }),
+      envelope,
+    );
+    expect(human).not.toContain('Pass rate 0.0%');
+    for (const expected of [
+      'Derived by Plumloom',
+      'Last run 2026-10-02',
+      'Migration readiness   1 of 2 ready',
+      '\u2713 Ready rubric',
+      '\u2717 Stale rubric',
+      'swing 30.0 pts',
+    ])
+      expect(human).toContain(expected);
+    expect(human).toMatch(/Stale rubric\s+no recent run/u);
+    expect(human).toMatch(/Ready rubric\s+95\.0% \u2192 96\.0%/u);
+    expect(human).toMatch(/\u2022 Stale rubric\s+last run \u2014/u);
+    expect(human).toContain(`Evals: ${IDS.evaluation}`);
+    expect(human).not.toContain('string_check');
+    expect(human).toContain('\n\nTotals\n  Evals 2');
+    expect(human).toContain('\n\nMigration readiness');
+    expect(human).toContain('\n\nGoing stale');
+    expect(human).toContain('\n\nPass-rate trend');
+    expect(human).toContain('\n\nFlaky graders');
   });
 
   it('does not delete when confirmation is declined', async () => {
     const fetchImplementation = vi
       .fn<typeof fetch>()
-      .mockResolvedValue(jsonResponse({ name: 'Imported eval' }));
+      .mockResolvedValue(jsonResponse({ eval: IMPORTED_EVAL, runs: [], results: [] }));
     const { executor, stdout, confirm } = runtime(fetchImplementation, true);
     await executor.execute(
       { kind: 'external-import', input: { operation: 'remove', evaluationId: IDS.evaluation } },
@@ -622,8 +793,8 @@ describe('import runtime and output', () => {
   it('deletes only after interactive confirmation', async () => {
     const fetchImplementation = vi
       .fn<typeof fetch>()
-      .mockResolvedValueOnce(jsonResponse({ name: 'Imported eval' }))
-      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+      .mockResolvedValueOnce(jsonResponse({ eval: IMPORTED_EVAL, runs: [], results: [] }))
+      .mockResolvedValueOnce(jsonResponse({ deleted: true, eval_id: IDS.evaluation }));
     const { executor, stdout } = runtime(
       fetchImplementation,
       true,
@@ -649,6 +820,44 @@ describe('import runtime and output', () => {
     expect(fetchImplementation).not.toHaveBeenCalled();
   });
 
+  it.each([undefined, null, {}, { deleted: false }, { deleted: 'true' }, { removed: true }])(
+    'does not report deletion success for invalid acknowledgment %j',
+    async (response) => {
+      const fetchImplementation = vi
+        .fn<typeof fetch>()
+        .mockResolvedValue(
+          response === undefined ? new Response(null, { status: 204 }) : jsonResponse(response),
+        );
+      const { executor, stdout } = runtime(fetchImplementation);
+      await expect(
+        executor.execute(
+          {
+            kind: 'external-import',
+            input: { operation: 'remove', evaluationId: IDS.evaluation, yes: true },
+          },
+          { json: false, debug: false },
+        ),
+      ).rejects.toMatchObject({ code: 'INVALID_IMPORT_RESPONSE' });
+      expect(stdout.value).toBe('');
+      expect(fetchImplementation).toHaveBeenCalledOnce();
+    },
+  );
+
+  it('rejects a legacy detail envelope before requesting deletion confirmation', async () => {
+    const fetchImplementation = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(jsonResponse({ evaluation: IMPORTED_EVAL, runs: [], results: [] }));
+    const { executor, confirm } = runtime(fetchImplementation, true);
+    await expect(
+      executor.execute(
+        { kind: 'external-import', input: { operation: 'remove', evaluationId: IDS.evaluation } },
+        { json: false, debug: false },
+      ),
+    ).rejects.toMatchObject({ code: 'INVALID_IMPORT_RESPONSE' });
+    expect(confirm).not.toHaveBeenCalled();
+    expect(fetchImplementation).toHaveBeenCalledOnce();
+  });
+
   it('shows two result columns when expected is blank and selects the newest run', () => {
     const human = renderImport(
       importCommandSchema.parse({
@@ -657,25 +866,217 @@ describe('import runtime and output', () => {
         showOutputs: true,
       }),
       {
-        name: 'Example',
+        eval: IMPORTED_EVAL,
+        page: 1,
+        page_size: 50,
         runs: [
           {
-            id: 'evalrun_old',
-            created_at: '2026-01-01',
-            results: [{ input: 'OLD', output: 'Old output' }],
+            openai_run_id: 'evalrun_old',
+            run_created_at: '2026-01-01T12:00:00Z',
+            model: 'example-old-model',
+            passed_count: 1,
+            total_count: 3,
           },
           {
-            id: 'evalrun_new',
-            created_at: '2026-10-01',
-            results: [{ input: 'NEW', expected: '', output: 'New output', passed: true }],
+            openai_run_id: 'evalrun_new',
+            run_created_at: '2026-10-01T12:00:00Z',
+            model: 'example-new-model',
+            passed_count: 2,
+            total_count: 2,
           },
         ],
+        results: [{ input: 'NEW', expected: '', output: 'New output', passed: true }],
+        raw_json: { testing_criteria: [] },
       },
     );
-    expect(human).toContain('Results (evalrun_new)');
+    expect(human).toContain('Results (run 2)');
     expect(human).toContain('New output');
     expect(human).not.toContain('EXPECTED');
-    expect(human).not.toContain('Old output');
+    expect(human).toContain('Imported eval');
+    expect(human).toContain('Source: OpenAI (eval_example_imported)');
+    expect(human).toContain('Imported: 2026-10-15');
+    expect(human).toContain('run 2   example-new-model   2026-10-01   2/2 passed');
+    expect(human).toContain('run 1   example-old-model   2026-01-01   1/3 passed');
+    expect(human.indexOf('run 2')).toBeLessThan(human.indexOf('run 1'));
+    expect(human).toContain('\u2713 pass');
+    expect(human).toContain(
+      'Hint: Use --json for the full record, including raw_json and OpenAI run IDs.',
+    );
+  });
+
+  it.each([
+    [[], 'no runs available'],
+    [[{ run_created_at: '2026-10-01', pass_rate: null }], '\u2014 (single run)'],
+    [[{ run_created_at: '2026-10-01', pass_rate: 0 }], '0.0% (single run)'],
+    [
+      [
+        { run_created_at: '2026-10-01', pass_rate: null },
+        { run_created_at: '2026-10-02', pass_rate: 0.5 },
+      ],
+      '\u2014 \u2192 50.0%',
+    ],
+  ])('renders empty, single, zero, and null trend points: %j', (points, expected) => {
+    const human = renderImport(
+      importCommandSchema.parse({ operation: 'insights', workspaceId: IDS.workspace }),
+      {
+        derived_by: 'Plumloom',
+        totals: { evals: 1, runs: 1, results: 0, pass_rate: null, last_run: null },
+        migration_readiness: { ready: 0, total: 1, evals: [] },
+        going_stale: [],
+        flaky_graders: [],
+        pass_rate_trend: [{ eval_id: IDS.evaluation, name: 'Trend rubric', points }],
+      },
+    );
+    expect(human).toContain(`Trend rubric`.padEnd(36) + `  ${expected}`);
+    expect(human).toContain('Last run \u2014');
+    expect(human).toContain('Migration readiness   0 of 1 ready');
+  });
+
+  it.each([
+    undefined,
+    null,
+    [],
+    [
+      {
+        grader_type: 'score_model',
+        swing: 0.01,
+        flagged: false,
+        evals: [{ eval_id: IDS.evaluation }],
+      },
+    ],
+    [
+      {
+        grader_type: 'score_model',
+        swing: 0.9,
+        flagged: false,
+        evals: [{ eval_id: IDS.evaluation }],
+      },
+    ],
+  ])('shows none flagged when the backend reports no flagged graders: %j', (graders) => {
+    const human = renderImport(
+      importCommandSchema.parse({ operation: 'insights', workspaceId: IDS.workspace }),
+      {
+        derived_by: 'Plumloom',
+        totals: { pass_rate: null },
+        migration_readiness: { ready: 0, total: 0, evals: [] },
+        flaky_graders: graders,
+      },
+    );
+    expect(human).toContain('Flaky graders (swing \u2265 25pts)\n  none flagged');
+    expect(human).not.toContain('score_model');
+    expect(human).toContain('Pass rate \u2014');
+    expect(human).not.toContain('Pass rate 0.0%');
+  });
+
+  it('sends exact result-page query parameters for an explicitly selected run', async () => {
+    const envelope = {
+      eval: IMPORTED_EVAL,
+      runs: [
+        {
+          openai_run_id: 'evalrun_selected',
+          run_created_at: '2026-10-01T12:00:00Z',
+          model: 'example-model',
+          passed_count: 0,
+          total_count: 1,
+        },
+      ],
+      results: [
+        {
+          input: 'Example input',
+          expected: 'Expected answer',
+          output: 'Actual answer',
+          passed: false,
+        },
+      ],
+      page: 2,
+      page_size: 10,
+      total: 11,
+      raw_json: { testing_criteria: [] },
+    };
+    const fetchImplementation = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(envelope));
+    const { executor, stdout } = runtime(fetchImplementation);
+    await executor.execute(
+      {
+        kind: 'external-import',
+        input: {
+          operation: 'show',
+          evaluationId: IDS.evaluation,
+          run: 'evalrun_selected',
+          page: 2,
+          size: 10,
+          showOutputs: true,
+        },
+      },
+      { json: false, debug: false },
+    );
+    expect(fetchImplementation.mock.calls[0]?.[0]).toEqual(
+      new URL(
+        `/api/v1/import/external/evals/evaluations/${IDS.evaluation}?run_id=evalrun_selected&page=2&page_size=10`,
+        loadConfiguration().apiBaseUrl,
+      ),
+    );
+    expect(stdout.value).toContain('Results (run 1)');
+    expect(stdout.value).toContain('EXPECTED');
+    expect(stdout.value).toContain('Actual answer');
+    expect(stdout.value).toContain('Page 2; size 10.');
+  });
+
+  it.each([undefined, null, '', '   '])('shows unknown for an unavailable model: %j', (model) => {
+    const human = renderImport(
+      importCommandSchema.parse({ operation: 'show', evaluationId: IDS.evaluation }),
+      {
+        eval: IMPORTED_EVAL,
+        runs: [
+          {
+            openai_run_id: 'evalrun_example',
+            run_created_at: '2026-10-01',
+            model,
+            passed_count: 2,
+            total_count: 3,
+          },
+        ],
+        results: [],
+      },
+    );
+    expect(human).toContain('run 1   unknown   2026-10-01   2/3 passed');
+    expect(human).toContain('\n\nGraders\n  None reported.\n\nRun history\n');
+    expect(human).toContain('\n\nResults (run 1)  [--show-outputs for input/expected/output]');
+    expect(human).toContain('No results on this page.');
+  });
+
+  it('shows available graders and a numbered explicitly selected older run', () => {
+    const human = renderImport(
+      importCommandSchema.parse({
+        operation: 'show',
+        evaluationId: IDS.evaluation,
+        run: 'evalrun_old',
+      }),
+      {
+        eval: IMPORTED_EVAL,
+        raw_json: { testing_criteria: [{ name: 'rubric_judge', type: 'score_model' }] },
+        runs: [
+          {
+            openai_run_id: 'evalrun_old',
+            run_created_at: '2026-01-01',
+            model: 'example-model',
+            passed_count: 1,
+            total_count: 1,
+          },
+          {
+            openai_run_id: 'evalrun_new',
+            run_created_at: '2026-10-01',
+            model: 'example-model',
+            passed_count: 2,
+            total_count: 2,
+          },
+        ],
+        results: [{ passed: false, input: 'Example failed case' }],
+      },
+    );
+    expect(human).toContain('rubric_judge (score_model)');
+    expect(human).toContain('Results (run 1)');
+    expect(human).toContain('\u2717 fail  Example failed case');
+    expect(human).not.toContain('None reported.');
   });
 
   it('neutralizes terminal control characters in backend names', () => {
@@ -1062,16 +1463,19 @@ describe('external import transport', () => {
     expect(externalImport.mock.calls[0]?.[0].query?.page).toBe(1);
   });
 
-  it('provides machine-readable results for empty delete and disconnect responses', async () => {
+  it('preserves the deletion acknowledgment and handles an empty disconnect response', async () => {
     const api = createApi({
-      externalImport: vi.fn<AutoevalApi['externalImport']>().mockResolvedValue(undefined),
+      externalImport: vi
+        .fn<AutoevalApi['externalImport']>()
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce({ deleted: true, eval_id: IDS.evaluation }),
     });
     await expect(executeImport({ api }, { operation: 'disconnect' })).resolves.toEqual({
       disconnected: true,
     });
     await expect(
       executeImport({ api }, { operation: 'remove', evaluationId: IDS.evaluation, yes: true }),
-    ).resolves.toEqual({ removed: true, eval_id: IDS.evaluation });
+    ).resolves.toEqual({ deleted: true, eval_id: IDS.evaluation });
   });
 
   it('preserves numeric count responses and partial-failure exit status', async () => {

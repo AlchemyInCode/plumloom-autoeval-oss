@@ -220,18 +220,24 @@ function invalidImport(message: string, code = 'INVALID_IMPORT_ARGUMENTS'): Auto
   return new AutoevalError(message, { kind: 'usage', code });
 }
 
+function throwIfImportAborted(signal?: AbortSignal): void {
+  if (signal?.aborted) {
+    throw new AutoevalError('Import request was canceled.', {
+      kind: 'network',
+      code: 'REQUEST_ABORTED',
+    });
+  }
+}
+
 async function requestImport<Schema extends z.ZodType>(
   context: ActionContext,
   request: ExternalImportRequest,
   schema: Schema,
 ): Promise<z.output<Schema>> {
-  if (request.signal?.aborted)
-    throw new AutoevalError('Import request was canceled.', {
-      kind: 'network',
-      code: 'REQUEST_ABORTED',
-    });
+  throwIfImportAborted(request.signal);
   try {
     const response = await context.api.externalImport(request);
+    throwIfImportAborted(request.signal);
     const code = extractUpstreamError(response).code;
     const providerError = importErrors[code ?? ''];
     const isStatusState =
@@ -252,6 +258,7 @@ async function requestImport<Schema extends z.ZodType>(
       );
     return parsed.data;
   } catch (error) {
+    throwIfImportAborted(request.signal);
     if (error instanceof ApiError) {
       const providerError = importErrors[error.code ?? ''];
       if (providerError)
@@ -392,9 +399,14 @@ export async function executeImport(
         query: { page: input.page, page_size: input.size, search: input.search ?? '' },
       });
     case 'show':
-      return request('GET', `/evaluations/${input.evaluationId}`, jsonRecord, {
-        query: { run_id: input.run, page: input.page, size: input.size },
-      });
+      return request(
+        'GET',
+        `/evaluations/${input.evaluationId}`,
+        z.object({ eval: z.object({ name: z.string().min(1) }).loose() }).loose(),
+        {
+          query: { run_id: input.run, page: input.page, page_size: input.size },
+        },
+      );
     case 'insights':
       return request(
         'GET',
@@ -407,12 +419,10 @@ export async function executeImport(
           'Removal requires explicit confirmation (--yes).',
           'IMPORT_CONFIRMATION_REQUIRED',
         );
-      return (
-        (await request(
-          'DELETE',
-          `/evaluations/${input.evaluationId}`,
-          z.union([jsonRecord, z.undefined(), z.null()]),
-        )) ?? { removed: true, eval_id: input.evaluationId }
+      return request(
+        'DELETE',
+        `/evaluations/${input.evaluationId}`,
+        z.object({ deleted: z.literal(true) }).loose(),
       );
     }
     case 'run': {
