@@ -1,7 +1,9 @@
 import type { GateThresholds } from '../actions/gate.js';
 import type { QuickstartSampleKind } from '../quickstart/sample.js';
+import type { ImportCommand } from '../actions/imports.js';
 
 export type DeterministicCommand =
+  | { kind: 'external-import'; input: ImportCommand; inputFile?: string }
   | { kind: 'login'; key?: string }
   | { kind: 'logout' }
   | { kind: 'whoami' }

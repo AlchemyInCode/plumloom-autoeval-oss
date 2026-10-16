@@ -113,6 +113,44 @@ autoeval --json results <evaluation-id> <run-id>
 
 The [command guide](docs/public/commands.md) and [CLI reference](docs/public/cli-reference.md) cover the full command surface. For environment and credential behavior, see the [developer guide](docs/public/developer-guide.md) and [`.env.example`](.env.example). Runnable smoke workflows live under [`examples/smoke/`](examples/smoke/), additional sanitized configurations live under [`examples/evals/`](examples/evals/), and reliability semantics are documented in the [documentation home](docs/public/docs-home.md#reliability).
 
+## Import OpenAI evaluations
+
+Add your OpenAI key once in the Plumloom UI under **AI Providers & Models**. The CLI uses only
+your existing Plumloom CLI key; it never requests an OpenAI key or calls OpenAI directly.
+
+```bash
+autoeval import status
+autoeval import connect
+autoeval import review --search rubric
+autoeval import run --all-new
+autoeval import list
+autoeval import insights --workspace <workspace-uuid>
+autoeval import show <plumloom-eval-uuid> --show-outputs
+```
+
+Imports create a Plumloom copy and never write back to OpenAI. See the
+[OpenAI import guide](docs/public/openai-import.md) for every command, exit code, safety limit,
+and local/staging verification commands. This import surface is CLI-only.
+
+Detail results use `--page` and `--size` (sent as backend `page_size`). Imported-run histories
+show the backend's run dates and result totals. Removal reports success only after the backend
+confirms `deleted: true`.
+
+Human detail output uses numbered runs and shows `unknown` for missing model names. Add
+`--json` for the full redacted record, including `raw_json` and OpenAI run IDs.
+Result rows come from the backend's nested `results.items` page. Omit `--run` for the newest
+run, or use an OpenAI run ID from the JSON run history, not an `eval_...` source evaluation ID.
+
+Insights use spaced sections and readiness markers. The human flaky-graders panel shows only
+backend-flagged entries; JSON retains the full insights envelope and grader evaluation IDs.
+
+Interactive `import review`, `import run`, `import show`, and `import evals` display loading
+progress on stderr;
+`--json` stays machine-readable. Import runs show batch progress for IDs, text files, and
+all-new selections.
+Expanded detail output uses terminal-width input/expected/output columns with wrapped content.
+Ctrl+C cancels review without displaying a late response.
+
 ## MCP server
 
 Autoeval includes a local stdio MCP server that exposes the same action layer as the CLI. It resolves credentials from `AUTOEVAL_API_KEY` and then the OS credential store, and it never prompts. See the [MCP server guide](docs/public/mcp.md) and [Autoeval with Codex and Claude Code](docs/public/integration-codex-and-claude-code.md).

@@ -36,13 +36,14 @@ export class AutoevalError extends Error {
       kind: AutoevalErrorKind;
       code?: string;
       cause?: unknown;
+      exitCode?: number;
     },
   ) {
     super(message, { cause: options.cause });
     this.name = 'AutoevalError';
     this.kind = options.kind;
     this.code = options.code;
-    this.exitCode = EXIT_CODES[options.kind];
+    this.exitCode = options.exitCode ?? EXIT_CODES[options.kind];
   }
 }
 
