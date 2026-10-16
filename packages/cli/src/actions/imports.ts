@@ -39,7 +39,7 @@ export const importCommandSchema = z.discriminatedUnion('operation', [
     .object({
       operation: z.literal('show'),
       evaluationId: z.uuid(),
-      run: openaiRunIdSchema.optional(),
+      run: z.union([z.uuid(), openaiRunIdSchema]).optional(),
       showOutputs: z.boolean().default(false),
       page: pageOptions.page,
       size: pageOptions.size,
