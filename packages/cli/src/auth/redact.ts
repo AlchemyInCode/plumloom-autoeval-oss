@@ -1,4 +1,5 @@
 const CLI_KEY_PATTERN = /pl_sk_[A-Za-z0-9_-]{12,}/gu;
+const CLI_KEY_DETECTION_PATTERN = /pl_sk_[A-Za-z0-9_-]{12,}/u;
 const SENSITIVE_FIELD_SUFFIXES = new Set([
   'authorization',
   'credential',
@@ -43,6 +44,11 @@ function isSensitiveFieldName(input: string): boolean {
 
 export function redactText(input: string): string {
   return input.replace(CLI_KEY_PATTERN, 'pl_sk_[REDACTED]');
+}
+
+/** True when text contains a value that has the shape of an Autoeval CLI credential. */
+export function containsCliCredential(input: string): boolean {
+  return CLI_KEY_DETECTION_PATTERN.test(input);
 }
 
 /**

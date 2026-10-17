@@ -97,15 +97,22 @@ export function selectQuickstartWorkspace(
 
 /**
  * Model rule, in order:
- *   1. an explicit `--judge-model-id` / `--primary-model-id` wins;
+ *   1. an explicit `--judge-model-id` / `--primary-model-id` wins when it does
+ *      not conflict with the other model role;
  *   2. exactly one enabled model (the Free tier shape) is used silently;
  *   3. the first committed preference entry present in the catalog wins;
  *   4. otherwise a choice is required — never an implicit alphabetical pick.
+ *
+ * `excludeModelId` lets a caller keep the two roles distinct: when the primary
+ * role is auto-resolved it excludes the judge already chosen, so an evaluation
+ * never grades a model with itself. If exclusion leaves no candidate, the
+ * caller receives an actionable error instead of creating an invalid run.
  */
 export function selectQuickstartModel(
   candidates: readonly SupportedModel[],
   role: ModelRole,
   overrideModelId?: string,
+  excludeModelId?: string,
 ): ModelResolution {
   if (candidates.length === 0) {
     throw new AutoevalError(
@@ -116,6 +123,12 @@ export function selectQuickstartModel(
 
   if (overrideModelId !== undefined) {
     const wanted = overrideModelId.toLowerCase();
+    if (wanted === excludeModelId?.toLowerCase()) {
+      throw new AutoevalError(
+        'The judge model and primary model must be different. Enable another model or pass distinct --judge-model-id and --primary-model-id values.',
+        { kind: 'validation', code: 'MODEL_ROLE_CONFLICT' },
+      );
+    }
     const match = candidates.find((model) => model.id.toLowerCase() === wanted);
     if (!match) {
       throw new AutoevalError(
@@ -126,17 +139,30 @@ export function selectQuickstartModel(
     return { kind: 'resolved', model: match };
   }
 
-  const [only] = candidates;
-  if (candidates.length === 1 && only) {
+  const excluded = excludeModelId?.toLowerCase();
+  const distinct =
+    excluded === undefined
+      ? candidates
+      : candidates.filter((model) => model.id.toLowerCase() !== excluded);
+  if (distinct.length === 0) {
+    throw new AutoevalError(
+      'A scenario evaluation needs different judge and primary models, but only one enabled model is available. Enable another model or choose a non-scenario pack.',
+      { kind: 'validation', code: 'MODEL_ROLE_CONFLICT' },
+    );
+  }
+  const pool = distinct;
+
+  const [only] = pool;
+  if (pool.length === 1 && only) {
     return { kind: 'resolved', model: only };
   }
 
   const preference = role === 'judge' ? QUICKSTART_JUDGE_PREFERENCE : QUICKSTART_PRIMARY_PREFERENCE;
   for (const preferred of preference) {
     const wanted = preferred.toLowerCase();
-    const match = candidates.find((model) => modelIdentifiers(model).includes(wanted));
+    const match = pool.find((model) => modelIdentifiers(model).includes(wanted));
     if (match) return { kind: 'resolved', model: match };
   }
 
-  return { kind: 'choice-required', role, candidates };
+  return { kind: 'choice-required', role, candidates: pool };
 }

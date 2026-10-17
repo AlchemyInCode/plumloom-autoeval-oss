@@ -1,0 +1,16 @@
+# Starter pack: retrieval-grounded answer quality.
+#
+# A pack is a named, versioned bundle (this manifest plus its eval files) that
+# installs by name and runs with zero IDs: the judge and the model under test
+# are selected from distinct enabled models and the workspace is resolved at
+# run time. The eval's synthetic placeholders are replaced in memory.
+name: rag-answer-quality
+version: 1
+title: RAG answer quality
+description: Scores grounded answers for factuality and relevance against supplied reference documents.
+context: scenario
+evals:
+  - evals/grounded-answers.json
+gate:
+  minOverall: 4.0
+  minScenario: 3.5

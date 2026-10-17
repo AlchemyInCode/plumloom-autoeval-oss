@@ -89,6 +89,22 @@ export type DeterministicCommand =
       judgeModelId?: string;
       primaryModelId?: string;
     }
+  | { kind: 'config-set-workspace'; workspaceId: string }
+  | { kind: 'config-set-judge-model'; modelId: string }
+  | { kind: 'config-set-primary-model'; modelId: string }
+  | { kind: 'config-show' }
+  | { kind: 'config-clear' }
+  | { kind: 'pack-list' }
+  | { kind: 'pack-add'; name: string; directory?: string }
+  | { kind: 'pack-run'; name: string }
+  | {
+      kind: 'init';
+      pack?: string;
+      workspaceId?: string;
+      judgeModelId?: string;
+      primaryModelId?: string;
+      assumeYes: boolean;
+    }
   | { kind: 'run'; evaluationId: string }
   | { kind: 'status'; evaluationId: string; runId: string }
   | { kind: 'results'; evaluationId: string; runId: string; showOutputs?: boolean }

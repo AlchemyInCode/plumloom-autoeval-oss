@@ -27,6 +27,26 @@ const HINTS_BY_CODE: Readonly<Record<string, string>> = {
     'Set at least one threshold, for example --min-overall 4.0, or pass --thresholds <file>',
   GATE_THRESHOLDS_READ_FAILED: 'Check the --thresholds path relative to your current directory',
   INVALID_GATE_THRESHOLDS_JSON: 'Validate the thresholds file with a JSON linter, then retry',
+  PACK_NOT_FOUND: 'Run `autoeval pack list` to see the available starter packs',
+  PACK_FILE_EXISTS:
+    'A pack file already exists at that path; install into a new --dir or remove the existing files',
+  PACK_FILES_MODIFIED:
+    'Run an adapted pack with `autoeval suite run --manifest <file>`, or remove the pack directory and reinstall the bundled pack',
+  PACK_INVALID_PATH: 'This pack declares an unsafe file path and cannot be installed',
+  INIT_RUN_FAILED:
+    'Inspect the failed evaluation with `autoeval results <evaluation-id> <run-id>`, fix the issue, then rerun `autoeval init`',
+  PACK_RUN_FAILED:
+    'Inspect the failed evaluation with `autoeval results <evaluation-id> <run-id>`, then rerun `autoeval pack run <name>`',
+  SETTINGS_WRITE_FAILED:
+    'Check that your home or $XDG_CONFIG_HOME directory is writable, then retry',
+  INVALID_CONFIG_VALUE:
+    'Pass a non-empty non-secret ID, for example `autoeval config set-workspace <uuid>`',
+  INIT_WORKSPACE_REQUIRED:
+    'Save one with `autoeval config set-workspace <uuid>`, pass --workspace to `autoeval init`, or run in a terminal to choose',
+  INIT_MODEL_REQUIRED:
+    'Save model defaults with `autoeval config`, pass model IDs to `autoeval init`, or run in a terminal to choose; `autoeval models` lists IDs',
+  MODEL_ROLE_CONFLICT:
+    'Enable a second model, save distinct model defaults, or pass distinct model IDs to `autoeval init`; non-scenario packs need only a judge',
 };
 
 const HINTS_BY_KIND: Readonly<Partial<Record<AutoevalErrorKind, string>>> = {

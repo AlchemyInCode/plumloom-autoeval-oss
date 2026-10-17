@@ -1,0 +1,17 @@
+# Starter pack: a tool-grounded agent trajectory.
+#
+# A pack is a named, versioned bundle (this manifest plus its eval files) that
+# installs by name and runs with zero IDs: the judge model is auto-picked and
+# the workspace is resolved at run time. The eval's synthetic model placeholder
+# is replaced in memory with an enabled model.
+name: agent-trace
+version: 1
+title: Agent trace grounding
+description: Grades a recorded agent trajectory for a relevant lookup, use of the returned value, and a concise answer.
+context: agent_trace
+evals:
+  - evals/tool-grounded.json
+gate:
+  metrics:
+    factuality: 4.0
+    helpfulness: 4.0

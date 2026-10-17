@@ -141,7 +141,7 @@ export function createProgram(
       '',
       'Getting started:',
       '  1. autoeval login                             authenticate once (or set AUTOEVAL_API_KEY)',
-      '  2. autoeval quickstart                        run a first evaluation end to end',
+      '  2. autoeval init                              install a starter pack and run a first evaluation',
       '  3. autoeval run <evaluation-id>               run and wait; prints the Run ID',
       '  4. autoeval results <evaluation-id> <run-id>  read results for the Run ID from step 3',
       '',
@@ -781,6 +781,117 @@ export function createProgram(
       },
     );
 
+  const config = program
+    .command('config')
+    .description('manage saved non-secret defaults (never your API key)');
+  config
+    .command('set-workspace <workspace-id>')
+    .description('save the default workspace UUID')
+    .action(async (workspaceId: string, _options: object, command: Command) => {
+      await executor.execute(
+        { kind: 'config-set-workspace', workspaceId },
+        executionOptions(command),
+      );
+    });
+  config
+    .command('set-judge-model <model-id>')
+    .description('save the default judge model UUID')
+    .action(async (modelId: string, _options: object, command: Command) => {
+      await executor.execute(
+        { kind: 'config-set-judge-model', modelId },
+        executionOptions(command),
+      );
+    });
+  config
+    .command('set-primary-model <model-id>')
+    .description('save the default model-under-test UUID (scenario evaluations)')
+    .action(async (modelId: string, _options: object, command: Command) => {
+      await executor.execute(
+        { kind: 'config-set-primary-model', modelId },
+        executionOptions(command),
+      );
+    });
+  config
+    .command('show')
+    .description('print the saved defaults (no secrets)')
+    .action(async (_options: object, command: Command) => {
+      await executor.execute({ kind: 'config-show' }, executionOptions(command));
+    });
+  config
+    .command('clear')
+    .description('remove the saved defaults file')
+    .action(async (_options: object, command: Command) => {
+      await executor.execute({ kind: 'config-clear' }, executionOptions(command));
+    });
+
+  const pack = program.command('pack').description('install and run starter evaluation packs');
+  pack
+    .command('list')
+    .description('list the built-in starter packs')
+    .action(async (_options: object, command: Command) => {
+      await executor.execute({ kind: 'pack-list' }, executionOptions(command));
+    });
+  pack
+    .command('add <name>')
+    .description('install a starter pack into a local directory')
+    .option('--dir <path>', 'directory to install into (default: ./autoeval)')
+    .action(async (name: string, options: { dir?: string }, command: Command) => {
+      await executor.execute(
+        {
+          kind: 'pack-add',
+          name,
+          ...(options.dir === undefined ? {} : { directory: options.dir }),
+        },
+        executionOptions(command),
+      );
+    });
+  pack
+    .command('run <name>')
+    .description('install the pack if needed, then run it with auto-picked models')
+    .action(async (name: string, _options: object, command: Command) => {
+      await executor.execute({ kind: 'pack-run', name }, executionOptions(command));
+    });
+
+  program
+    .command('init')
+    .description(
+      'go from install to a first finished evaluation: resolve a workspace and models, install a starter pack, run it, and save your defaults',
+    )
+    .option('--pack <name>', 'starter pack to install and run (default: support-bot)')
+    .option('--workspace <workspace-id>', 'use this workspace instead of resolving one')
+    .option('--judge-model-id <model-id>', 'use this judge model instead of resolving one')
+    .option(
+      '--primary-model-id <model-id>',
+      'use this model under test instead of resolving one (scenario packs only)',
+    )
+    .option('--yes', 'never prompt; select the first ordered choice when needed', false)
+    .action(
+      async (
+        options: {
+          pack?: string;
+          workspace?: string;
+          judgeModelId?: string;
+          primaryModelId?: string;
+          yes?: boolean;
+        },
+        command: Command,
+      ) => {
+        await executor.execute(
+          {
+            kind: 'init',
+            ...(options.pack === undefined ? {} : { pack: options.pack }),
+            ...(options.workspace === undefined ? {} : { workspaceId: options.workspace }),
+            ...(options.judgeModelId === undefined ? {} : { judgeModelId: options.judgeModelId }),
+            ...(options.primaryModelId === undefined
+              ? {}
+              : { primaryModelId: options.primaryModelId }),
+            assumeYes: options.yes === true,
+          },
+          executionOptions(command),
+        );
+      },
+    );
+
   addCommandExamples(program);
 
   for (const extend of extensions) extend(program);
@@ -789,6 +900,25 @@ export function createProgram(
 }
 
 const COMMAND_EXAMPLES: Readonly<Record<string, readonly string[]>> = {
+  init: ['autoeval init', 'autoeval init --pack rag-answer-quality', 'autoeval init --yes'],
+  config: [
+    'autoeval config show',
+    'autoeval config set-workspace <workspace-id>',
+    'autoeval config set-judge-model <model-id>',
+    'autoeval config clear',
+  ],
+  'config show': ['autoeval config show', 'autoeval --json config show'],
+  'config set-workspace': ['autoeval config set-workspace <workspace-id>'],
+  'config set-judge-model': ['autoeval config set-judge-model <model-id>'],
+  'config set-primary-model': ['autoeval config set-primary-model <model-id>'],
+  'config clear': ['autoeval config clear'],
+  pack: ['autoeval pack list', 'autoeval pack add support-bot', 'autoeval pack run support-bot'],
+  'pack list': ['autoeval pack list', 'autoeval --json pack list'],
+  'pack add': [
+    'autoeval pack add support-bot',
+    'autoeval pack add rag-answer-quality --dir ./evals',
+  ],
+  'pack run': ['autoeval pack run support-bot'],
   login: ['autoeval login', 'AUTOEVAL_API_KEY=pl_sk_... autoeval whoami'],
   whoami: ['autoeval whoami', 'autoeval --json whoami'],
   'workspace list': ['autoeval workspace list'],

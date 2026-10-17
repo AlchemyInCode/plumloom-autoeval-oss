@@ -50,14 +50,42 @@ error code, the human report, and `--json`.
 ## 0. First result in one command
 
 ```bash
-autoeval quickstart
+autoeval init
 ```
 
-Quickstart resolves the workspace and judge model, grades a bundled recorded agent trajectory,
-waits for it, and prints the result. `--sample scenario` runs the scenario sample instead and also
-resolves a model under test. Overrides are available through `--workspace`,
-`--judge-model-id`, `--primary-model-id`, and `--input`; `--yes` disables prompts. See the
-[quickstart](./quickstart.md) for the complete selection rules.
+`init` resolves a workspace and enabled model roles, installs a starter pack under `./autoeval/`,
+runs it, and saves non-secret defaults only after the evaluation and settings write succeed.
+`--pack rag-answer-quality` selects the scenario starter, which requires distinct judge and primary
+models. `--yes` uses the first ordered choice instead of prompting.
+
+For the older no-files sample flow, `autoeval quickstart` grades a bundled recorded trajectory.
+`--sample scenario` runs the scenario sample instead. Its overrides are `--workspace`,
+`--judge-model-id`, `--primary-model-id`, and `--input`; `quickstart --yes` disables prompts and
+fails if selection remains ambiguous. See the [quickstart](./quickstart.md) for its selection rules.
+
+### Saved defaults and starter packs
+
+```bash
+autoeval config set-workspace <workspace-id>
+autoeval config set-judge-model <model-id>
+autoeval config set-primary-model <model-id>
+autoeval config show
+autoeval config clear
+
+autoeval pack list
+autoeval pack add support-bot
+autoeval pack run support-bot
+```
+
+Settings are stored at `$XDG_CONFIG_HOME/autoeval/settings.json`, or
+`~/.config/autoeval/settings.json`, with owner-only permissions. They never hold the API key;
+credential-shaped values are rejected on writes and ignored if found in an existing settings file.
+Explicit flags take precedence over saved defaults.
+
+Pack evals contain public synthetic model placeholders. `init` and `pack run` replace them in
+memory. They install a missing pack, but will not silently execute partial, edited, symlinked, or
+policy-modified pack files. Run an adapted copy explicitly with
+`autoeval suite run --manifest <file>` or `suite gate`.
 
 ---
 
@@ -180,6 +208,9 @@ account. It creates nothing and submits no runs. `--judge-model-id` and
 check the public example files and their placeholder model IDs. It reports every problem in one
 pass and exits `2` when anything is blocking, so CI can run it as a fast gate
 before the expensive suite step.
+
+When omitted, workspace and model flags fall back to saved `config` defaults before the manifest
+or file values are probed.
 
 ## 4c. Import an agent trajectory
 
@@ -345,6 +376,8 @@ evals:
 ```bash
 autoeval suite run --manifest autoeval.suite.yaml [--workspace <workspace-id>] [--judge-model-id <uuid>] [--primary-model-id <uuid>] [--concurrency 3] [--stagger-ms 250]
 ```
+
+Workspace and model flags override saved `config` defaults; saved defaults fill omitted flags.
 
 `--workspace` overrides the manifest's `workspace` without editing the file — this is how the
 committed smoke manifest, [`examples/suite/autoeval.suite.yaml`](../../examples/suite/autoeval.suite.yaml), is

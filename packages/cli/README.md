@@ -21,6 +21,7 @@ node packages/cli/dist/cli.js --help
 
 ## What is in this package
 
+- Activation commands: `init`, `config`, and the four bundled `pack` starters
 - Deterministic commands: `login`, `whoami`, `models`, `workspace`, `eval`, `status`, `results`,
   `gate`, `suite run`, `suite gate`
 - File-driven eval inputs (`src/configured-run/file-inputs.ts`) and suite manifests
@@ -28,6 +29,24 @@ node packages/cli/dist/cli.js --help
 - The file-driven guide (`src/guide/eval-guide.ts`): scope, file selection, run confirmation
 - Rendering: tables, scorecards, markdown answers, progress, trends, digests
 - The local stdio MCP server (`dist/mcp.js`)
+
+## Activate Autoeval
+
+```bash
+autoeval init
+autoeval config show
+autoeval pack list
+```
+
+`init` resolves a workspace and enabled models, installs the default starter pack under
+`./autoeval/`, runs it, and saves non-secret defaults only after both the run and settings write
+succeed. Scenario packs require distinct judge and primary models. Settings live at
+`$XDG_CONFIG_HOME/autoeval/settings.json` (or `~/.config/autoeval/settings.json`), are written with
+owner-only permissions, and reject credential-shaped values.
+
+`pack run` will install a missing bundled pack. It reuses existing files only when their contents
+and manifest execution policy match the bundled pack; use `suite run --manifest <file>` for an
+adapted copy.
 
 ## Release gating in CI
 

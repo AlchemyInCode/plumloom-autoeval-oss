@@ -37,11 +37,47 @@ Autoeval connects to [https://api.plumloom.ai](https://api.plumloom.ai) automati
 ## Quickstart
 
 ```bash
-autoeval login
-autoeval quickstart
+autoeval init
 ```
 
-`quickstart` resolves a workspace and judge model, grades a bundled sample end to end, and prints the result. See the [quickstart guide](docs/public/quickstart.md).
+`init` takes you from install to a first finished evaluation: it resolves a workspace and the models to use, installs a starter pack into the current directory, runs it end to end, prints the result, and — once the evaluation finishes successfully — saves your choices as defaults so later commands need fewer flags. It signs you in first if needed. If the evaluation fails to run, `init` reports the failure, exits non-zero, and does not save defaults. Add `--yes` to accept the first available workspace and models without prompting (useful in scripts).
+
+To grade a single bundled sample without writing any files, use `autoeval quickstart`. See the [quickstart guide](docs/public/quickstart.md).
+
+### Saved defaults
+
+`init` records non-secret defaults (workspace and model IDs) in a settings file so commands such as `quickstart`, `pack run`, `suite run`, `suite gate`, and `doctor` can omit those flags. Your API key is never written to this file; it stays in the OS keyring or the `AUTOEVAL_API_KEY` environment variable. Credential-shaped values are rejected in every settings field, including when an existing file is loaded. Explicit flags always override saved defaults.
+
+```bash
+autoeval config show                        # print saved defaults (no secrets)
+autoeval config set-workspace <workspace-id>
+autoeval config set-judge-model <model-id>
+autoeval config set-primary-model <model-id> # model under test, scenario evals
+autoeval config clear                        # remove the settings file
+```
+
+The file lives at `$XDG_CONFIG_HOME/autoeval/settings.json` (defaulting to `~/.config/autoeval/settings.json`) with owner-only permissions.
+
+### Starter packs
+
+Starter packs are ready-to-run evaluation files you can install, run, and then adapt.
+
+```bash
+autoeval pack list                 # show the built-in packs
+autoeval pack add support-bot      # install into ./autoeval/support-bot
+autoeval pack run support-bot      # install if needed, then run
+```
+
+Available packs:
+
+- `support-bot` — support bot answer quality (conversation)
+- `rag-answer-quality` — RAG answer quality (scenario)
+- `coding-agent` — coding agent decision quality (agent_trace)
+- `agent-trace` — agent trace grounding (agent_trace)
+
+Each pack installs an `autoeval.suite.yaml` manifest plus its eval file and fixtures. Pack evals contain synthetic model placeholders; `init` and `pack run` replace them in memory with enabled models and use the resolved workspace. Scenario packs require two distinct enabled models, one judge and one model under test.
+
+`pack run` reuses an installed pack only while its bundled files and manifest execution policy still match the shipped pack. To adapt a pack, copy or edit it and run the resulting manifest explicitly with `autoeval suite run --manifest <file>` (or `suite gate`). This prevents `init` and `pack run` from silently executing pre-existing or tampered files.
 
 ## File-driven evaluation
 

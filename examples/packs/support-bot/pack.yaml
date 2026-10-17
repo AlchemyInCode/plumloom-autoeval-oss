@@ -1,0 +1,17 @@
+# Starter pack: a support assistant graded on a recorded conversation.
+#
+# A pack is a named, versioned bundle (this manifest plus its eval files) that
+# installs by name and runs with zero IDs: the judge model is auto-picked and
+# the workspace is resolved at run time. The eval's synthetic model placeholder
+# is replaced in memory with an enabled model.
+name: support-bot
+version: 1
+title: Support bot answer quality
+description: Grades a support assistant conversation for accuracy and helpfulness against a reference guide.
+context: conversation
+evals:
+  - evals/support-conversation.json
+gate:
+  metrics:
+    factuality: 4.0
+    helpfulness: 4.0

@@ -385,6 +385,50 @@ describe('deterministic command parsing', () => {
       ['results', IDS.evaluation, IDS.run, '--show-outputs'],
       { kind: 'results', evaluationId: IDS.evaluation, runId: IDS.run, showOutputs: true },
     ],
+    [
+      ['config', 'set-workspace', IDS.workspace],
+      { kind: 'config-set-workspace', workspaceId: IDS.workspace },
+    ],
+    [
+      ['config', 'set-judge-model', IDS.model],
+      { kind: 'config-set-judge-model', modelId: IDS.model },
+    ],
+    [
+      ['config', 'set-primary-model', IDS.config],
+      { kind: 'config-set-primary-model', modelId: IDS.config },
+    ],
+    [['config', 'show'], { kind: 'config-show' }],
+    [['config', 'clear'], { kind: 'config-clear' }],
+    [['pack', 'list'], { kind: 'pack-list' }],
+    [['pack', 'add', 'support-bot'], { kind: 'pack-add', name: 'support-bot' }],
+    [
+      ['pack', 'add', 'support-bot', '--dir', './evals'],
+      { kind: 'pack-add', name: 'support-bot', directory: './evals' },
+    ],
+    [['pack', 'run', 'support-bot'], { kind: 'pack-run', name: 'support-bot' }],
+    [['init'], { kind: 'init', assumeYes: false }],
+    [
+      [
+        'init',
+        '--pack',
+        'rag-answer-quality',
+        '--workspace',
+        IDS.workspace,
+        '--judge-model-id',
+        IDS.model,
+        '--primary-model-id',
+        IDS.config,
+        '--yes',
+      ],
+      {
+        kind: 'init',
+        pack: 'rag-answer-quality',
+        workspaceId: IDS.workspace,
+        judgeModelId: IDS.model,
+        primaryModelId: IDS.config,
+        assumeYes: true,
+      },
+    ],
   ];
 
   it.each(cases)('parses %j exactly', async (arguments_, expected) => {
@@ -433,6 +477,11 @@ describe('deterministic command parsing', () => {
     await expect(
       parserHarness().parse(['gate', IDS.evaluation, '--metric', 'missing-separator']),
     ).rejects.toMatchObject({ kind: 'usage', code: 'INVALID_GATE_THRESHOLD' });
+    await expect(parserHarness().parse(['config', 'set-workspace'])).rejects.toBeInstanceOf(
+      CommanderError,
+    );
+    await expect(parserHarness().parse(['pack', 'add'])).rejects.toBeInstanceOf(CommanderError);
+    await expect(parserHarness().parse(['pack', 'run'])).rejects.toBeInstanceOf(CommanderError);
   });
 
   it('redacts CLI-key-shaped values from parser errors', async () => {
@@ -487,7 +536,7 @@ describe('deterministic command parsing', () => {
     ]) {
       expect(help).not.toContain(forbidden);
     }
-    expect(help).toContain('autoeval quickstart');
+    expect(help).toContain('autoeval init');
     expect(help).toContain('https://api.plumloom.ai (fixed; no configuration required)');
     expect(help).not.toContain('AUTOEVAL_API_BASE_URL');
   });

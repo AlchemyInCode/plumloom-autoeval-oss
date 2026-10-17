@@ -61,6 +61,42 @@ fails with the override flag to pass. Quickstart never creates or assumes a work
 Human output prints the resolved plan, scorecard, and a prefilled `autoeval results` command. JSON
 output contains the workspace, evaluation, run, selected model IDs, and results.
 
+## Activation and local defaults
+
+### `autoeval init [--pack <name>] [--workspace <workspace-id>] [--judge-model-id <uuid>] [--primary-model-id <uuid>] [--yes]`
+
+Runs the install-to-result activation workflow. It resolves a workspace and enabled models,
+installs the selected starter pack (default `support-bot`) under `./autoeval/`, executes it, and
+persists defaults only when the evaluation completed and the settings file was written. A scenario
+pack requires distinct judge and primary models; if two distinct enabled models are unavailable,
+the command fails before installing or running the pack. `--yes` never prompts and selects the
+first ordered candidate when a choice is needed.
+
+Human output is the suite summary and outcome-appropriate next steps. JSON output is a sanitized
+suite summary plus `pack`, selected model IDs, and `persistedDefaults`. A failed run exits `5`; a
+required settings-write failure exits `2` and is not reported as successful activation.
+
+### `autoeval config set-workspace <id>` / `set-judge-model <id>` / `set-primary-model <id>` / `show` / `clear`
+
+Manages non-secret defaults at `$XDG_CONFIG_HOME/autoeval/settings.json` (or
+`~/.config/autoeval/settings.json`). The file is atomically written with owner-only permissions.
+Credentials and credential-shaped values are rejected in every field; a malformed, oversized,
+non-regular, unreadable, or credential-bearing existing file is ignored. Under `--debug`, the CLI
+reports a safe diagnostic without echoing file contents. `show` emits either labeled human rows or
+the settings JSON; neither output includes credentials.
+
+### `autoeval pack list` / `pack add <name> [--dir <directory>]` / `pack run <name>`
+
+The built-ins are `support-bot`, `rag-answer-quality`, `coding-agent`, and `agent-trace`. `add`
+installs without credentials and refuses every existing destination file. The default destination
+is `./autoeval/<name>`.
+
+`run` resolves workspace/model defaults and installs a missing pack. An existing installation is
+reused only when every bundled file matches and the manifest retains the bundled eval list and gate
+policy; only its generated workspace value may differ. Partial, modified, symlinked, or redirected
+installs fail before a run is submitted. To run an adapted copy, use `suite run --manifest <file>`.
+Human output includes result-appropriate guidance; JSON output contains the sanitized suite summary.
+
 ## Workspaces
 
 ### `autoeval workspace list`
@@ -194,6 +230,7 @@ Checks, in order:
 the primary model before the probe, with the same override semantics as `suite run` and
 `suite gate`. Pass them when checking the public example files, whose model IDs are synthetic
 placeholders; without an override those files fail the eval check by design.
+When an option is omitted, a saved `config` workspace or model default is applied first.
 
 A failing check never aborts the remaining checks, so one command reports every problem. Checks that
 depend on a failed prerequisite are reported as `skipped`, not as failures.
@@ -436,6 +473,8 @@ Policy fields: `minOverall` (scenario context), `minScenario` (scenario cells), 
 - Optional: `--concurrency <n>`; maximum evals executing at once (default `3`)
 - Optional: `--stagger-ms <ms>`; delay between successive eval starts (default `250`)
 
+Workspace and model options override saved `config` defaults; omitted options use those defaults.
+
 Creates and runs every eval in the manifest through the same deterministic
 create/configure/run/poll path as `eval create-from --run`, then fetches results. Execution runs
 in a bounded pool; result fetching runs off the execution plane so it overlaps with evals that
@@ -446,6 +485,9 @@ execution state, status (`completed`, `execution_failed`, `result_failed`), elap
 fetched result payload. JSON output contains the same `SuiteSummary` with per-eval records and
 completed/failed counts. A failure is recorded against a single eval; the rest of the suite
 continues.
+
+Human next steps describe remediation when any eval fails and release-gate adoption only after all
+evals complete. JSON output contains no prose guidance.
 
 Exit codes: `0` when the suite finished (including with per-eval failures recorded), otherwise
 the standard usage, auth, network, and run-failure codes.

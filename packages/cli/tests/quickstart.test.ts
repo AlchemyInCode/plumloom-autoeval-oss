@@ -132,6 +132,47 @@ describe('quickstart model resolution', () => {
   it('fails when the account has no enabled models', () => {
     expect(() => selectQuickstartModel([], 'judge')).toThrow(/autoeval models/u);
   });
+
+  it('excludes the judge when auto-picking a distinct primary model', () => {
+    // Both preference lists lead with the same entry; without exclusion the
+    // primary role would auto-pick the same model as the judge (self-grading).
+    const judgeKey = QUICKSTART_JUDGE_PREFERENCE[0] ?? '';
+    const shared = model({ id: 'm-judge', modelKey: judgeKey });
+    const other = model({ id: 'm-other' });
+
+    const judge = selectQuickstartModel([shared, other], 'judge');
+    expect(judge).toEqual({ kind: 'resolved', model: shared });
+
+    const primary = selectQuickstartModel([shared, other], 'primary', undefined, shared.id);
+    expect(primary.kind).toBe('resolved');
+    if (primary.kind !== 'resolved') return;
+    expect(primary.model.id).not.toBe(shared.id);
+  });
+
+  it('keeps the excluded model out of a required choice', () => {
+    const judge = model({ id: 'm-judge' });
+    const a = model({ id: 'm-a' });
+    const b = model({ id: 'm-b' });
+    const resolution = selectQuickstartModel([judge, a, b], 'primary', undefined, judge.id);
+    expect(resolution.kind).toBe('choice-required');
+    if (resolution.kind !== 'choice-required') return;
+    expect(resolution.candidates.map((candidate) => candidate.id)).toEqual(['m-a', 'm-b']);
+  });
+
+  it('fails early when a scenario account has no distinct primary model', () => {
+    const only = model({ id: 'm-1' });
+    expect(() => selectQuickstartModel([only], 'primary', undefined, only.id)).toThrow(
+      /different judge and primary models/u,
+    );
+  });
+
+  it('rejects an explicit primary ID that equals the judge', () => {
+    const shared = model({ id: 'm-judge' });
+    const other = model({ id: 'm-other' });
+    expect(() => selectQuickstartModel([shared, other], 'primary', shared.id, shared.id)).toThrow(
+      /must be different/u,
+    );
+  });
 });
 
 describe('quickstart sample', () => {

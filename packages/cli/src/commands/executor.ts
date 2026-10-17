@@ -1,5 +1,5 @@
 import { open, readFile, writeFile } from 'node:fs/promises';
-import { dirname, resolve } from 'node:path';
+import { dirname, relative, resolve } from 'node:path';
 
 import { z } from 'zod';
 
@@ -26,7 +26,7 @@ import { whoAmI } from '../actions/identity.js';
 import { getModels } from '../actions/models.js';
 import { getResults } from '../actions/results.js';
 import type { ActionContext } from '../actions/context.js';
-import type { SupportedModel } from '../domain/types.js';
+import type { SupportedModel, Workspace } from '../domain/types.js';
 import { runSuite, type SuiteSummary } from '../actions/suite.js';
 import { gateSuite, suiteGateExitError } from '../actions/suite-gate.js';
 import { doctorExitError, runDoctor } from '../actions/doctor.js';
@@ -62,6 +62,19 @@ import type { FetchImplementation, ApiDiagnostic } from '../api/client.js';
 import { SystemPollClock, type PollClock } from '../polling/clock.js';
 import { createApiActionContext } from '../runtime/action-context.js';
 import { readSuiteManifest, type SuiteManifest } from '../suite/manifest.js';
+import {
+  clearSettings,
+  loadSettings,
+  saveSettings,
+  settingsPath,
+  type AutoevalSettings,
+} from '../settings/settings.js';
+import { resolveModelIds, resolveWorkspaceId } from '../settings/resolve.js';
+import { describeSettings, setConfigValue, type ConfigField } from '../actions/config.js';
+import { ensurePackInstalled, installPack, planPackInstall } from '../actions/pack.js';
+import { activationRunFailure, runActivation } from '../actions/init.js';
+import { DEFAULT_PACK_NAME, listPacks, requirePack, type BundledPack } from '../packs/registry.js';
+import { renderNextStepsBlock, type NextStepContext } from '../output/next-steps.js';
 import { convertHarnessSession } from '../trace/deepseek-harness.js';
 import { buildAgentTraceInput } from '../trace/import.js';
 import {
@@ -186,6 +199,10 @@ export type RuntimeDependencies = {
   signal?: AbortSignal;
   /** Injected so the quickstart evaluation name is deterministic in tests. */
   now?: () => Date;
+  /** Injected so tests never read or write the real user settings file. */
+  settingsFilePath?: string;
+  /** Base directory for pack installs; defaults to the process cwd. */
+  workingDirectory?: string;
 };
 
 const qualityStandardFileSchema = z
@@ -509,6 +526,18 @@ async function readGateThresholdsFile(inputFile: string): Promise<GateThresholds
   };
 }
 
+/** Maps a terminal gate/suite decision to the next-step guidance it warrants. */
+function nextStepContextForVerdict(
+  decision: 'PASS' | 'FAIL' | 'INCONCLUSIVE' | 'ERROR',
+  hasGate: boolean,
+): NextStepContext {
+  if (decision === 'FAIL' || decision === 'ERROR') return { kind: 'failed' };
+  if (decision === 'INCONCLUSIVE') return { kind: 'inconclusive' };
+  return hasGate
+    ? { kind: 'first-result', verdict: 'PASS', hasGate: true }
+    : { kind: 'passed-no-gate' };
+}
+
 export class RuntimeCommandExecutor implements CommandExecutor {
   readonly #configuration: AutoevalConfiguration;
   readonly #environment: Readonly<Record<string, string | undefined>>;
@@ -522,6 +551,8 @@ export class RuntimeCommandExecutor implements CommandExecutor {
   readonly #stdin: RuntimeInput;
   readonly #stderr: OutputStream;
   readonly #signal: AbortSignal | undefined;
+  readonly #settingsFilePath: string;
+  readonly #workingDirectory: string;
   #lastCreateFromRuns: { evaluationId: string; runId: string }[] = [];
 
   constructor(dependencies: RuntimeDependencies) {
@@ -540,6 +571,18 @@ export class RuntimeCommandExecutor implements CommandExecutor {
     this.#writer = new OutputWriter(stdout, this.#stderr);
     this.#stdin = dependencies.stdin ?? process.stdin;
     this.#signal = dependencies.signal;
+    this.#settingsFilePath = dependencies.settingsFilePath ?? settingsPath(this.#environment);
+    this.#workingDirectory = dependencies.workingDirectory ?? process.cwd();
+  }
+
+  /** Reads saved defaults, surfacing a diagnostic under --debug but never throwing. */
+  async #loadSettings(options: ExecutionOptions): Promise<AutoevalSettings> {
+    return loadSettings({
+      path: this.#settingsFilePath,
+      ...(options.debug
+        ? { onDiagnostic: (message: string) => this.#stderr.write(`[debug] ${message}\n`) }
+        : {}),
+    });
   }
 
   async execute(command: DeterministicCommand, options: ExecutionOptions): Promise<void> {
@@ -608,6 +651,37 @@ export class RuntimeCommandExecutor implements CommandExecutor {
         );
       }
       return;
+    }
+
+    // Local-only commands manage on-disk defaults or write files; they never
+    // reach the API, so they resolve no credential (mirrors login/logout).
+    switch (command.kind) {
+      case 'config-set-workspace':
+        await this.#setConfigField('defaultWorkspaceId', command.workspaceId, options);
+        return;
+      case 'config-set-judge-model':
+        await this.#setConfigField('defaultJudgeModelId', command.modelId, options);
+        return;
+      case 'config-set-primary-model':
+        await this.#setConfigField('defaultPrimaryModelId', command.modelId, options);
+        return;
+      case 'config-show':
+        await this.#showConfig(options);
+        return;
+      case 'config-clear':
+        await this.#clearConfig(options);
+        return;
+      case 'pack-list':
+        this.#listPacks(options);
+        return;
+      case 'pack-add':
+        await this.#runPackAdd(command, options);
+        return;
+      case 'init':
+        await this.#runInit(command, options);
+        return;
+      default:
+        break;
     }
 
     const credential = await resolveCredential({
@@ -789,27 +863,48 @@ export class RuntimeCommandExecutor implements CommandExecutor {
         return;
       }
       case 'suite-run': {
+        const settings = await this.#loadSettings(options);
         const manifest = await readSuiteManifest(command.manifestFile);
-        const summary = await this.#runSuiteFromManifest(context, manifest, command, options);
+        const resolvedCommand = this.#resolveSuiteDefaults(command, settings);
+        const summary = await this.#runSuiteFromManifest(
+          context,
+          manifest,
+          resolvedCommand,
+          options,
+        );
         const failureClusters = clusterExecutionFailures(summary);
+        const nextSteps = renderNextStepsBlock(
+          summary.failed > 0 ? { kind: 'failed' } : { kind: 'passed-no-gate' },
+        );
         this.#writer.writeResult(
           { ...summary, failureClusters },
-          renderSuiteSummary(summary, failureClusters),
+          `${renderSuiteSummary(summary, failureClusters)}${options.json ? '' : nextSteps}`,
           options.json,
         );
         return;
       }
       case 'suite-gate': {
+        const settings = await this.#loadSettings(options);
         const manifest = await readSuiteManifest(command.manifestFile);
-        const summary = await this.#runSuiteFromManifest(context, manifest, command, options, {
-          includeReliabilityEvidence: githubReliabilityReportingEnabled(this.#environment),
-        });
+        const resolvedCommand = this.#resolveSuiteDefaults(command, settings);
+        const summary = await this.#runSuiteFromManifest(
+          context,
+          manifest,
+          resolvedCommand,
+          options,
+          {
+            includeReliabilityEvidence: githubReliabilityReportingEnabled(this.#environment),
+          },
+        );
         const policyByFile = new Map(manifest.entries.map((entry) => [entry.file, entry.gate]));
         const gateResult = gateSuite({ summary, policyByFile });
         const failureClusters = clusterSuiteFailures(gateResult);
+        const nextSteps = renderNextStepsBlock(
+          nextStepContextForVerdict(gateResult.suiteDecision, true),
+        );
         this.#writer.writeResult(
           { ...gateResult, failureClusters },
-          renderSuiteGateReport(gateResult, failureClusters),
+          `${renderSuiteGateReport(gateResult, failureClusters)}${options.json ? '' : nextSteps}`,
           options.json,
         );
         const commentResult = await publishGithubReliabilityReport({
@@ -1030,15 +1125,13 @@ export class RuntimeCommandExecutor implements CommandExecutor {
         return;
       }
       case 'doctor': {
+        const settings = await this.#loadSettings(options);
         const manifestFile = command.manifestFile;
         // Same override semantics as suite run / suite gate: explicit CLI model UUIDs replace
         // the file's judge (and scenario primary) model before the eval file is probed.
-        const modelOverrides = {
-          ...(command.judgeModelId === undefined ? {} : { judgeModelId: command.judgeModelId }),
-          ...(command.primaryModelId === undefined
-            ? {}
-            : { primaryModelId: command.primaryModelId }),
-        };
+        // A saved default supplies the value only when the flag is absent.
+        const modelOverrides = resolveModelIds(command, settings);
+        const resolvedWorkspaceId = resolveWorkspaceId(command.workspaceId, settings);
         const report = await runDoctor(context, {
           loadEvalFile: async (inputFile: string) =>
             applyModelOverrides(
@@ -1046,7 +1139,7 @@ export class RuntimeCommandExecutor implements CommandExecutor {
               modelOverrides,
             ),
           evalFiles: command.inputFiles,
-          ...(command.workspaceId === undefined ? {} : { workspaceId: command.workspaceId }),
+          ...(resolvedWorkspaceId === undefined ? {} : { workspaceId: resolvedWorkspaceId }),
           ...(manifestFile === undefined
             ? {}
             : {
@@ -1066,7 +1159,12 @@ export class RuntimeCommandExecutor implements CommandExecutor {
         return;
       }
       case 'quickstart': {
-        await this.#runQuickstart(context, command, options);
+        const settings = await this.#loadSettings(options);
+        await this.#runQuickstart(context, command, options, settings);
+        return;
+      }
+      case 'pack-run': {
+        await this.#runPack(context, command, options);
         return;
       }
       case 'run': {
@@ -1082,7 +1180,12 @@ export class RuntimeCommandExecutor implements CommandExecutor {
             ...(this.#signal ? { signal: this.#signal } : {}),
           });
           progress.stop();
-          this.#writer.writeResult(result, renderRunExecution(result), options.json);
+          const runNextSteps = renderNextStepsBlock({ kind: 'passed-no-gate' });
+          this.#writer.writeResult(
+            result,
+            `${renderRunExecution(result)}${options.json ? '' : runNextSteps}`,
+            options.json,
+          );
         } finally {
           progress.stop();
         }
@@ -1148,7 +1251,14 @@ export class RuntimeCommandExecutor implements CommandExecutor {
           run: { ...execution.run, status: execution.outcome.status.state },
           elapsedMs: execution.outcome.elapsedMs,
         };
-        this.#writer.writeResult(summary, renderGateReport(summary), options.json);
+        const gateNextSteps = renderNextStepsBlock(
+          nextStepContextForVerdict(report.decision, true),
+        );
+        this.#writer.writeResult(
+          summary,
+          `${renderGateReport(summary)}${options.json ? '' : gateNextSteps}`,
+          options.json,
+        );
         if (report.decision === 'FAIL') {
           const failed = report.checks
             .filter((check) => check.decision === 'FAIL')
@@ -1222,11 +1332,14 @@ export class RuntimeCommandExecutor implements CommandExecutor {
     context: ActionContext,
     command: Extract<DeterministicCommand, { kind: 'quickstart' }>,
     options: ExecutionOptions,
+    settings: AutoevalSettings,
   ): Promise<void> {
     const interactive = this.#canPrompt(options, command.assumeYes);
+    const resolvedWorkspaceId = resolveWorkspaceId(command.workspaceId, settings);
+    const resolvedModelIds = resolveModelIds(command, settings);
 
     const workspacePage = await listWorkspaces(context, {}, this.#signal);
-    const workspaceResolution = selectQuickstartWorkspace(workspacePage.items, command.workspaceId);
+    const workspaceResolution = selectQuickstartWorkspace(workspacePage.items, resolvedWorkspaceId);
     let workspace;
     if (workspaceResolution.kind === 'resolved') {
       workspace = workspaceResolution.workspace;
@@ -1259,8 +1372,9 @@ export class RuntimeCommandExecutor implements CommandExecutor {
     const resolveModel = async (
       role: 'judge' | 'primary',
       override: string | undefined,
+      excludeModelId?: string,
     ): Promise<SupportedModel> => {
-      const resolution = selectQuickstartModel(candidates, role, override);
+      const resolution = selectQuickstartModel(candidates, role, override, excludeModelId);
       if (resolution.kind === 'resolved') return resolution.model;
       if (!interactive) {
         throw new AutoevalError(
@@ -1293,10 +1407,10 @@ export class RuntimeCommandExecutor implements CommandExecutor {
     const sampleLabel = command.inputFile ?? `${bundled.name} (bundled)`;
 
     const parsed = parseConfiguredRunInput(sampleSource);
-    const judge = await resolveModel('judge', command.judgeModelId);
+    const judge = await resolveModel('judge', resolvedModelIds.judgeModelId);
     const primary =
       parsed.configuration.contextType === 'scenario'
-        ? await resolveModel('primary', command.primaryModelId)
+        ? await resolveModel('primary', resolvedModelIds.primaryModelId, judge.id)
         : undefined;
 
     const overridden = applyModelOverrides(parsed, {
@@ -1378,6 +1492,312 @@ export class RuntimeCommandExecutor implements CommandExecutor {
     } finally {
       progress.stop();
     }
+  }
+
+  /** Explicit flag → saved default → manifest/auto, for suite run and gate. */
+  #resolveSuiteDefaults(
+    command: {
+      workspaceId?: string;
+      concurrency?: number;
+      staggerMs?: number;
+      judgeModelId?: string;
+      primaryModelId?: string;
+    },
+    settings: AutoevalSettings,
+  ): {
+    workspaceId?: string;
+    concurrency?: number;
+    staggerMs?: number;
+    judgeModelId?: string;
+    primaryModelId?: string;
+  } {
+    const workspaceId = resolveWorkspaceId(command.workspaceId, settings);
+    const { judgeModelId, primaryModelId } = resolveModelIds(command, settings);
+    return {
+      ...(workspaceId !== undefined ? { workspaceId } : {}),
+      ...(command.concurrency !== undefined ? { concurrency: command.concurrency } : {}),
+      ...(command.staggerMs !== undefined ? { staggerMs: command.staggerMs } : {}),
+      ...(judgeModelId !== undefined ? { judgeModelId } : {}),
+      ...(primaryModelId !== undefined ? { primaryModelId } : {}),
+    };
+  }
+
+  async #setConfigField(
+    field: ConfigField,
+    value: string,
+    options: ExecutionOptions,
+  ): Promise<void> {
+    const current = await this.#loadSettings(options);
+    const next = setConfigValue(current, field, value);
+    await saveSettings(next, { path: this.#settingsFilePath });
+    const rows = describeSettings(next)
+      .map((row) => `  ${row.label}: ${row.value}`)
+      .join('\n');
+    this.#writer.writeResult(next, `Saved ${field}.\n${rows}\n`, options.json);
+  }
+
+  async #showConfig(options: ExecutionOptions): Promise<void> {
+    const settings = await this.#loadSettings(options);
+    const rows = describeSettings(settings)
+      .map((row) => `  ${row.label}: ${row.value}`)
+      .join('\n');
+    this.#writer.writeResult(settings, `Saved defaults:\n${rows}\n`, options.json);
+  }
+
+  async #clearConfig(options: ExecutionOptions): Promise<void> {
+    await clearSettings({ path: this.#settingsFilePath });
+    this.#writer.writeResult({ cleared: true }, 'Removed saved defaults.\n', options.json);
+  }
+
+  #listPacks(options: ExecutionOptions): void {
+    const packs = listPacks();
+    const human = `${packs
+      .map((pack) => `${pack.name}  —  ${pack.title} (${pack.context})`)
+      .join('\n')}\n`;
+    const machine = packs.map((pack) => ({
+      name: pack.name,
+      version: pack.version,
+      title: pack.title,
+      description: pack.description,
+      context: pack.context,
+    }));
+    this.#writer.writeResult(machine, human, options.json);
+  }
+
+  async #runPackAdd(
+    command: Extract<DeterministicCommand, { kind: 'pack-add' }>,
+    options: ExecutionOptions,
+  ): Promise<void> {
+    const settings = await this.#loadSettings(options);
+    const pack = requirePack(command.name);
+    const targetDirectory = resolve(this.#workingDirectory, command.directory ?? 'autoeval');
+    const plan = planPackInstall(pack, targetDirectory, {
+      ...(settings.defaultWorkspaceId !== undefined
+        ? { workspaceId: settings.defaultWorkspaceId }
+        : {}),
+    });
+    await installPack(plan);
+    const manifestDisplay = relative(this.#workingDirectory, plan.manifestPath);
+    const human = [
+      `Installed pack "${pack.name}" into ${relative(this.#workingDirectory, plan.installDirectory) || '.'}`,
+      `  Run it: autoeval pack run ${pack.name}`,
+      `  Or gate it in CI: autoeval suite gate --manifest ${manifestDisplay}`,
+      '',
+    ].join('\n');
+    this.#writer.writeResult(
+      {
+        packName: pack.name,
+        installDirectory: plan.installDirectory,
+        manifestPath: plan.manifestPath,
+        files: plan.files.map((file) => file.absolutePath),
+      },
+      human,
+      options.json,
+    );
+  }
+
+  async #runPack(
+    context: ActionContext,
+    command: Extract<DeterministicCommand, { kind: 'pack-run' }>,
+    options: ExecutionOptions,
+  ): Promise<void> {
+    const settings = await this.#loadSettings(options);
+    const pack = requirePack(command.name);
+    const interactive = this.#canPrompt(options, false);
+    const result = await runActivation(context, {
+      pack,
+      settings,
+      runPack: ({ workspace, judge, primary }) =>
+        this.#installAndRunPack(context, pack, workspace, judge, primary, options),
+      ...(interactive
+        ? {
+            chooseWorkspace: (candidates) => this.#chooseActivationWorkspace(candidates),
+            chooseModel: (role, candidates) => this.#chooseActivationModel(role, candidates),
+          }
+        : {}),
+      ...(this.#signal ? { signal: this.#signal } : {}),
+    });
+    const { summary } = result;
+    const failureClusters = clusterExecutionFailures(summary);
+    const hadFailures = summary.failed > 0;
+    const nextSteps = renderNextStepsBlock(
+      hadFailures ? { kind: 'failed' } : { kind: 'passed-no-gate' },
+    );
+    this.#writer.writeResult(
+      { ...this.#sanitizeSuiteSummaryForJson(summary), failureClusters },
+      `${renderSuiteSummary(summary, failureClusters)}${options.json ? '' : nextSteps}`,
+      options.json,
+    );
+    if (hadFailures) throw activationRunFailure(summary, 'PACK_RUN_FAILED');
+  }
+
+  async #runInit(
+    command: Extract<DeterministicCommand, { kind: 'init' }>,
+    options: ExecutionOptions,
+  ): Promise<void> {
+    const startedAtMs = this.#now().getTime();
+    const interactive = this.#canPrompt(options, command.assumeYes);
+    const apiKey = await this.#resolveInitCredential(interactive, options);
+    const context = this.#createContext(apiKey, options);
+    const settings = await this.#loadSettings(options);
+    const pack = requirePack(command.pack ?? DEFAULT_PACK_NAME);
+    const result = await runActivation(context, {
+      pack,
+      settings,
+      ...(command.workspaceId === undefined ? {} : { workspaceId: command.workspaceId }),
+      ...(command.judgeModelId === undefined ? {} : { judgeModelId: command.judgeModelId }),
+      ...(command.primaryModelId === undefined ? {} : { primaryModelId: command.primaryModelId }),
+      ...(command.assumeYes ? { assumeFirstChoice: true } : {}),
+      runPack: ({ workspace, judge, primary }) =>
+        this.#installAndRunPack(context, pack, workspace, judge, primary, options),
+      persistSettings: (next) => saveSettings(next, { path: this.#settingsFilePath }),
+      ...(interactive
+        ? {
+            chooseWorkspace: (candidates) => this.#chooseActivationWorkspace(candidates),
+            chooseModel: (role, candidates) => this.#chooseActivationModel(role, candidates),
+          }
+        : {}),
+      ...(this.#signal ? { signal: this.#signal } : {}),
+    });
+    const { summary, judge, primary, persistedDefaults } = result;
+    const hadFailures = summary.failed > 0;
+
+    if (options.debug) {
+      const elapsedSeconds = Math.round((this.#now().getTime() - startedAtMs) / 1_000);
+      this.#stderr.write(`[debug] init completed in ${elapsedSeconds}s\n`);
+    }
+
+    const failureClusters = clusterExecutionFailures(summary);
+    const nextSteps = renderNextStepsBlock(
+      hadFailures
+        ? { kind: 'failed' }
+        : { kind: 'first-result', verdict: 'COMPLETED', hasGate: false },
+    );
+    this.#writer.writeResult(
+      {
+        ...this.#sanitizeSuiteSummaryForJson(summary),
+        pack: pack.name,
+        judgeModelId: judge.id,
+        ...(primary !== undefined ? { primaryModelId: primary.id } : {}),
+        persistedDefaults,
+        failureClusters,
+      },
+      `${renderSuiteSummary(summary, failureClusters)}${options.json ? '' : nextSteps}`,
+      options.json,
+    );
+    if (hadFailures) throw activationRunFailure(summary, 'INIT_RUN_FAILED');
+  }
+
+  /**
+   * Minimizes a suite summary for `--json` output: each eval's results are run
+   * through the same redactor the quickstart path uses, and the raw backend
+   * run-status payload (`statusRaw`) is dropped. Keeps init/pack output within
+   * the first-run data-minimization posture rather than echoing raw payloads.
+   */
+  #sanitizeSuiteSummaryForJson(summary: SuiteSummary): Record<string, unknown> {
+    return {
+      ...summary,
+      evals: summary.evals.map((entry) => {
+        const sanitized: Record<string, unknown> = { ...entry };
+        if (entry.execution !== undefined) {
+          const execution: Record<string, unknown> = { ...entry.execution };
+          delete execution.statusRaw;
+          sanitized.execution = execution;
+        }
+        if (entry.results !== undefined) {
+          sanitized.results = this.#redactResultsJson(entry.results);
+        }
+        return sanitized;
+      }),
+    };
+  }
+
+  /** Install the pack (add-if-needed) and run it as a suite with resolved models. */
+  async #installAndRunPack(
+    context: ActionContext,
+    pack: BundledPack,
+    workspace: Workspace,
+    judge: SupportedModel,
+    primary: SupportedModel | undefined,
+    options: ExecutionOptions,
+  ): Promise<SuiteSummary> {
+    const targetDirectory = resolve(this.#workingDirectory, 'autoeval');
+    const plan = planPackInstall(pack, targetDirectory, { workspaceId: workspace.id });
+    const { manifest } = await ensurePackInstalled(plan);
+    const resolvedCommand = {
+      workspaceId: workspace.id,
+      judgeModelId: judge.id,
+      ...(primary !== undefined ? { primaryModelId: primary.id } : {}),
+    };
+    return this.#runSuiteFromManifest(context, manifest, resolvedCommand, options);
+  }
+
+  async #resolveInitCredential(interactive: boolean, options: ExecutionOptions): Promise<string> {
+    try {
+      const resolved = await resolveCredential({
+        environment: this.#environment,
+        store: this.#store,
+        prompt: this.#prompt,
+        allowPrompt: false,
+      });
+      return resolved.apiKey;
+    } catch (error) {
+      const isMissingCredential =
+        error instanceof AutoevalError && error.code === 'CREDENTIAL_REQUIRED';
+      if (!isMissingCredential || !interactive) throw error;
+      this.#stderr.write(renderLoginGuidance());
+      await login({
+        environment: this.#environment,
+        store: this.#store,
+        prompt: this.#prompt,
+        allowPrompt: true,
+        validate: async (apiKey) =>
+          this.#createContext(apiKey, options).api.getCurrentUser(this.#signal),
+      });
+      const resolved = await resolveCredential({
+        environment: this.#environment,
+        store: this.#store,
+        prompt: this.#prompt,
+        allowPrompt: false,
+      });
+      return resolved.apiKey;
+    }
+  }
+
+  async #chooseActivationWorkspace(candidates: readonly Workspace[]): Promise<Workspace> {
+    const index = await this.#choicePrompt.choose(
+      'Which workspace should this evaluation go in?',
+      candidates.map((candidate) => ({
+        label: candidate.name,
+        detail: `${candidate.evaluationCount} evaluations`,
+      })),
+    );
+    const chosen = candidates[index];
+    if (!chosen) {
+      throw new AutoevalError('No workspace was chosen.', {
+        kind: 'usage',
+        code: 'INIT_WORKSPACE_REQUIRED',
+      });
+    }
+    return chosen;
+  }
+
+  async #chooseActivationModel(
+    role: 'judge' | 'primary',
+    candidates: readonly SupportedModel[],
+  ): Promise<SupportedModel> {
+    const index = await this.#choicePrompt.choose(
+      role === 'judge' ? 'Which model should judge?' : 'Which model is under test?',
+      candidates.map((model) => ({ label: model.displayName, detail: model.provider })),
+    );
+    const chosen = candidates[index];
+    if (!chosen) {
+      throw new AutoevalError('No model was chosen.', {
+        kind: 'usage',
+        code: 'INIT_MODEL_REQUIRED',
+      });
+    }
+    return chosen;
   }
 
   async #runSuiteFromManifest(
