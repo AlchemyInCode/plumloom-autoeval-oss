@@ -1,7 +1,8 @@
 # Copy to .github/workflows/autoeval-suite-gate.yml in your own repo and remove
 # the .example extension. Then configure these repository values:
 #   - secret   AUTOEVAL_API_KEY         your Plumloom CLI key (pl_sk_...)
-#   - variable AUTOEVAL_WORKSPACE_ID    the workspace returned by `autoeval workspace list`
+#   - secret   AUTOEVAL_WORKSPACE_ID    the workspace returned by `autoeval workspace list`;
+#                                      stored as a secret because gate output includes it
 #   - variable AUTOEVAL_JUDGE_MODEL_ID  an enabled model returned by `autoeval models`
 #   - optional variable AUTOEVAL_PRIMARY_MODEL_ID  an enabled model used to override
 #     the primary model in scenario evaluations; omit it for conversation- or
@@ -29,6 +30,8 @@ on:
 
 permissions:
   contents: read
+  # Required only for the same-repository reliability report comment.
+  pull-requests: write
 
 jobs:
   gate:
@@ -37,9 +40,13 @@ jobs:
     runs-on: ubuntu-latest
     env:
       AUTOEVAL_API_KEY: ${{ secrets.AUTOEVAL_API_KEY }}
-      AUTOEVAL_WORKSPACE_ID: ${{ vars.AUTOEVAL_WORKSPACE_ID }}
+      AUTOEVAL_WORKSPACE_ID: ${{ secrets.AUTOEVAL_WORKSPACE_ID }}
       AUTOEVAL_JUDGE_MODEL_ID: ${{ vars.AUTOEVAL_JUDGE_MODEL_ID }}
       AUTOEVAL_PRIMARY_MODEL_ID: ${{ vars.AUTOEVAL_PRIMARY_MODEL_ID }}
+      AUTOEVAL_PR_RELIABILITY_COMMENT: 'true'
+      # Use a stable, unique value per matrix cell when adding a matrix strategy.
+      AUTOEVAL_REPORT_MATRIX_ID: default
+      GITHUB_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -47,7 +54,7 @@ jobs:
           node-version: 22
       # Pinning prevents CLI-version drift and improves reproducibility, but model
       # and judge behavior can still make evaluation results vary between runs.
-      - run: npm install --global @plumloom/cli@0.1.4
+      - run: npm install --global @plumloom/cli@0.1.5
       - name: Verify runtime configuration
         run: |
           test -n "$AUTOEVAL_API_KEY"
