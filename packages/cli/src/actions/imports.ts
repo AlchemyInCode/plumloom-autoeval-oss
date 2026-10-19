@@ -342,8 +342,7 @@ async function reviewImports(
 export function importOutcomeExitCode(command: ParsedImportCommand, response: unknown): number {
   if (command.operation === 'status') {
     const status = importStatusSchema.parse(response);
-    if (!status.key_present) return 3;
-    return status.evals_access === 'ready' ? 0 : 4;
+    return status.key_present ? 0 : 3;
   }
   if (command.operation === 'run')
     return importBatchSchema.parse(response).failed.length > 0 ? 1 : 0;

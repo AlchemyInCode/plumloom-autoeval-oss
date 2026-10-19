@@ -1014,17 +1014,31 @@ describe('import runtime and output', () => {
     [true, null],
   ])('hides stale warm-cache guidance for key=%s access=%s', (keyPresent, access) => {
     const command = importCommandSchema.parse({ operation: 'status' });
-    const response = { key_present: keyPresent, evals_access: access, cache_status: 'warm' };
+    const response = {
+      key_present: keyPresent,
+      evals_access: access,
+      cache_status: 'warm',
+    };
+
     const human = renderImport(command, response);
+    expect(human).toContain('Cache:     Warm');
+    expect(human).not.toContain('Evals access:');
     expect(human).not.toContain('Cached list:');
-    expect(human).not.toContain("autoeval import review' to list");
-    expect(importOutcomeExitCode(command, response)).toBe(keyPresent ? 4 : 3);
+    expect(human).not.toContain('Action:');
+
+    expect(human).toContain(
+      keyPresent
+        ? "Hint:      Run 'autoeval import connect' to verify live OpenAI Evals access."
+        : "Hint:      Add your OpenAI key in Plumloom (Settings → AI Providers & Models), then run 'autoeval import connect'.",
+    );
+
+    expect(importOutcomeExitCode(command, response)).toBe(keyPresent ? 0 : 3);
   });
 
   it.each([
-    [{ code: 'KEY_PRESENT' }, true, 4],
-    [{ error_code: 'KEY_PRESENT' }, true, 4],
-    [{ detail: { code: 'KEY_PRESENT' } }, true, 4],
+    [{ code: 'KEY_PRESENT' }, true, 0],
+    [{ error_code: 'KEY_PRESENT' }, true, 0],
+    [{ detail: { code: 'KEY_PRESENT' } }, true, 0],
     [{ code: 'NO_KEY' }, false, 3],
   ])(
     'normalizes coded status %j without inventing readiness',
@@ -1040,27 +1054,32 @@ describe('import runtime and output', () => {
       });
       expect(importOutcomeExitCode(command, response)).toBe(exitCode);
       const human = renderImport(command, response);
-      expect(human).toContain('Evals access: not ready');
+      expect(human).not.toContain('Evals access:');
+      expect(human).not.toContain('evals_access');
       expect(human).not.toContain('Cached list:');
+      expect(human).not.toContain('Action:');
+
       if (keyPresent) {
-        expect(human).toContain("Hint: Run 'autoeval import connect'");
-        expect(human).not.toContain('Add an OpenAI key');
-      } else {
+        expect(human).toContain('Configured (unverified)');
         expect(human).toContain(
-          'Hint: Add an OpenAI key in the Plumloom UI under AI Providers & Models.',
+          "Run 'autoeval import connect' to verify live OpenAI Evals access.",
         );
-        expect(human).toContain('autoeval import status --json');
+      } else {
+        expect(human).toContain('API Key:   Missing');
+        expect(human).toContain(
+          "Add your OpenAI key in Plumloom (Settings → AI Providers & Models), then run 'autoeval import connect'.",
+        );
       }
       expect(externalImport).toHaveBeenCalledOnce();
     },
   );
 
   it.each([
-    [true, true, 'KEY_PRESENT', 'not_ready', 'warm', 4],
-    [true, false, 'KEY_PRESENT', 'not_ready', 'cold', 4],
+    [true, true, 'KEY_PRESENT', 'not_ready', 'warm', 0],
+    [true, false, 'KEY_PRESENT', 'not_ready', 'cold', 0],
     [false, false, 'NO_KEY', 'not_ready', 'cold', 3],
-    [true, true, 'EVALS_FORBIDDEN', 'forbidden', 'warm', 4],
-    [true, true, 'OPENAI_UNREACHABLE', 'unreachable', 'warm', 4],
+    [true, true, 'EVALS_FORBIDDEN', 'forbidden', 'warm', 0],
+    [true, true, 'OPENAI_UNREACHABLE', 'unreachable', 'warm', 0],
   ])(
     'maps backend key/cache fields with key=%s cache=%s code=%s',
     async (keyPresent, cacheWarm, code, access, cache, exitCode) => {
@@ -1081,12 +1100,16 @@ describe('import runtime and output', () => {
       });
       expect(importOutcomeExitCode(command, response)).toBe(exitCode);
       const human = renderImport(command, response);
-      expect(human).toContain(`Evals access: ${access === 'not_ready' ? 'not ready' : access}`);
-      if (access === 'ready') expect(human).toContain(`Cached list:  ${cache}`);
-      else expect(human).not.toContain('Cached list:');
-      expect(human).not.toContain('not checked');
-      if (keyPresent) expect(human).toContain('present (...test)');
-      if (exitCode === 0) expect(human).toContain("run 'autoeval import review'");
+      expect(human).not.toContain('Evals access:');
+      expect(human).not.toContain('evals_access');
+      expect(human).not.toContain('Cached list:');
+      expect(human).not.toContain('Action:');
+      expect(human).toContain(keyPresent ? 'Configured (unverified)' : 'API Key:   Missing');
+      expect(human).toContain(
+        keyPresent
+          ? "Run 'autoeval import connect' to verify live OpenAI Evals access."
+          : "Add your OpenAI key in Plumloom (Settings → AI Providers & Models), then run 'autoeval import connect'.",
+      );
       expect(externalImport).toHaveBeenCalledOnce();
     },
   );
@@ -1104,7 +1127,7 @@ describe('import runtime and output', () => {
     const command = importCommandSchema.parse({ operation: 'status' });
     const response = await executeImport({ api }, command);
     expect(response).toMatchObject({ evals_access: 'forbidden', cache_status: 'warm' });
-    expect(importOutcomeExitCode(command, response)).toBe(4);
+    expect(importOutcomeExitCode(command, response)).toBe(0);
   });
 
   it('preserves explicitly reported access and cache states in coded responses', async () => {
@@ -1121,8 +1144,13 @@ describe('import runtime and output', () => {
     const response = await executeImport({ api }, command);
     expect(response).toEqual({ ...envelope, key_present: true });
     expect(importOutcomeExitCode(command, response)).toBe(0);
-    expect(renderImport(command, response)).toContain('present (...test)');
-    expect(renderImport(command, response)).not.toContain('Hint:');
+    const human = renderImport(command, response);
+    expect(human).toContain('API Key:   Configured (unverified)');
+    expect(human).toContain(
+      "Hint:      Run 'autoeval import connect' to verify live OpenAI Evals access.",
+    );
+    expect(human).not.toContain('Evals access:');
+    expect(human).not.toContain('present (...test)');
   });
 
   it.each([
@@ -1146,11 +1174,15 @@ describe('import runtime and output', () => {
   it('gives a connect hint for a present key with a cold cache', () => {
     const human = renderImport(importCommandSchema.parse({ operation: 'status' }), {
       key_present: true,
-      evals_access: 'ready',
+      evals_access: 'not_ready',
       cache_status: 'cold',
     });
-    expect(human).toContain("Hint: Run 'autoeval import connect'");
-    expect(human).not.toContain('Add an OpenAI key');
+    expect(human).toContain('API Key:   Configured (unverified)');
+    expect(human).toContain('Cache:     Cold');
+    expect(human).toContain(
+      "Hint:      Run 'autoeval import connect' to verify live OpenAI Evals access.",
+    );
+    expect(human).not.toContain('Evals access:');
   });
 
   it('rejects an invalid key before considering stale warm-cache state', async () => {
@@ -1169,24 +1201,10 @@ describe('import runtime and output', () => {
   });
 
   it.each([
-    ['forbidden', 'Hint: Enable Evals access'],
-    ['unreachable', 'Hint: OpenAI is unreachable'],
-  ])('gives the appropriate hint for %s access', (evalsAccess, expectedHint) => {
-    const human = renderImport(importCommandSchema.parse({ operation: 'status' }), {
-      key_present: true,
-      evals_access: evalsAccess,
-      cache_status: 'cold',
-    });
-    expect(human).toContain(expectedHint);
-    expect(human).not.toContain('Add an OpenAI key');
-    expect(human).not.toContain('to validate access and cache');
-  });
-
-  it.each([
     [{ key_present: true, evals_access: 'ready', cache_status: 'warm' }, 0],
     [{ key_present: false, evals_access: null, cache_status: 'cold' }, 3],
-    [{ key_present: true, evals_access: 'forbidden', cache_status: 'cold' }, 4],
-    [{ key_present: true, evals_access: 'unreachable', cache_status: 'cold' }, 4],
+    [{ key_present: true, evals_access: 'forbidden', cache_status: 'cold' }, 0],
+    [{ key_present: true, evals_access: 'unreachable', cache_status: 'cold' }, 0],
   ])('returns the documented status exit code', (status, expected) => {
     expect(importOutcomeExitCode(importCommandSchema.parse({ operation: 'status' }), status)).toBe(
       expected,

@@ -67,31 +67,19 @@ export function renderImport(command: ParsedImportCommand, response: unknown): s
   switch (command.operation) {
     case 'status': {
       const status = importStatusSchema.parse(response);
-      let hint = '';
-      if (!status.key_present) {
-        hint =
-          "Hint: Add an OpenAI key in the Plumloom UI under AI Providers & Models. Run 'autoeval import status --json' for the machine state.\n";
-      } else if (status.evals_access === 'forbidden') {
-        hint =
-          'Hint: Enable Evals access for the configured OpenAI key, then run autoeval import connect.\n';
-      } else if (status.evals_access === 'unreachable') {
-        hint = 'Hint: OpenAI is unreachable. Try autoeval import connect again later.\n';
-      } else if (
-        status.evals_access === null ||
-        status.evals_access === 'not_ready' ||
-        status.cache_status !== 'warm'
-      ) {
-        hint = "Hint: Run 'autoeval import connect' to check access and warm the cache.\n";
-      }
-      const accessLabel =
-        !status.key_present || status.evals_access === null || status.evals_access === 'not_ready'
-          ? 'not ready'
-          : status.evals_access;
-      const cacheLine =
-        status.key_present && status.evals_access === 'ready'
-          ? `Cached list:  ${status.cache_status ?? 'unknown'}${status.cache_status === 'warm' ? " (run 'autoeval import review' to list)" : ''}\n`
-          : '';
-      return `OpenAI key:    ${status.key_present ? `present${status.key_suffix ? ` (...${text(status.key_suffix)})` : ''}` : 'no key'}\nEvals access: ${accessLabel}\n${cacheLine}${hint}`;
+      const keyLabel = status.key_present ? 'Configured (unverified)' : 'Missing';
+      const cacheLabel = status.cache_status === 'warm' ? 'Warm' : 'Cold';
+      const hintLabel = status.key_present
+        ? "Run 'autoeval import connect' to verify live OpenAI Evals access."
+        : "Add your OpenAI key in Plumloom (Settings → AI Providers & Models), then run 'autoeval import connect'.";
+      const labelWidth = 11;
+      const line = (label: string, value: string): string => `${label.padEnd(labelWidth)}${value}`;
+      return [
+        line('API Key:', keyLabel),
+        line('Cache:', cacheLabel),
+        line('Hint:', hintLabel),
+        '',
+      ].join('\n');
     }
     case 'connect':
       return `Connected to OpenAI.\nEvals found: ${text(envelope.total ?? envelope.eval_count ?? envelope.total_evals)}\nRun 'autoeval import review' to choose what to import.\n`;
@@ -231,13 +219,14 @@ function renderImportedEvaluation(
   runs.forEach((run, index) => {
     const model =
       typeof run.model === 'string' && run.model.trim() !== '' ? text(run.model) : 'unknown';
+    const runId = text(run.run_id ?? run.id);
     lines.push(
-      `  run ${runs.length - index}   ${model}   ${date(run.run_created_at)}   ${text(run.passed_count)}/${text(run.total_count)} passed`,
+      `  run ${runs.length - index}   ${model}   ${date(run.run_created_at)}   ${text(run.passed_count)}/${text(run.total_count)} passed   ${runId}`,
     );
   });
   if (runs.length === 0) lines.push('  No runs available.');
   const selectedIndex = command.run
-    ? runs.findIndex((run) => (run.openai_run_id ?? run.id) === command.run)
+    ? runs.findIndex((run) => (run.openai_run_id ?? run.run_id ?? run.id) === command.run)
     : runs.length
       ? 0
       : -1;
