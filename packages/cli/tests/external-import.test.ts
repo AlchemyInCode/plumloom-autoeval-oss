@@ -682,7 +682,7 @@ describe('import runtime and output', () => {
     ).toContain('No results on this page.');
   });
 
-  it.each(['eval_example_not_a_run', IDS.run, '../invalid', ''])(
+  it.each(['eval_example_not_a_run', '../invalid', ''])(
     'rejects an invalid --run value with specific guidance: %s',
     async (run) => {
       const fetchImplementation = vi.fn<typeof fetch>();
@@ -1056,7 +1056,7 @@ describe('import runtime and output', () => {
   );
 
   it.each([
-    [true, true, 'KEY_PRESENT', 'ready', 'warm', 0],
+    [true, true, 'KEY_PRESENT', 'not_ready', 'warm', 4],
     [true, false, 'KEY_PRESENT', 'not_ready', 'cold', 4],
     [false, false, 'NO_KEY', 'not_ready', 'cold', 3],
     [true, true, 'EVALS_FORBIDDEN', 'forbidden', 'warm', 4],

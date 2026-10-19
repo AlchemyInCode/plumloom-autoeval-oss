@@ -183,7 +183,7 @@ export const importStatusSchema = z.preprocess((input: unknown) => {
   if (access === undefined) {
     if (code === 'EVALS_FORBIDDEN') access = 'forbidden';
     else if (code === 'OPENAI_UNREACHABLE') access = 'unreachable';
-    else access = keyPresent === true && cacheStatus === 'warm' ? 'ready' : 'not_ready';
+    else access = 'not_ready';
   }
   return {
     ...response,
@@ -402,7 +402,7 @@ export async function executeImport(
       return request(
         'GET',
         `/evaluations/${input.evaluationId}`,
-        z.object({ eval: z.object({ name: z.string().min(1) }).loose() }).loose(),
+        z.object({ eval: z.object({ name: z.string() }).loose() }).loose(),
         {
           query: { run_id: input.run, page: input.page, page_size: input.size },
         },

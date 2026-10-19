@@ -92,7 +92,7 @@ autoeval import run --all-new
 autoeval import run --input <utf8-file>
 autoeval import list
 autoeval import evals --workspace <uuid> [--search <text>] [--page 1] [--size 50]
-autoeval import show <uuid> [--run <openai-run-id>] [--show-outputs] [--page 1] [--size 50]
+autoeval import show <uuid> [--run <run-id>] [--show-outputs] [--page 1] [--size 50]
 autoeval import insights --workspace <uuid>
 autoeval import remove <uuid> [--yes]
 autoeval import disconnect

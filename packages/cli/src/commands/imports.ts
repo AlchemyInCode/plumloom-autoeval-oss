@@ -157,7 +157,7 @@ export function registerImportCommands(program: Command, executor: CommandExecut
       .command('show <plumloom-eval-id>')
       .description('show an imported evaluation and run results'),
   )
-    .option('--run <openai-run-id>', 'select an OpenAI run (newest by default)')
+    .option('--run <run-id>', 'select a Plumloom run UUID or OpenAI run ID (newest by default)')
     .option('--show-outputs', 'expand inputs, expected values, and outputs')
     .action(
       async (

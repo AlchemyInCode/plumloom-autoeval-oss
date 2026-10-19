@@ -218,7 +218,9 @@ function renderImportedEvaluation(
   if (evaluation.description) lines.push(text(evaluation.description));
   lines.push('', 'Graders');
   const graders = records(
-    evaluation.graders ?? record(evaluation.raw_json ?? envelope.raw_json).testing_criteria,
+    evaluation.graders ??
+      envelope.graders ??
+      record(evaluation.raw_json ?? envelope.raw_json).testing_criteria,
   );
   for (const grader of graders) lines.push(`  ${text(grader.name)} (${text(grader.type)})`);
   if (graders.length === 0) lines.push('  None reported.');
