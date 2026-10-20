@@ -9,7 +9,7 @@ import { VALID_KEY } from './helpers.js';
 describe('Autoeval MCP authenticated context', () => {
   it('reuses environment credential precedence and authenticated API transport', async () => {
     const store: CredentialStore = {
-      read: vi.fn(() => Promise.resolve('pl_sk_unusedStoredKey12345')),
+      read: vi.fn(() => Promise.resolve('unused-stored-credential')),
       write: vi.fn(() => Promise.resolve()),
       delete: vi.fn(() => Promise.resolve(false)),
     };
