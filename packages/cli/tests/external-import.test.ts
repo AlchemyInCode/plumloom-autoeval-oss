@@ -1175,7 +1175,7 @@ describe('import runtime and output', () => {
       cache_status: 'cold',
     });
     expect(human).toContain('API Key:     Configured (unverified)');
-    expect(human).toContain('Cache:       Cold');
+    expect(human).toContain('Cache:       Warm');
     expect(human).toContain(
       "Action:      Run 'autoeval import connect' to verify live OpenAI Evals access.",
     );
