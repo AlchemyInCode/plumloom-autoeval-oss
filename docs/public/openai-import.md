@@ -28,8 +28,8 @@ Evaluation content may still contain sensitive user data: treat exported records
 | `import remove <uuid> [--yes]`                                                | Delete the Plumloom copy and its runs/results. Interactive default is no. JSON/noninteractive use requires `--yes`. Does not delete anything in OpenAI.                                                                            |
 | `import disconnect`                                                           | Clear discovery only. Retains provider key and imported evaluations.                                                                                                                                                               |
 
-Use `eval_...` IDs for source selection. Use Plumloom UUIDs for workspace options and for
-`show`/`remove`. Run selection accepts OpenAI `evalrun_...` or `run_...` IDs, not Plumloom UUIDs.
+Use `eval_...` IDs for source selection. Use Plumloom UUIDs for workspace options,
+`show`/`remove`, and `--run` run selection.
 
 ## Limits and Failure Handling
 
@@ -107,17 +107,16 @@ untrusted upstream error text is not printed by the import actions.
 Human detail output separates graders, run history, and results. Runs are numbered
 chronologically (`run 1` is oldest) and displayed newest first. Missing, null, or blank model
 names display as `unknown`; empty grader/run/result sections are reported explicitly.
-Use `--run <openai-run-id>` to select a specific run, not its display number. Copy the value
-from `runs[].openai_run_id` in `--json` output (`evalrun_...` or `run_...`); an `eval_...`
-source evaluation ID or the UUID under `results.run_id` is not accepted. Omit `--run` for
-the newest run. `--show-outputs`
+Use `--run <run-uuid>` to select a specific run, not its display number. Copy the value
+from `runs[].run_id` in `--json` output (or the run history table); an `eval_...`
+source evaluation ID is not accepted. Omit `--run` for the newest run. `--show-outputs`
 expands input/expected/output across the available terminal width, wrapping long content
 instead of truncating it and omitting the expected column when it is blank. Columns share
 the available space; non-TTY output uses a 100-column fallback when no terminal width is known.
 Interactive `import show` displays loading feedback on stderr while fetching details/results
 and preparing human output, then clears it before printing the results or an error.
 The indicator is disabled for JSON/non-TTY output. The footer points
-to `--json` for the complete redacted record, including `raw_json` and full OpenAI run IDs.
+to `--json` for the complete redacted record, including `raw_json`.
 The backend's result page is nested under `results`, with `run_id`, `page`, `page_size`,
 `total`, and `items`. Human output reads `results.items` and uses the nested page metadata
 for result counts and next-page hints. Null outputs remain unknown rather than invented.
@@ -209,7 +208,7 @@ node packages/cli/dist/cli.js import evals --workspace <workspace-uuid> --page 1
 node packages/cli/dist/cli.js import evals --workspace <workspace-uuid> --search rubric
 node packages/cli/dist/cli.js import show <plumloom-eval-uuid>
 node packages/cli/dist/cli.js import show <plumloom-eval-uuid> --show-outputs
-node packages/cli/dist/cli.js import show <plumloom-eval-uuid> --run <openai-run-id> --page 1 --size 10
+node packages/cli/dist/cli.js import show <plumloom-eval-uuid> --run <plumloom-run-uuid> --page 1 --size 10
 node packages/cli/dist/cli.js --json import show <plumloom-eval-uuid>
 node packages/cli/dist/cli.js import insights --workspace <workspace-uuid>
 node packages/cli/dist/cli.js --json import insights --workspace <workspace-uuid>

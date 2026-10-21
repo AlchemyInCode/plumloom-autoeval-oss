@@ -650,7 +650,7 @@ export class RuntimeCommandExecutor implements CommandExecutor {
             parsed.error.issues.some((issue) => issue.path[0] === 'run')
           ) {
             throw new AutoevalError(
-              '--run must be an OpenAI run ID (evalrun_... or run_...), not an eval_... evaluation ID or Plumloom UUID. Omit --run to show the newest run.',
+              '--run must be a Plumloom run UUID, not an eval_... evaluation ID. Omit --run to show the newest run.',
               {
                 kind: 'usage',
                 code: 'INVALID_IMPORT_RUN_ID',

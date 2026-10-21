@@ -139,7 +139,7 @@ export class ApiClient {
   constructor(options: ApiClientOptions) {
     this.#baseUrl = options.baseUrl;
     this.#apiKey = options.apiKey;
-    this.#requestTimeoutMs = Math.max(options.requestTimeoutMs, 60000);
+    this.#requestTimeoutMs = options.requestTimeoutMs;
     this.#maxResponseBytes = options.maxResponseBytes;
     this.#fetch = options.fetchImplementation ?? fetch;
     this.#onDiagnostic = options.onDiagnostic;

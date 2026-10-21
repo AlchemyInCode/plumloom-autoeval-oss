@@ -69,15 +69,15 @@ export function renderImport(command: ParsedImportCommand, response: unknown): s
       const status = importStatusSchema.parse(response);
       const keyLabel = status.key_present ? 'Configured (unverified)' : 'Missing';
       const cacheLabel = status.key_present && status.cache_status === 'warm' ? 'Warm' : 'Cold';
-      const hintLabel = status.key_present
+      const actionLabel = status.key_present
         ? "Run 'autoeval import connect' to verify live OpenAI Evals access."
         : "Add your OpenAI key in Plumloom (Settings → AI Providers & Models), then run 'autoeval import connect'.";
-      const labelWidth = 11;
+      const labelWidth = 13;
       const line = (label: string, value: string): string => `${label.padEnd(labelWidth)}${value}`;
       return [
         line('API Key:', keyLabel),
         line('Cache:', cacheLabel),
-        line('Hint:', hintLabel),
+        line('Action:', actionLabel),
         '',
       ].join('\n');
     }
@@ -226,7 +226,10 @@ function renderImportedEvaluation(
   });
   if (runs.length === 0) lines.push('  No runs available.');
   const selectedIndex = command.run
-    ? runs.findIndex((run) => (run.openai_run_id ?? run.run_id ?? run.id) === command.run)
+    ? runs.findIndex(
+        (run) =>
+          run.run_id === command.run || run.id === command.run || run.openai_run_id === command.run,
+      )
     : runs.length
       ? 0
       : -1;
@@ -279,7 +282,7 @@ function renderImportedEvaluation(
   lines.push(
     '',
     `Page ${pageNumber}; size ${pageSize}.`,
-    'Hint: Use --json for the full record, including raw_json and OpenAI run IDs.',
+    'Hint: Use --json for the full record, including raw_json.',
   );
   return `${lines.join('\n')}\n`;
 }

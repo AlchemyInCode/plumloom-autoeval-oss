@@ -1,4 +1,4 @@
-# 0013: Server-Side OpenAI Import Through the CLI
+# 0014: Server-Side OpenAI Import Through the CLI
 
 ## Status
 

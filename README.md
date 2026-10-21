@@ -193,9 +193,9 @@ show the backend's run dates and result totals. Removal reports success only aft
 confirms `deleted: true`.
 
 Human detail output uses numbered runs and shows `unknown` for missing model names. Add
-`--json` for the full redacted record, including `raw_json` and OpenAI run IDs.
+`--json` for the full redacted record, including `raw_json`.
 Result rows come from the backend's nested `results.items` page. Omit `--run` for the newest
-run, or use an OpenAI run ID from the JSON run history, not an `eval_...` source evaluation ID.
+run, or use the Plumloom run UUID from the run history, not an `eval_...` source evaluation ID.
 
 Insights use spaced sections and readiness markers. The human flaky-graders panel shows only
 backend-flagged entries; JSON retains the full insights envelope and grader evaluation IDs.
@@ -207,7 +207,7 @@ all-new selections.
 Expanded detail output uses terminal-width input/expected/output columns with wrapped content.
 Ctrl+C cancels review without displaying a late response.
 
-## MCP server
+## Use it from your coding agent
 
 **MCP server** — a local stdio server exposing the same action layer as the CLI. Credentials resolve from `AUTOEVAL_API_KEY`, then the OS credential store; it never prompts. → [MCP guide](docs/public/mcp.md) · [Codex & Claude Code](docs/public/integration-codex-and-claude-code.md)
 

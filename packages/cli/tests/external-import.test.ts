@@ -698,7 +698,7 @@ describe('import runtime and output', () => {
       ).rejects.toMatchObject({ code: 'INVALID_IMPORT_RUN_ID', exitCode: 2 });
       expect(fetchImplementation).not.toHaveBeenCalled();
       expect(hintForError({ kind: 'usage', code: 'INVALID_IMPORT_RUN_ID' })).toContain(
-        'runs[].openai_run_id',
+        'runs[].run_id',
       );
     },
   );
@@ -1021,15 +1021,14 @@ describe('import runtime and output', () => {
     };
 
     const human = renderImport(command, response);
-    expect(human).toContain('Cache:     Warm');
+    expect(human).toContain(keyPresent ? 'Cache:       Warm' : 'Cache:       Cold');
     expect(human).not.toContain('Evals access:');
     expect(human).not.toContain('Cached list:');
-    expect(human).not.toContain('Action:');
 
     expect(human).toContain(
       keyPresent
-        ? "Hint:      Run 'autoeval import connect' to verify live OpenAI Evals access."
-        : "Hint:      Add your OpenAI key in Plumloom (Settings → AI Providers & Models), then run 'autoeval import connect'.",
+        ? "Action:      Run 'autoeval import connect' to verify live OpenAI Evals access."
+        : "Action:      Add your OpenAI key in Plumloom (Settings → AI Providers & Models), then run 'autoeval import connect'.",
     );
 
     expect(importOutcomeExitCode(command, response)).toBe(keyPresent ? 0 : 3);
@@ -1057,7 +1056,6 @@ describe('import runtime and output', () => {
       expect(human).not.toContain('Evals access:');
       expect(human).not.toContain('evals_access');
       expect(human).not.toContain('Cached list:');
-      expect(human).not.toContain('Action:');
 
       if (keyPresent) {
         expect(human).toContain('Configured (unverified)');
@@ -1065,7 +1063,7 @@ describe('import runtime and output', () => {
           "Run 'autoeval import connect' to verify live OpenAI Evals access.",
         );
       } else {
-        expect(human).toContain('API Key:   Missing');
+        expect(human).toContain('API Key:     Missing');
         expect(human).toContain(
           "Add your OpenAI key in Plumloom (Settings → AI Providers & Models), then run 'autoeval import connect'.",
         );
@@ -1103,8 +1101,7 @@ describe('import runtime and output', () => {
       expect(human).not.toContain('Evals access:');
       expect(human).not.toContain('evals_access');
       expect(human).not.toContain('Cached list:');
-      expect(human).not.toContain('Action:');
-      expect(human).toContain(keyPresent ? 'Configured (unverified)' : 'API Key:   Missing');
+      expect(human).toContain(keyPresent ? 'Configured (unverified)' : 'API Key:     Missing');
       expect(human).toContain(
         keyPresent
           ? "Run 'autoeval import connect' to verify live OpenAI Evals access."
@@ -1145,9 +1142,9 @@ describe('import runtime and output', () => {
     expect(response).toEqual({ ...envelope, key_present: true });
     expect(importOutcomeExitCode(command, response)).toBe(0);
     const human = renderImport(command, response);
-    expect(human).toContain('API Key:   Configured (unverified)');
+    expect(human).toContain('API Key:     Configured (unverified)');
     expect(human).toContain(
-      "Hint:      Run 'autoeval import connect' to verify live OpenAI Evals access.",
+      "Action:      Run 'autoeval import connect' to verify live OpenAI Evals access.",
     );
     expect(human).not.toContain('Evals access:');
     expect(human).not.toContain('present (...test)');
@@ -1177,10 +1174,10 @@ describe('import runtime and output', () => {
       evals_access: 'not_ready',
       cache_status: 'cold',
     });
-    expect(human).toContain('API Key:   Configured (unverified)');
-    expect(human).toContain('Cache:     Cold');
+    expect(human).toContain('API Key:     Configured (unverified)');
+    expect(human).toContain('Cache:       Cold');
     expect(human).toContain(
-      "Hint:      Run 'autoeval import connect' to verify live OpenAI Evals access.",
+      "Action:      Run 'autoeval import connect' to verify live OpenAI Evals access.",
     );
     expect(human).not.toContain('Evals access:');
   });
@@ -1405,6 +1402,7 @@ describe('import runtime and output', () => {
         page_size: 50,
         runs: [
           {
+            run_id: '55555555-5555-4555-8555-555555555551',
             openai_run_id: 'evalrun_old',
             run_created_at: '2026-01-01T12:00:00Z',
             model: 'example-old-model',
@@ -1412,6 +1410,7 @@ describe('import runtime and output', () => {
             total_count: 3,
           },
           {
+            run_id: '55555555-5555-4555-8555-555555555552',
             openai_run_id: 'evalrun_new',
             run_created_at: '2026-10-01T12:00:00Z',
             model: 'example-new-model',
@@ -1429,13 +1428,15 @@ describe('import runtime and output', () => {
     expect(human).toContain('Imported eval');
     expect(human).toContain('Source: OpenAI (eval_example_imported)');
     expect(human).toContain('Imported: 2026-10-15');
-    expect(human).toContain('run 2   example-new-model   2026-10-01   2/2 passed');
-    expect(human).toContain('run 1   example-old-model   2026-01-01   1/3 passed');
+    expect(human).toContain(
+      'run 2   example-new-model   2026-10-01   2/2 passed   55555555-5555-4555-8555-555555555552',
+    );
+    expect(human).toContain(
+      'run 1   example-old-model   2026-01-01   1/3 passed   55555555-5555-4555-8555-555555555551',
+    );
     expect(human.indexOf('run 2')).toBeLessThan(human.indexOf('run 1'));
     expect(human).toContain('\u2713 pass');
-    expect(human).toContain(
-      'Hint: Use --json for the full record, including raw_json and OpenAI run IDs.',
-    );
+    expect(human).toContain('Hint: Use --json for the full record, including raw_json.');
   });
 
   it.each([
@@ -1507,6 +1508,7 @@ describe('import runtime and output', () => {
       eval: IMPORTED_EVAL,
       runs: [
         {
+          run_id: IDS.run,
           openai_run_id: 'evalrun_selected',
           run_created_at: '2026-10-01T12:00:00Z',
           model: 'example-model',
@@ -1535,7 +1537,7 @@ describe('import runtime and output', () => {
         input: {
           operation: 'show',
           evaluationId: IDS.evaluation,
-          run: 'evalrun_selected',
+          run: IDS.run,
           page: 2,
           size: 10,
           showOutputs: true,
@@ -1545,7 +1547,7 @@ describe('import runtime and output', () => {
     );
     expect(fetchImplementation.mock.calls[0]?.[0]).toEqual(
       new URL(
-        `/api/v1/import/external/evals/evaluations/${IDS.evaluation}?run_id=evalrun_selected&page=2&page_size=10`,
+        `/api/v1/import/external/evals/evaluations/${IDS.evaluation}?run_id=${IDS.run}&page=2&page_size=10`,
         loadConfiguration().apiBaseUrl,
       ),
     );
@@ -1562,6 +1564,7 @@ describe('import runtime and output', () => {
         eval: IMPORTED_EVAL,
         runs: [
           {
+            run_id: IDS.run,
             openai_run_id: 'evalrun_example',
             run_created_at: '2026-10-01',
             model,
@@ -1572,7 +1575,7 @@ describe('import runtime and output', () => {
         results: [],
       },
     );
-    expect(human).toContain('run 1   unknown   2026-10-01   2/3 passed');
+    expect(human).toContain(`run 1   unknown   2026-10-01   2/3 passed   ${IDS.run}`);
     expect(human).toContain('\n\nGraders\n  None reported.\n\nRun history\n');
     expect(human).toContain('\n\nResults (run 1)  [--show-outputs for input/expected/output]');
     expect(human).toContain('No results on this page.');
@@ -1583,13 +1586,14 @@ describe('import runtime and output', () => {
       importCommandSchema.parse({
         operation: 'show',
         evaluationId: IDS.evaluation,
-        run: 'evalrun_old',
+        run: '55555555-5555-4555-8555-555555555551',
       }),
       {
         eval: IMPORTED_EVAL,
         raw_json: { testing_criteria: [{ name: 'rubric_judge', type: 'score_model' }] },
         runs: [
           {
+            run_id: '55555555-5555-4555-8555-555555555551',
             openai_run_id: 'evalrun_old',
             run_created_at: '2026-01-01',
             model: 'example-model',
@@ -1597,6 +1601,7 @@ describe('import runtime and output', () => {
             total_count: 1,
           },
           {
+            run_id: '55555555-5555-4555-8555-555555555552',
             openai_run_id: 'evalrun_new',
             run_created_at: '2026-10-01',
             model: 'example-model',
