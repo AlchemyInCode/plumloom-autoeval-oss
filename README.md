@@ -41,22 +41,22 @@
   <img src="assets/contexts.png" alt="Scenario, Conversation and Agent trace evaluation contexts" width="100%" />
 </p>
 
-| | Scenario | Conversation | Agent trace |
-|---|:---:|:---:|:---:|
-| **Supported evaluation context** | ✅ | ✅ | ✅ |
-| **Multiple trials** — confidence intervals and consistency statistics | ✅ | — | — |
+|                                                                       | Scenario | Conversation | Agent trace |
+| --------------------------------------------------------------------- | :------: | :----------: | :---------: |
+| **Supported evaluation context**                                      |    ✅    |      ✅      |     ✅      |
+| **Multiple trials** — confidence intervals and consistency statistics |    ✅    |      —       |      —      |
 
 > [!IMPORTANT]
 > Multiple trials and statistical reliability evidence apply to **scenario evaluations**. Autoeval also supports conversation and agent-trace evaluation contexts.
 
 ## Where it runs
 
-| | |
-|---|---|
-| **`>_ CLI`** | Author, validate, and run eval files; read scored results from the terminal. |
+|                         |                                                                                                                  |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| **`>_ CLI`**            | Author, validate, and run eval files; read scored results from the terminal.                                     |
 | **`⑂ CI release gate`** | A suite manifest lists evals and thresholds. `autoeval suite gate` exits non-zero on anything other than `PASS`. |
-| **`◇ Coding agents`** | A local stdio MCP server exposes the same action layer as the CLI. |
-| **`⚿ AI providers`** | Connect OpenAI or Together.ai so Plumloom can run evaluations. |
+| **`◇ Coding agents`**   | A local stdio MCP server exposes the same action layer as the CLI.                                               |
+| **`⚿ AI providers`**    | Connect OpenAI or Together.ai so Plumloom can run evaluations.                                                   |
 
 <p align="center">
   <img width="100%" alt="Autoeval architecture" src="https://github.com/user-attachments/assets/4dfac43a-3934-463d-a8d8-4516fd625004" />
@@ -136,9 +136,9 @@ autoeval suite run  --manifest autoeval.suite.yaml   # run, no release judgment
 autoeval suite gate --manifest autoeval.suite.yaml   # apply thresholds
 ```
 
-| Verdict | `PASS` | `FAIL` / `INCONCLUSIVE` | `ERROR` |
-|---|:---:|:---:|:---:|
-| Exit code | `0` | `1` | `5` |
+| Verdict   | `PASS` | `FAIL` / `INCONCLUSIVE` | `ERROR` |
+| --------- | :----: | :---------------------: | :-----: |
+| Exit code |  `0`   |           `1`           |   `5`   |
 
 <details>
 <summary><b>CI setup details</b></summary>
@@ -192,13 +192,13 @@ gemini extensions install https://github.com/AlchemyInCode/plumloom-autoeval-oss
 
 ## Documentation
 
-| Get started | Integrate | Operate |
-|---|---|---|
-| [Docs home](docs/public/docs-home.md) | [MCP server](docs/public/mcp.md) | [Release gating](docs/public/release-gating.md) |
-| [Quickstart](docs/public/quickstart.md) | [Codex & Claude Code](docs/public/integration-codex-and-claude-code.md) | [Troubleshooting](TROUBLESHOOTING.md) |
-| [Command guide](docs/public/commands.md) | [Agent skill](docs/public/integration-agent-skill.md) | [Security policy](SECURITY.md) |
-| [Developer guide](docs/public/developer-guide.md) | [Agent skill security](docs/public/agent-skill-security.md) | [Contributing](CONTRIBUTING.md) |
-| [CLI reference](docs/public/cli-reference.md) | [DeepSeek Harness](docs/public/integration-deepseek-harness.md) | |
+| Get started                                       | Integrate                                                               | Operate                                         |
+| ------------------------------------------------- | ----------------------------------------------------------------------- | ----------------------------------------------- |
+| [Docs home](docs/public/docs-home.md)             | [MCP server](docs/public/mcp.md)                                        | [Release gating](docs/public/release-gating.md) |
+| [Quickstart](docs/public/quickstart.md)           | [Codex & Claude Code](docs/public/integration-codex-and-claude-code.md) | [Troubleshooting](TROUBLESHOOTING.md)           |
+| [Command guide](docs/public/commands.md)          | [Agent skill](docs/public/integration-agent-skill.md)                   | [Security policy](SECURITY.md)                  |
+| [Developer guide](docs/public/developer-guide.md) | [Agent skill security](docs/public/agent-skill-security.md)             | [Contributing](CONTRIBUTING.md)                 |
+| [CLI reference](docs/public/cli-reference.md)     | [DeepSeek Harness](docs/public/integration-deepseek-harness.md)         |                                                 |
 
 ## Support
 
