@@ -1,47 +1,93 @@
-# Plumloom Autoeval
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: light)" srcset="assets/banner-light.png" />
+    <img src="assets/banner-dark.png" alt="Plumloom Autoeval — the release-confidence layer for AI-agent changes" width="100%" />
+  </picture>
+</p>
 
-**The release-confidence layer for AI-agent changes.**
+<p align="center">
+  <a href="https://www.npmjs.com/package/@plumloom/cli"><img src="https://img.shields.io/npm/v/@plumloom/cli?style=flat-square&labelColor=1b1e22&color=1fa3c4&label=npm" alt="npm" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-b23c8c?style=flat-square&labelColor=1b1e22" alt="License" /></a>
+  <img src="https://img.shields.io/badge/node-%E2%89%A522.13-a8a832?style=flat-square&labelColor=1b1e22" alt="Node" />
+  <img src="https://img.shields.io/badge/MCP-server-1fa3c4?style=flat-square&labelColor=1b1e22" alt="MCP" />
+  <img src="https://img.shields.io/badge/CI-release%20gate-b23c8c?style=flat-square&labelColor=1b1e22" alt="CI gate" />
+</p>
 
-Autoeval is an open-source CLI and MCP server that turns committed evaluation files into versioned, gated checks on AI-agent behavior, scored by the Plumloom backend. It supports scenario, conversation, and agent-trace evaluation contexts from development through CI.
+<p align="center">
+  <code>&gt;_</code>
+  <a href="docs/public/docs-home.md"><b>Docs</b></a> ·
+  <a href="docs/public/quickstart.md"><b>Quickstart</b></a> ·
+  <a href="docs/public/commands.md"><b>Commands</b></a> ·
+  <a href="https://plumloom.ai/free-pilot"><b>Free Pilot</b></a> ·
+  <a href="https://plumloom.ai"><b>plumloom.ai</b></a>
+</p>
 
-LLM outputs and judge scores can vary between runs. For scenario evaluations, Autoeval supports multiple trials and reports reliability evidence such as confidence intervals and consistency statistics. This helps developers judge whether a release decision is supported by evidence beyond a single score.
+---
 
-## Architecture
+**Autoeval** is an open-source CLI and MCP server that turns committed evaluation files into versioned, gated checks on AI-agent behavior, scored by the Plumloom backend. It runs from your terminal, your CI, or your coding agent.
 
-<img width="1766" height="606" alt="image" src="https://github.com/user-attachments/assets/4dfac43a-3934-463d-a8d8-4516fd625004" />
+> [!NOTE]
+> **A single evaluation tells you what happened. Repeated evaluation tells you what would happen again.**
+>
+> LLM outputs and judge scores vary between runs, so one passing score is one sample. Autoeval reports reliability evidence — confidence intervals and consistency statistics — so a release decision rests on more than a single number.
 
-Eval files and the suite manifest are the only inputs you author and commit; Autoeval submits runs to Plumloom, reads back scored results, and the gate turns them into a CI pass/fail.
+<p align="center">
+  <img src="assets/reliability.png" alt="Autoeval release evidence: average score, 95% confidence interval, release bar, verdict" width="100%" />
+</p>
 
-## Requirements
+## What you can evaluate
 
-- Node.js 22.13 or newer
-- A Plumloom CLI key beginning with `pl_sk_`
+<p align="center">
+  <img src="assets/contexts.png" alt="Scenario, Conversation and Agent trace evaluation contexts" width="100%" />
+</p>
 
-pnpm 11 is needed only to build from source.
+| | Scenario | Conversation | Agent trace |
+|---|:---:|:---:|:---:|
+| **Supported evaluation context** | ✅ | ✅ | ✅ |
+| **Multiple trials** — confidence intervals and consistency statistics | ✅ | — | — |
 
-## Install
+> [!IMPORTANT]
+> Multiple trials and statistical reliability evidence apply to **scenario evaluations**. Autoeval also supports conversation and agent-trace evaluation contexts.
 
-```bash
-npm install --global @plumloom/cli
-```
+## Where it runs
 
-To build from source, run `pnpm install --frozen-lockfile && pnpm build`. In the examples below, replace `autoeval` with `node packages/cli/dist/cli.js` when running from this repository.
+| | |
+|---|---|
+| **`>_ CLI`** | Author, validate, and run eval files; read scored results from the terminal. |
+| **`⑂ CI release gate`** | A suite manifest lists evals and thresholds. `autoeval suite gate` exits non-zero on anything other than `PASS`. |
+| **`◇ Coding agents`** | A local stdio MCP server exposes the same action layer as the CLI. |
+| **`⚿ AI providers`** | Connect OpenAI or Together.ai so Plumloom can run evaluations. |
 
-## Configure Plumloom
+<p align="center">
+  <img width="100%" alt="Autoeval architecture" src="https://github.com/user-attachments/assets/4dfac43a-3934-463d-a8d8-4516fd625004" />
+</p>
 
-1. [Connect an AI provider](https://app.plumloom.ai/ai-providers) so Plumloom can run evaluations. OpenAI and Together.ai are supported.
-2. [Create a Plumloom API key](https://app.plumloom.ai/api-keys) for authentication from your terminal, CI, or development tools.
-
-Autoeval connects to [https://api.plumloom.ai](https://api.plumloom.ai) automatically. No API URL configuration is required.
+Eval files and the suite manifest are the only inputs you author and commit. Autoeval submits runs to Plumloom, reads back scored results, and the gate turns them into a CI pass/fail.
 
 ## Quickstart
 
+**Requirements:** Node.js 22.13+ and a Plumloom CLI key (`pl_sk_…`). pnpm 11 only if building from source.
+
+1. [Connect an AI provider](https://app.plumloom.ai/ai-providers) (OpenAI or Together.ai).
+2. [Create a Plumloom API key](https://app.plumloom.ai/api-keys).
+
 ```bash
+npm install --global @plumloom/cli
 autoeval login
 autoeval quickstart
 ```
 
-`quickstart` resolves a workspace and judge model, grades a bundled sample end to end, and prints the result. See the [quickstart guide](docs/public/quickstart.md).
+`quickstart` resolves a workspace and judge model, grades a bundled sample end to end, and prints the result. Autoeval connects to `https://api.plumloom.ai` automatically. → [Quickstart guide](docs/public/quickstart.md)
+
+<details>
+<summary><b>Build from source</b></summary>
+
+```bash
+pnpm install --frozen-lockfile && pnpm build
+```
+
+In the examples below, replace `autoeval` with `node packages/cli/dist/cli.js` when running from this repository.
+</details>
 
 ## File-driven evaluation
 
@@ -64,11 +110,11 @@ autoeval eval validate --input support.autoeval.json
 autoeval eval create-from --workspace <workspace-id> --input support.autoeval.json --run
 ```
 
-Model-ID fields take UUIDs; copy enabled IDs from `autoeval models`. See [Write and run your own evaluation file](docs/public/examples/write-and-run-your-own-eval.md) for the full walkthrough.
+Model-ID fields take UUIDs; copy enabled IDs from `autoeval models`. → [Write and run your own evaluation file](docs/public/examples/write-and-run-your-own-eval.md)
 
-## Add a CI release gate
+## Gate a release in CI
 
-A suite manifest names a workspace, lists evaluation files, and declares release thresholds. Paths resolve relative to the manifest.
+A suite manifest names a workspace, lists evaluation files, and declares release thresholds.
 
 ```yaml
 workspace: <workspace-id>
@@ -84,25 +130,28 @@ evals:
         relevance: 3.8
 ```
 
-Commit the manifest, every referenced eval file, and any artifacts or reference documents those evals load. Start from [`examples/suite/autoeval.suite.yaml`](examples/suite/autoeval.suite.yaml) and its fixtures under [`examples/smoke/fixtures/`](examples/smoke/fixtures/), then use `autoeval workspace list` and `autoeval models` to replace the synthetic workspace and model IDs in your own copies.
-
 ```bash
-autoeval doctor --manifest autoeval.suite.yaml
-autoeval suite run --manifest autoeval.suite.yaml
-autoeval suite gate --manifest autoeval.suite.yaml
+autoeval doctor     --manifest autoeval.suite.yaml   # read-only pre-flight
+autoeval suite run  --manifest autoeval.suite.yaml   # run, no release judgment
+autoeval suite gate --manifest autoeval.suite.yaml   # apply thresholds
 ```
 
-`doctor` checks credentials, files, workspace access, and model IDs without creating resources. `suite run` executes the listed evaluations without a release judgment. `suite gate` applies the manifest thresholds: `PASS`=0, `FAIL`/`INCONCLUSIVE`=1, and `ERROR`=5.
+| Verdict | `PASS` | `FAIL` / `INCONCLUSIVE` | `ERROR` |
+|---|:---:|:---:|:---:|
+| Exit code | `0` | `1` | `5` |
 
-Copy [`.github/workflows/autoeval-suite-gate.yml.example`](.github/workflows/autoeval-suite-gate.yml.example) into your repository for a ready-to-use adopter workflow. See [Gate a release in CI](docs/public/examples/gate-a-release-in-ci.md) and [Release gating for CI](docs/public/release-gating.md) for setup and policy details.
+<details>
+<summary><b>CI setup details</b></summary>
 
-For same-repository pull requests, the example workflow also updates one context-aware Autoeval
-Reliability Report comment per suite and matrix job. It shows the existing gate verdict alongside
-available Standard, Judgment, and Repeatability evidence; comment failures never replace the gate
-verdict or exit code. Fork pull requests remain excluded because they do not receive repository
-secrets.
+Commit the manifest, every referenced eval file, and any artifacts or reference documents those evals load. Start from [`examples/suite/autoeval.suite.yaml`](examples/suite/autoeval.suite.yaml) and its fixtures under [`examples/smoke/fixtures/`](examples/smoke/fixtures/), then use `autoeval workspace list` and `autoeval models` to replace the synthetic IDs.
 
-Common commands include:
+Copy [`.github/workflows/autoeval-suite-gate.yml.example`](.github/workflows/autoeval-suite-gate.yml.example) into your repository for a ready-to-use workflow. See [Gate a release in CI](docs/public/examples/gate-a-release-in-ci.md) and [Release gating for CI](docs/public/release-gating.md).
+
+For same-repository pull requests, the example workflow also updates one context-aware Autoeval Reliability Report comment per suite and matrix job, showing the gate verdict alongside available Standard, Judgment, and Repeatability evidence. Comment failures never replace the gate verdict or exit code. Fork pull requests are excluded because they do not receive repository secrets.
+</details>
+
+<details>
+<summary><b>Common commands</b></summary>
 
 ```text
 autoeval workspace list
@@ -111,47 +160,53 @@ autoeval results <evaluation-id> <run-id>
 autoeval --json results <evaluation-id> <run-id>
 ```
 
-The [command guide](docs/public/commands.md) and [CLI reference](docs/public/cli-reference.md) cover the full command surface. For environment and credential behavior, see the [developer guide](docs/public/developer-guide.md) and [`.env.example`](.env.example). Runnable smoke workflows live under [`examples/smoke/`](examples/smoke/), additional sanitized configurations live under [`examples/evals/`](examples/evals/), and reliability semantics are documented in the [documentation home](docs/public/docs-home.md#reliability).
+See the [command guide](docs/public/commands.md), [CLI reference](docs/public/cli-reference.md), [developer guide](docs/public/developer-guide.md), and [`.env.example`](.env.example). Smoke workflows: [`examples/smoke/`](examples/smoke/) · sample configs: [`examples/evals/`](examples/evals/).
+</details>
 
-## MCP server
+## Use it from your coding agent
 
-Autoeval includes a local stdio MCP server that exposes the same action layer as the CLI. It resolves credentials from `AUTOEVAL_API_KEY` and then the OS credential store, and it never prompts. See the [MCP server guide](docs/public/mcp.md) and [Autoeval with Codex and Claude Code](docs/public/integration-codex-and-claude-code.md).
+**MCP server** — a local stdio server exposing the same action layer as the CLI. Credentials resolve from `AUTOEVAL_API_KEY`, then the OS credential store; it never prompts. → [MCP guide](docs/public/mcp.md) · [Codex & Claude Code](docs/public/integration-codex-and-claude-code.md)
 
-## Agent skill
-
-Install the package from the Claude Code marketplace:
+**Claude Code plugin**
 
 ```bash
 claude plugin marketplace add AlchemyInCode/plumloom-autoeval-oss
 claude plugin install plumloom-autoeval@plumloom
 ```
 
-Install the Gemini CLI extension:
+**Gemini CLI extension** (skill-only for now: install and trigger supported, end-to-end execution not yet)
 
 ```bash
 gemini extensions install https://github.com/AlchemyInCode/plumloom-autoeval-oss
 ```
 
-Gemini CLI is skill-only for now: install and trigger are supported, but end-to-end Autoeval execution is not. See the [agent skill guide](docs/public/integration-agent-skill.md) and [agent skill security and permissions](docs/public/agent-skill-security.md).
+→ [Agent skill guide](docs/public/integration-agent-skill.md) · [Security and permissions](docs/public/agent-skill-security.md)
+
+<!-- Kiro's power registry asks for a privacy policy link and a support contact in the README. -->
+
+## Free Autoeval Pilot
+
+> [!TIP]
+> **Limited to ten teams.** Complimentary hands-on onboarding, evaluation support, and model access. Applications are considered in the order received.
+> **[Sign up for the Free Pilot →](https://plumloom.ai/free-pilot)**
+
+## Documentation
+
+| Get started | Integrate | Operate |
+|---|---|---|
+| [Docs home](docs/public/docs-home.md) | [MCP server](docs/public/mcp.md) | [Release gating](docs/public/release-gating.md) |
+| [Quickstart](docs/public/quickstart.md) | [Codex & Claude Code](docs/public/integration-codex-and-claude-code.md) | [Troubleshooting](TROUBLESHOOTING.md) |
+| [Command guide](docs/public/commands.md) | [Agent skill](docs/public/integration-agent-skill.md) | [Security policy](SECURITY.md) |
+| [Developer guide](docs/public/developer-guide.md) | [Agent skill security](docs/public/agent-skill-security.md) | [Contributing](CONTRIBUTING.md) |
+| [CLI reference](docs/public/cli-reference.md) | [DeepSeek Harness](docs/public/integration-deepseek-harness.md) | |
+
+## Support
 
 - Privacy policy: [Plumloom Privacy Policy](https://plumloom.ai/privacy-policy)
 - Support: [support@plumloom.ai](mailto:support@plumloom.ai)
 
-<!-- Kiro's power registry asks for a privacy policy link and a support contact in the README. -->
+---
 
-## Documentation
-
-- [Documentation home](docs/public/docs-home.md)
-- [Quickstart](docs/public/quickstart.md)
-- [Command guide](docs/public/commands.md)
-- [Deterministic CLI developer guide](docs/public/developer-guide.md)
-- [Deterministic command reference](docs/public/cli-reference.md)
-- [MCP server guide](docs/public/mcp.md)
-- [Codex and Claude Code integration](docs/public/integration-codex-and-claude-code.md)
-- [Agent skill for coding agents](docs/public/integration-agent-skill.md)
-- [Agent skill security and permissions](docs/public/agent-skill-security.md)
-- [DeepSeek Harness integration](docs/public/integration-deepseek-harness.md)
-- [Release gating for CI](docs/public/release-gating.md)
-- [Troubleshooting](TROUBLESHOOTING.md)
-- [Security policy](SECURITY.md)
-- [Contributing](CONTRIBUTING.md)
+<p align="center">
+  <img src="assets/pmark.png" alt="Plumloom" width="32" />&nbsp;&nbsp;<sub><code>&gt;_ PLUMLOOM</code> &middot; Reliability for probabilistic software &middot; Apache-2.0</sub>
+</p>
