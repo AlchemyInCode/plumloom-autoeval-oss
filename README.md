@@ -22,6 +22,12 @@
   <a href="https://plumloom.ai"><b>plumloom.ai</b></a>
 </p>
 
+## Demo
+
+[![Watch Autoeval: quickstart to release gate](assets/autoeval-demo-thumbnail-v1.png)](https://vimeo.com/1237844316)
+
+Quickstart, validate the setup, and see passing and failing release gates.
+
 ---
 
 **Autoeval** is an open-source CLI and MCP server that turns committed evaluation files into versioned, gated checks on AI-agent behavior, scored by the Plumloom backend. It runs from your terminal, your CI, or your coding agent.
