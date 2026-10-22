@@ -283,7 +283,7 @@ describe('import action boundaries', () => {
     [{ operation: 'list' }, 'GET', '/workspaces'],
     [{ operation: 'evals', workspaceId: IDS.workspace }, 'GET', `/workspaces/${IDS.workspace}`],
     [
-      { operation: 'show', evaluationId: IDS.evaluation, run: 'evalrun_sample', page: 2, size: 10 },
+      { operation: 'show', evaluationId: IDS.evaluation, page: 2, size: 10 },
       'GET',
       `/evaluations/${IDS.evaluation}`,
     ],
@@ -320,12 +320,12 @@ describe('import action boundaries', () => {
       .mockResolvedValue(bodies[input.operation]);
     await executeImport({ api: createApi({ externalImport }) }, input as ImportCommand);
     expect(externalImport).toHaveBeenCalledWith(expect.objectContaining({ method, path }));
-    if (input.operation === 'show')
+    if (input.operation === 'show') {
       expect(externalImport.mock.calls[0]?.[0].query).toEqual({
-        run_id: 'evalrun_sample',
         page: 2,
         page_size: 10,
       });
+    }
   });
 });
 
@@ -346,12 +346,12 @@ describe('import runtime and output', () => {
           outcome === 'failure'
             ? jsonResponse({ code: 'NO_KEY' })
             : jsonResponse({
-                page: 1,
-                page_size: 50,
-                total: 0,
-                items: [],
-                workspace: { workspace_id: IDS.workspace, name: 'Imported from OpenAI' },
-              }),
+              page: 1,
+              page_size: 50,
+              total: 0,
+              items: [],
+              workspace: { workspace_id: IDS.workspace, name: 'Imported from OpenAI' },
+            }),
         );
       });
       const { executor, stdout } = runtime(
@@ -442,10 +442,10 @@ describe('import runtime and output', () => {
           outcome === 'failure'
             ? jsonResponse({ code: 'NO_KEY' })
             : jsonResponse({
-                eval: IMPORTED_EVAL,
-                runs: [],
-                results: { page: 1, page_size: 50, total: 0, items: [] },
-              }),
+              eval: IMPORTED_EVAL,
+              runs: [],
+              results: { page: 1, page_size: 50, total: 0, items: [] },
+            }),
         );
       });
       const { executor, stdout } = runtime(
@@ -702,6 +702,33 @@ describe('import runtime and output', () => {
       );
     },
   );
+  it('accepts a valid Plumloom run UUID', async () => {
+    const fetchImplementation = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(
+        jsonResponse({
+          eval: IMPORTED_EVAL,
+          runs: [],
+          results: [],
+        }),
+      );
+
+    const { executor } = runtime(fetchImplementation);
+
+    await executor.execute(
+      {
+        kind: 'external-import',
+        input: {
+          operation: 'show',
+          evaluationId: IDS.evaluation,
+          run: IDS.run,
+        },
+      },
+      { json: false, debug: false },
+    );
+
+    expect(fetchImplementation).toHaveBeenCalledOnce();
+  });
 
   it('shows loading before importing text-file IDs and advances between batches', async () => {
     const directory = await mkdtemp(join(tmpdir(), 'autoeval-import-progress-'));
