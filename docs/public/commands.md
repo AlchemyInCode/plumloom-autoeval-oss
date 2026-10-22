@@ -47,6 +47,29 @@ error code, the human report, and `--json`.
 
 ---
 
+## Import Existing OpenAI Evaluations
+
+Configure the OpenAI key in the Plumloom UI (AI Providers & Models), then use the existing
+Plumloom CLI login:
+
+```bash
+autoeval import status
+autoeval import connect
+autoeval import review --search rubric
+autoeval import run --all-new
+autoeval import list
+autoeval import evals --workspace <workspace-uuid>
+autoeval import insights --workspace <workspace-uuid>
+autoeval import show <plumloom-eval-uuid> --show-outputs
+```
+
+OpenAI source IDs (`eval_...`) are accepted only by import selection. Workspace IDs and the
+evaluation IDs used by `show` and `remove` are Plumloom UUIDs. Imports never write to OpenAI.
+`connect --refresh` refreshes discovery; `disconnect` clears only discovery, not the provider
+key or imported copies. Import-specific exits: `1` partial failure, `3` missing/invalid provider
+key, `4` forbidden/unreachable Evals, `9` cold cache. See the
+[complete import and testing guide](./openai-import.md).
+
 ## 0. First result in one command
 
 ```bash

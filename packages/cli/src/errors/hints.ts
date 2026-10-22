@@ -9,6 +9,19 @@ const HINTS_BY_CODE: Readonly<Record<string, string>> = {
     'Run `autoeval login` (it will prompt for a key), pass `autoeval login --key <pl_sk_...>`, or set AUTOEVAL_API_KEY',
   INVALID_CLI_KEY_FORMAT:
     'Create a current CLI key at https://app.plumloom.ai (it starts with pl_sk_), then run `autoeval login` or `autoeval login --key <key>`',
+  INVALID_IMPORT_RESPONSE:
+    'Check the import endpoint response contract; --debug shows request metadata, not the response body',
+  INVALID_IMPORT_RUN_ID:
+    'Use --json with import show to find runs[].run_id; --run does not accept the source evaluation ID',
+  IMPORT_METHOD_NOT_ALLOWED:
+    'Confirm the deployed backend discovery route supports GET; reconnecting or retrying the same method will not fix HTTP 405',
+  NO_KEY:
+    'Configure OpenAI in the Plumloom UI under AI Providers & Models; autoeval login sets only your Plumloom CLI key',
+  INVALID_KEY:
+    'Replace the OpenAI key in the Plumloom UI under AI Providers & Models, then run autoeval import connect',
+  EVALS_FORBIDDEN:
+    'Enable Evals read access for the configured OpenAI key, then run autoeval import connect',
+  OPENAI_UNREACHABLE: 'Try autoeval import connect again later when OpenAI is reachable',
   RUN_POLL_TIMEOUT:
     'Check progress later with `autoeval status <evaluation-id> <run-id>`; the run keeps going server-side',
   RESULT_POLL_TIMEOUT:
