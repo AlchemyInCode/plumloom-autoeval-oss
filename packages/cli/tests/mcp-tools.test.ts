@@ -112,21 +112,15 @@ describe('Autoeval MCP tools', () => {
       'run_evaluation',
       'get_run_status',
       'get_results',
-      'import_get_status',
       'import_status',
       'import_connect',
       'import_disconnect',
       'import_review',
-      'import_evaluations',
       'import_run',
       'import_list_workspaces',
-      'import_list_workspace_evaluations',
       'import_list_evals',
-      'import_get_evaluation',
       'import_show_eval',
-      'import_get_insights',
       'import_insights',
-      'import_remove_evaluation',
       'import_remove_eval',
     ]);
     expect(
@@ -139,11 +133,8 @@ describe('Autoeval MCP tools', () => {
       'assign_quality_standard',
       'run_configured_evaluation',
       'run_evaluation',
-      'import_connect',
       'import_disconnect',
-      'import_evaluations',
       'import_run',
-      'import_remove_evaluation',
       'import_remove_eval',
     ]);
   });
@@ -457,7 +448,7 @@ describe('Autoeval MCP tools', () => {
     const context = mcpContext(createApi(), abortController.signal);
     const tools = createAutoevalMcpTools(context, actions({ executeImport }));
 
-    const statusResult = await toolByName(tools, 'import_get_status').invoke({});
+    const statusResult = await toolByName(tools, 'import_status').invoke({});
     expect(outputOf(statusResult)).toEqual({
       ok: true,
       data: { key_present: true, cache_status: 'warm' },
@@ -510,9 +501,9 @@ describe('Autoeval MCP tools', () => {
     );
 
     executeImport.mockResolvedValueOnce({ imported: ['eval_1'], skipped: [], failed: [] });
-    const runResult = await toolByName(tools, 'import_evaluations').invoke({
-      evalIds: ['eval_1'],
-      allNew: false,
+    const runResult = await toolByName(tools, 'import_run').invoke({
+      eval_ids: ['eval_1'],
+      all_new: false,
     });
     expect(outputOf(runResult)).toEqual({
       ok: true,
@@ -537,8 +528,8 @@ describe('Autoeval MCP tools', () => {
     );
 
     executeImport.mockResolvedValueOnce({ items: [], total: 0, page: 1, page_size: 50 });
-    const evalsResult = await toolByName(tools, 'import_list_workspace_evaluations').invoke({
-      workspaceId: IDS.workspace,
+    const evalsResult = await toolByName(tools, 'import_list_evals').invoke({
+      workspace_id: IDS.workspace,
       page: 1,
       size: 50,
     });
@@ -553,9 +544,8 @@ describe('Autoeval MCP tools', () => {
     );
 
     executeImport.mockResolvedValueOnce({ eval: { name: 'Eval 1' } });
-    const showResult = await toolByName(tools, 'import_get_evaluation').invoke({
-      evaluationId: IDS.evaluation,
-      showOutputs: true,
+    const showResult = await toolByName(tools, 'import_show_eval').invoke({
+      eval_id: IDS.evaluation,
     });
     expect(outputOf(showResult)).toEqual({
       ok: true,
@@ -563,13 +553,16 @@ describe('Autoeval MCP tools', () => {
     });
     expect(executeImport).toHaveBeenCalledWith(
       context.actions,
-      { operation: 'show', evaluationId: IDS.evaluation, showOutputs: true },
+      {
+        operation: 'show',
+        evaluationId: IDS.evaluation,
+      },
       { signal: abortController.signal },
     );
 
     executeImport.mockResolvedValueOnce({ derived_by: 'Plumloom' });
-    const insightsResult = await toolByName(tools, 'import_get_insights').invoke({
-      workspaceId: IDS.workspace,
+    const insightsResult = await toolByName(tools, 'import_insights').invoke({
+      workspace_id: IDS.workspace,
     });
     expect(outputOf(insightsResult)).toEqual({
       ok: true,
@@ -582,98 +575,11 @@ describe('Autoeval MCP tools', () => {
     );
 
     executeImport.mockResolvedValueOnce({ deleted: true });
-    const removeResult = await toolByName(tools, 'import_remove_evaluation').invoke({
-      evaluationId: IDS.evaluation,
+    const removeResult = await toolByName(tools, 'import_remove_eval').invoke({
+      eval_id: IDS.evaluation,
       yes: true,
     });
     expect(outputOf(removeResult)).toEqual({
-      ok: true,
-      data: { deleted: true },
-    });
-    expect(executeImport).toHaveBeenCalledWith(
-      context.actions,
-      { operation: 'remove', evaluationId: IDS.evaluation, yes: true },
-      { signal: abortController.signal },
-    );
-
-    // Test alias tools and snake_case arguments
-    executeImport.mockResolvedValueOnce({ key_present: true });
-    const aliasStatusResult = await toolByName(tools, 'import_status').invoke({});
-    expect(outputOf(aliasStatusResult)).toEqual({
-      ok: true,
-      data: { key_present: true },
-    });
-
-    executeImport.mockResolvedValueOnce({ imported: ['eval_2'], skipped: [], failed: [] });
-    const aliasRunResult = await toolByName(tools, 'import_run').invoke({
-      eval_ids: ['eval_2'],
-      all_new: false,
-    });
-    expect(outputOf(aliasRunResult)).toEqual({
-      ok: true,
-      data: { imported: ['eval_2'], skipped: [], failed: [] },
-    });
-    expect(executeImport).toHaveBeenCalledWith(
-      context.actions,
-      { operation: 'run', evalIds: ['eval_2'], allNew: false },
-      { signal: abortController.signal },
-    );
-
-    executeImport.mockResolvedValueOnce({ items: [], total: 0, page: 1, page_size: 50 });
-    const aliasListEvalsResult = await toolByName(tools, 'import_list_evals').invoke({
-      workspace_id: IDS.workspace,
-    });
-    expect(outputOf(aliasListEvalsResult)).toEqual({
-      ok: true,
-      data: { items: [], total: 0, page: 1, page_size: 50 },
-    });
-    expect(executeImport).toHaveBeenCalledWith(
-      context.actions,
-      { operation: 'evals', workspaceId: IDS.workspace },
-      { signal: abortController.signal },
-    );
-
-    executeImport.mockResolvedValueOnce({ eval: { name: 'Eval 2' } });
-    const aliasShowResult = await toolByName(tools, 'import_show_eval').invoke({
-      eval_id: IDS.evaluation,
-      run_id: 'run_openai_123',
-      show_outputs: true,
-    });
-    expect(outputOf(aliasShowResult)).toEqual({
-      ok: true,
-      data: { eval: { name: 'Eval 2' } },
-    });
-    expect(executeImport).toHaveBeenCalledWith(
-      context.actions,
-      {
-        operation: 'show',
-        evaluationId: IDS.evaluation,
-        run: 'run_openai_123',
-        showOutputs: true,
-      },
-      { signal: abortController.signal },
-    );
-
-    executeImport.mockResolvedValueOnce({ derived_by: 'Plumloom' });
-    const aliasInsightsResult = await toolByName(tools, 'import_insights').invoke({
-      workspace_id: IDS.workspace,
-    });
-    expect(outputOf(aliasInsightsResult)).toEqual({
-      ok: true,
-      data: { derived_by: 'Plumloom' },
-    });
-    expect(executeImport).toHaveBeenCalledWith(
-      context.actions,
-      { operation: 'insights', workspaceId: IDS.workspace },
-      { signal: abortController.signal },
-    );
-
-    executeImport.mockResolvedValueOnce({ deleted: true });
-    const aliasRemoveResult = await toolByName(tools, 'import_remove_eval').invoke({
-      eval_id: IDS.evaluation,
-      yes: true,
-    });
-    expect(outputOf(aliasRemoveResult)).toEqual({
       ok: true,
       data: { deleted: true },
     });
@@ -695,8 +601,8 @@ describe('Autoeval MCP tools', () => {
     const tools = createAutoevalMcpTools(context, actions({ executeImport }));
 
     // Rejects invalid eval ID format in schema
-    const invalidEvalIdResult = await toolByName(tools, 'import_evaluations').invoke({
-      evalIds: ['invalid-id-without-eval-prefix'],
+    const invalidEvalIdResult = await toolByName(tools, 'import_run').invoke({
+      eval_ids: ['invalid-id-without-eval-prefix'],
     });
     expect(invalidEvalIdResult.isError).toBe(true);
     expect(outputOf(invalidEvalIdResult)).toEqual({
@@ -709,11 +615,8 @@ describe('Autoeval MCP tools', () => {
     });
 
     // Rejects invalid UUID for workspaceId
-    const invalidWorkspaceResult = await toolByName(
-      tools,
-      'import_list_workspace_evaluations',
-    ).invoke({
-      workspaceId: 'not-a-uuid',
+    const invalidWorkspaceResult = await toolByName(tools, 'import_list_evals').invoke({
+      workspace_id: 'not-a-uuid',
     });
     expect(invalidWorkspaceResult.isError).toBe(true);
     expect(outputOf(invalidWorkspaceResult)).toEqual({
@@ -726,9 +629,9 @@ describe('Autoeval MCP tools', () => {
     });
 
     // Normalizes AutoevalError from shared action
-    const removeFailResult = await toolByName(tools, 'import_remove_evaluation').invoke({
-      evaluationId: IDS.evaluation,
-      yes: false,
+    const removeFailResult = await toolByName(tools, 'import_remove_eval').invoke({
+      eval_id: IDS.evaluation,
+      yes: true,
     });
     expect(removeFailResult.isError).toBe(true);
     expect(outputOf(removeFailResult)).toEqual({

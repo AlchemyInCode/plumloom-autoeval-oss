@@ -390,16 +390,6 @@ export function createAutoevalMcpTools(
         }),
     }),
     defineTool({
-      name: 'import_get_status',
-      title: 'Get external import status',
-      description:
-        'Checks server-side external provider key presence, access readiness, and discovery cache status.',
-      access: 'readOnly',
-      inputSchema: emptyInputSchema,
-      execute: () =>
-        actions.executeImport(context.actions, { operation: 'status' }, actionSignal(context)),
-    }),
-    defineTool({
       name: 'import_status',
       title: 'Get external import status',
       description:
@@ -414,7 +404,7 @@ export function createAutoevalMcpTools(
       title: 'Connect external import',
       description:
         'Validates external provider access, discovers evaluations, and updates the discovery cache. This changes cache state.',
-      access: 'stateChanging',
+      access: 'readOnly',
       inputSchema: importConnectInputSchema,
       execute: ({ refresh }) =>
         actions.executeImport(
@@ -454,46 +444,23 @@ export function createAutoevalMcpTools(
         ),
     }),
     defineTool({
-      name: 'import_evaluations',
-      title: 'Import evaluations',
-      description:
-        'Imports specified external evaluation IDs or all new unimported evaluations into the import workspace in batches. This changes state.',
-      access: 'stateChanging',
-      inputSchema: importEvaluationsInputSchema,
-      execute: (input) => {
-        const evalIds = input.evalIds ?? input.eval_ids;
-        const allNew = input.all_new ?? input.allNew;
-        return actions.executeImport(
-          context.actions,
-          {
-            operation: 'run',
-            allNew,
-            ...(evalIds !== undefined ? { evalIds } : {}),
-          },
-          actionSignal(context),
-        );
-      },
-    }),
-    defineTool({
       name: 'import_run',
       title: 'Import evaluations',
       description:
         'Imports specified external evaluation IDs or all new unimported evaluations into the import workspace in batches. This changes state.',
       access: 'stateChanging',
       inputSchema: importEvaluationsInputSchema,
-      execute: (input) => {
-        const evalIds = input.evalIds ?? input.eval_ids;
-        const allNew = input.all_new ?? input.allNew;
-        return actions.executeImport(
+
+      execute: (input) =>
+        actions.executeImport(
           context.actions,
           {
             operation: 'run',
-            allNew,
-            ...(evalIds !== undefined ? { evalIds } : {}),
+            allNew: input.all_new ?? false,
+            ...(input.eval_ids !== undefined ? { evalIds: input.eval_ids } : {}),
           },
           actionSignal(context),
-        );
-      },
+        ),
     }),
     defineTool({
       name: 'import_list_workspaces',
@@ -505,28 +472,6 @@ export function createAutoevalMcpTools(
         actions.executeImport(context.actions, { operation: 'list' }, actionSignal(context)),
     }),
     defineTool({
-      name: 'import_list_workspace_evaluations',
-      title: 'List evaluations in import workspace',
-      description:
-        'Lists evaluations already imported into workspaceId with source and internal identifiers.',
-      access: 'readOnly',
-      inputSchema: importWorkspaceEvaluationsInputSchema,
-      execute: (input) => {
-        const workspaceId = input.workspaceId ?? input.workspace_id ?? '';
-        return actions.executeImport(
-          context.actions,
-          {
-            operation: 'evals',
-            workspaceId,
-            ...(input.page !== undefined ? { page: input.page } : {}),
-            ...(input.size !== undefined ? { size: input.size } : {}),
-            ...(input.search !== undefined ? { search: input.search } : {}),
-          },
-          actionSignal(context),
-        );
-      },
-    }),
-    defineTool({
       name: 'import_list_evals',
       title: 'List evaluations in import workspace',
       description:
@@ -534,7 +479,7 @@ export function createAutoevalMcpTools(
       access: 'readOnly',
       inputSchema: importWorkspaceEvaluationsInputSchema,
       execute: (input) => {
-        const workspaceId = input.workspaceId ?? input.workspace_id ?? '';
+        const workspaceId = input.workspace_id;
         return actions.executeImport(
           context.actions,
           {
@@ -543,31 +488,6 @@ export function createAutoevalMcpTools(
             ...(input.page !== undefined ? { page: input.page } : {}),
             ...(input.size !== undefined ? { size: input.size } : {}),
             ...(input.search !== undefined ? { search: input.search } : {}),
-          },
-          actionSignal(context),
-        );
-      },
-    }),
-    defineTool({
-      name: 'import_get_evaluation',
-      title: 'Get imported evaluation detail',
-      description:
-        'Returns detail, graders, run history, and test results for an imported evaluationId.',
-      access: 'readOnly',
-      inputSchema: importEvaluationDetailInputSchema,
-      execute: (input) => {
-        const evaluationId = input.evaluationId ?? input.eval_id ?? '';
-        const run = input.run ?? input.run_id;
-        const showOutputs = input.show_outputs ?? input.showOutputs;
-        return actions.executeImport(
-          context.actions,
-          {
-            operation: 'show',
-            evaluationId,
-            showOutputs,
-            ...(run !== undefined ? { run } : {}),
-            ...(input.page !== undefined ? { page: input.page } : {}),
-            ...(input.size !== undefined ? { size: input.size } : {}),
           },
           actionSignal(context),
         );
@@ -581,35 +501,17 @@ export function createAutoevalMcpTools(
       access: 'readOnly',
       inputSchema: importEvaluationDetailInputSchema,
       execute: (input) => {
-        const evaluationId = input.evaluationId ?? input.eval_id ?? '';
-        const run = input.run ?? input.run_id;
-        const showOutputs = input.show_outputs ?? input.showOutputs;
+        const evaluationId = input.eval_id;
+        const run = input.run_id;
         return actions.executeImport(
           context.actions,
           {
             operation: 'show',
             evaluationId,
-            showOutputs,
             ...(run !== undefined ? { run } : {}),
             ...(input.page !== undefined ? { page: input.page } : {}),
             ...(input.size !== undefined ? { size: input.size } : {}),
           },
-          actionSignal(context),
-        );
-      },
-    }),
-    defineTool({
-      name: 'import_get_insights',
-      title: 'Get import workspace insights',
-      description:
-        'Returns migration readiness, totals, pass-rate trends, and grader reliability insights for workspaceId.',
-      access: 'readOnly',
-      inputSchema: importWorkspaceIdInputSchema,
-      execute: (input) => {
-        const workspaceId = input.workspaceId ?? input.workspace_id ?? '';
-        return actions.executeImport(
-          context.actions,
-          { operation: 'insights', workspaceId },
           actionSignal(context),
         );
       },
@@ -622,26 +524,10 @@ export function createAutoevalMcpTools(
       access: 'readOnly',
       inputSchema: importWorkspaceIdInputSchema,
       execute: (input) => {
-        const workspaceId = input.workspaceId ?? input.workspace_id ?? '';
+        const workspaceId = input.workspace_id;
         return actions.executeImport(
           context.actions,
           { operation: 'insights', workspaceId },
-          actionSignal(context),
-        );
-      },
-    }),
-    defineTool({
-      name: 'import_remove_evaluation',
-      title: 'Remove imported evaluation',
-      description:
-        'Deletes the imported evaluation and its runs from the local workspace. Requires explicit confirmation (yes: true). This changes state.',
-      access: 'stateChanging',
-      inputSchema: importRemoveEvaluationInputSchema,
-      execute: (input) => {
-        const evaluationId = input.evaluationId ?? input.eval_id ?? '';
-        return actions.executeImport(
-          context.actions,
-          { operation: 'remove', evaluationId, yes: input.yes },
           actionSignal(context),
         );
       },
@@ -654,7 +540,7 @@ export function createAutoevalMcpTools(
       access: 'stateChanging',
       inputSchema: importRemoveEvaluationInputSchema,
       execute: (input) => {
-        const evaluationId = input.evaluationId ?? input.eval_id ?? '';
+        const evaluationId = input.eval_id;
         return actions.executeImport(
           context.actions,
           { operation: 'remove', evaluationId, yes: input.yes },

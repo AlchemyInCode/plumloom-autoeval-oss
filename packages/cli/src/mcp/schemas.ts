@@ -100,68 +100,50 @@ export const importReviewInputSchema = z
 
 export const importEvaluationsInputSchema = z
   .object({
-    evalIds: z
-      .array(z.string().regex(/^eval_[A-Za-z0-9_-]{1,200}$/u))
-      .max(25_000)
-      .optional(),
     eval_ids: z
       .array(z.string().regex(/^eval_[A-Za-z0-9_-]{1,200}$/u))
       .max(25_000)
       .optional(),
-    allNew: z.boolean().default(false),
     all_new: z.boolean().optional(),
   })
-  .strict();
+  .strict()
+  .refine(
+    (data) => (data.eval_ids !== undefined && data.eval_ids.length > 0) || data.all_new === true,
+    {
+      message: 'Provide eval_ids or set all_new to true.',
+    },
+  );
 
 export const importWorkspaceEvaluationsInputSchema = z
   .object({
-    workspaceId: uuid.optional(),
-    workspace_id: uuid.optional(),
+    workspace_id: uuid,
     page: z.number().int().min(1).max(1000).optional(),
     size: z.number().int().min(1).max(200).optional(),
     search: z.string().trim().max(500).optional(),
   })
-  .strict()
-  .refine((data) => data.workspaceId !== undefined || data.workspace_id !== undefined, {
-    message: 'workspaceId or workspace_id is required',
-  });
+  .strict();
 
 export const importEvaluationDetailInputSchema = z
   .object({
-    evaluationId: uuid.optional(),
-    eval_id: uuid.optional(),
-    run: z.union([uuid, z.string().regex(/^(?:evalrun|run)_[A-Za-z0-9_-]{1,200}$/u)]).optional(),
+    eval_id: z.string().min(1).max(200),
     run_id: z.union([uuid, z.string().regex(/^(?:evalrun|run)_[A-Za-z0-9_-]{1,200}$/u)]).optional(),
-    showOutputs: z.boolean().default(false),
-    show_outputs: z.boolean().optional(),
     page: z.number().int().min(1).max(1000).optional(),
     size: pageSize,
   })
-  .strict()
-  .refine((data) => data.evaluationId !== undefined || data.eval_id !== undefined, {
-    message: 'evaluationId or eval_id is required',
-  });
+  .strict();
 
 export const importWorkspaceIdInputSchema = z
   .object({
-    workspaceId: uuid.optional(),
-    workspace_id: uuid.optional(),
+    workspace_id: uuid,
   })
-  .strict()
-  .refine((data) => data.workspaceId !== undefined || data.workspace_id !== undefined, {
-    message: 'workspaceId or workspace_id is required',
-  });
+  .strict();
 
 export const importRemoveEvaluationInputSchema = z
   .object({
-    evaluationId: uuid.optional(),
-    eval_id: uuid.optional(),
+    eval_id: z.string().min(1).max(200),
     yes: z.boolean().default(false),
   })
-  .strict()
-  .refine((data) => data.evaluationId !== undefined || data.eval_id !== undefined, {
-    message: 'evaluationId or eval_id is required',
-  });
+  .strict();
 
 const mcpErrorSchema = z
   .object({
