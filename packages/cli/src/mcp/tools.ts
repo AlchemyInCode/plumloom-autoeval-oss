@@ -404,7 +404,7 @@ export function createAutoevalMcpTools(
       title: 'Connect external import',
       description:
         'Validates external provider access, discovers evaluations, and updates the discovery cache. This changes cache state.',
-      access: 'readOnly',
+      access: 'stateChanging',
       inputSchema: importConnectInputSchema,
       execute: ({ refresh }) =>
         actions.executeImport(
@@ -551,20 +551,19 @@ export function createAutoevalMcpTools(
   ];
 }
 
-function toolAnnotations(access: McpToolAccess): ToolAnnotations {
-  return access === 'readOnly'
-    ? {
-        readOnlyHint: true,
-        destructiveHint: false,
-        idempotentHint: true,
-        openWorldHint: true,
-      }
-    : {
-        readOnlyHint: false,
-        destructiveHint: false,
-        idempotentHint: false,
-        openWorldHint: true,
-      };
+function toolAnnotations(
+  tool: Pick<AutoevalMcpTool, 'access' | 'name'>,
+): ToolAnnotations {
+  const isReadOnly = tool.access === 'readOnly';
+  const isDestructive = tool.name === 'import_remove_eval';
+  const isIdempotent = isReadOnly || tool.name === 'import_disconnect';
+
+  return {
+    readOnlyHint: isReadOnly,
+    destructiveHint: isDestructive,
+    idempotentHint: isIdempotent,
+    openWorldHint: true,
+  };
 }
 
 export function registerAutoevalMcpTools(
@@ -579,7 +578,7 @@ export function registerAutoevalMcpTools(
         description: tool.description,
         inputSchema: tool.inputSchema,
         outputSchema: mcpToolOutputSchema,
-        annotations: toolAnnotations(tool.access),
+        annotations: toolAnnotations(tool),
       },
       (input) => tool.invoke(input),
     );

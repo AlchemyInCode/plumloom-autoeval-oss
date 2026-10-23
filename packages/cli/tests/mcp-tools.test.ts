@@ -133,6 +133,7 @@ describe('Autoeval MCP tools', () => {
       'assign_quality_standard',
       'run_configured_evaluation',
       'run_evaluation',
+      'import_connect',
       'import_disconnect',
       'import_run',
       'import_remove_eval',

@@ -108,9 +108,15 @@ export const importEvaluationsInputSchema = z
   })
   .strict()
   .refine(
-    (data) => (data.eval_ids !== undefined && data.eval_ids.length > 0) || data.all_new === true,
+    (data) => {
+      const hasEvalIds = (data.eval_ids?.length ?? 0) > 0;
+
+      return data.all_new === true
+        ? data.eval_ids === undefined
+        : hasEvalIds;
+    },
     {
-      message: 'Provide eval_ids or set all_new to true.',
+      message: 'Provide non-empty eval_ids or set all_new to true, but not both.',
     },
   );
 
@@ -125,7 +131,7 @@ export const importWorkspaceEvaluationsInputSchema = z
 
 export const importEvaluationDetailInputSchema = z
   .object({
-    eval_id: z.string().min(1).max(200),
+    eval_id: uuid,
     run_id: z.union([uuid, z.string().regex(/^(?:evalrun|run)_[A-Za-z0-9_-]{1,200}$/u)]).optional(),
     page: z.number().int().min(1).max(1000).optional(),
     size: pageSize,
@@ -140,7 +146,7 @@ export const importWorkspaceIdInputSchema = z
 
 export const importRemoveEvaluationInputSchema = z
   .object({
-    eval_id: z.string().min(1).max(200),
+    eval_id: uuid,
     yes: z.boolean().default(false),
   })
   .strict();

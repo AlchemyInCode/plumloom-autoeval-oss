@@ -65,12 +65,12 @@ Read-only tools may query the API but do not create or update evaluation resourc
 | `validate_configured_evaluation`                          | Validate configured input without creating versions or a run       |
 | `get_run_status`                                          | Read a run's current status                                        |
 | `get_results`                                             | Read context-specific results, including trajectory when available |
-| `import_get_status` (`import_status`)                     | Check external provider key presence, access readiness, and cache  |
+| `import_status`                                           | Check external provider key presence, access readiness, and cache  |
 | `import_review`                                           | Review cached external evaluations without importing               |
 | `import_list_workspaces`                                  | List workspaces dedicated to imported external evaluations         |
-| `import_list_workspace_evaluations` (`import_list_evals`) | List evaluations in an import workspace                            |
-| `import_get_evaluation` (`import_show_eval`)              | Read imported evaluation detail, graders, run history, and outputs |
-| `import_get_insights` (`import_insights`)                 | Read readiness, pass-rate trends, and grader reliability insights  |
+| `import_list_evals`                                       | List evaluations in an import workspace                            |
+| `import_show_eval`                                        | Read imported evaluation detail, graders, run history, and outputs |
+| `import_insights`                                         | Read readiness, pass-rate trends, and grader reliability insights  |
 
 State-changing tools execute deterministically when called. The MCP server does not add an interactive confirmation prompt:
 
@@ -85,10 +85,11 @@ State-changing tools execute deterministically when called. The MCP server does 
 | `run_evaluation`                                  | Submit the current saved configuration and return the run identifiers                       |
 | `import_connect`                                  | Validate external provider access and refresh discovery cache                               |
 | `import_disconnect`                               | Clear external discovery cache                                                              |
-| `import_evaluations` (`import_run`)               | Import selected or all-new external evaluations in batches                                  |
-| `import_remove_evaluation` (`import_remove_eval`) | Delete an imported evaluation from the workspace (requires explicit confirmation)           |
+| `import_run`                                      | Import selected or all-new external evaluations in batches                                  |
+| `import_remove_eval`                              | Delete an imported evaluation from the workspace (requires explicit confirmation)           |
 
-Every ID argument is a UUID, except external evaluation source IDs which use `eval_...`. Tool schemas reject unknown fields. Results use an `{ "ok": true, "data": ... }` envelope. Failures use `{ "ok": false, "error": { "kind", "code", "message" } }`, set the MCP error flag, and redact recognized secret fields and CLI-key patterns.
+Tool inputs are validated against their schemas, and unknown fields are rejected. Resource IDs generally use UUIDs. External evaluation source IDs use the `eval_...` format, while `run_id` accepts a UUID or an ID prefixed with `run_` or `evalrun_`.
+Results use an `{ "ok": true, "data": ... }` envelope. Failures use `{ "ok": false, "error": { "kind", "code", "message" } }`, set the MCP error flag, and redact recognized secret fields and CLI-key patterns.
 
 ## Configured evaluation semantics
 
