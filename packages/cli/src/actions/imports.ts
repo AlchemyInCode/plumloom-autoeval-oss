@@ -6,7 +6,6 @@ import { AutoevalError } from '../errors/autoeval-error.js';
 import type { ActionContext } from './context.js';
 
 export const openaiEvalIdSchema = z.string().regex(/^eval_[A-Za-z0-9_-]{1,200}$/u);
-const openaiRunIdSchema = z.string().regex(/^(?:evalrun|run)_[A-Za-z0-9_-]{1,200}$/u);
 const pageOptions = {
   page: z.number().int().min(1).max(1000).default(1),
   size: z.number().int().min(1).max(100).default(50),
