@@ -551,9 +551,7 @@ export function createAutoevalMcpTools(
   ];
 }
 
-function toolAnnotations(
-  tool: Pick<AutoevalMcpTool, 'access' | 'name'>,
-): ToolAnnotations {
+function toolAnnotations(tool: Pick<AutoevalMcpTool, 'access' | 'name'>): ToolAnnotations {
   const isReadOnly = tool.access === 'readOnly';
   const isDestructive = tool.name === 'import_remove_eval';
   const isIdempotent = isReadOnly || tool.name === 'import_disconnect';

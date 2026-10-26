@@ -111,9 +111,7 @@ export const importEvaluationsInputSchema = z
     (data) => {
       const hasEvalIds = (data.eval_ids?.length ?? 0) > 0;
 
-      return data.all_new === true
-        ? data.eval_ids === undefined
-        : hasEvalIds;
+      return data.all_new === true ? data.eval_ids === undefined : hasEvalIds;
     },
     {
       message: 'Provide non-empty eval_ids or set all_new to true, but not both.',
@@ -132,7 +130,7 @@ export const importWorkspaceEvaluationsInputSchema = z
 export const importEvaluationDetailInputSchema = z
   .object({
     eval_id: uuid,
-    run_id: z.union([uuid, z.string().regex(/^(?:evalrun|run)_[A-Za-z0-9_-]{1,200}$/u)]).optional(),
+    run_id: uuid.optional(),
     page: z.number().int().min(1).max(1000).optional(),
     size: pageSize,
   })

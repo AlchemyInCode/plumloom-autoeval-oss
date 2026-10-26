@@ -643,5 +643,19 @@ describe('Autoeval MCP tools', () => {
         message: 'Removal requires explicit confirmation (--yes).',
       },
     });
+    // Rejects external run IDs that are not Plumloom UUIDs
+    const invalidRunIdResult = await toolByName(tools, 'import_show_eval').invoke({
+      eval_id: IDS.evaluation,
+      run_id: 'run_abc123',
+    });
+
+    expect(invalidRunIdResult.isError).toBe(true);
+    expect(outputOf(invalidRunIdResult)).toMatchObject({
+      ok: false,
+      error: {
+        kind: 'usage',
+        code: 'INVALID_TOOL_ARGUMENTS',
+      },
+    });
   });
 });
