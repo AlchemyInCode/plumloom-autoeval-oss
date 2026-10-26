@@ -346,12 +346,12 @@ describe('import runtime and output', () => {
           outcome === 'failure'
             ? jsonResponse({ code: 'NO_KEY' })
             : jsonResponse({
-              page: 1,
-              page_size: 50,
-              total: 0,
-              items: [],
-              workspace: { workspace_id: IDS.workspace, name: 'Imported from OpenAI' },
-            }),
+                page: 1,
+                page_size: 50,
+                total: 0,
+                items: [],
+                workspace: { workspace_id: IDS.workspace, name: 'Imported from OpenAI' },
+              }),
         );
       });
       const { executor, stdout } = runtime(
@@ -442,10 +442,10 @@ describe('import runtime and output', () => {
           outcome === 'failure'
             ? jsonResponse({ code: 'NO_KEY' })
             : jsonResponse({
-              eval: IMPORTED_EVAL,
-              runs: [],
-              results: { page: 1, page_size: 50, total: 0, items: [] },
-            }),
+                eval: IMPORTED_EVAL,
+                runs: [],
+                results: { page: 1, page_size: 50, total: 0, items: [] },
+              }),
         );
       });
       const { executor, stdout } = runtime(
@@ -703,15 +703,13 @@ describe('import runtime and output', () => {
     },
   );
   it('accepts a valid Plumloom run UUID', async () => {
-    const fetchImplementation = vi
-      .fn<typeof fetch>()
-      .mockResolvedValue(
-        jsonResponse({
-          eval: IMPORTED_EVAL,
-          runs: [],
-          results: [],
-        }),
-      );
+    const fetchImplementation = vi.fn<typeof fetch>().mockResolvedValue(
+      jsonResponse({
+        eval: IMPORTED_EVAL,
+        runs: [],
+        results: [],
+      }),
+    );
 
     const { executor } = runtime(fetchImplementation);
 
