@@ -36,14 +36,16 @@ export async function readImportIds(filename: string): Promise<string[]> {
   }
 }
 
-function positiveInteger(value: string): number {
+function boundedInteger(value: string, label: string, maximum: number): number {
   const parsed = Number(value);
-  if (!Number.isSafeInteger(parsed) || parsed < 1) {
-    throw new AutoevalError('Import page and size must be positive integers.', {
+
+  if (!Number.isSafeInteger(parsed) || parsed < 1 || parsed > maximum) {
+    throw new AutoevalError(`${label} must be an integer between 1 and ${maximum}.`, {
       kind: 'usage',
       code: 'INVALID_IMPORT_ARGUMENTS',
     });
   }
+
   return parsed;
 }
 
@@ -77,8 +79,13 @@ export function registerImportCommands(program: Command, executor: CommandExecut
   };
   const pagination = (command: Command, maximumSize = 100): Command =>
     command
-      .option('--page <number>', 'page number (1-1000)', positiveInteger, 1)
-      .option('--size <number>', `page size (1-${maximumSize})`, positiveInteger, 50);
+      .option('--page <number>', 'page number (1-1000)', (v) => boundedInteger(v, 'page', 1000), 1)
+      .option(
+        '--size <number>',
+        `page size (1-${maximumSize})`,
+        (v) => boundedInteger(v, 'size', maximumSize),
+        50,
+      );
   group
     .command('status')
     .description('check server-side OpenAI key and Evals access')

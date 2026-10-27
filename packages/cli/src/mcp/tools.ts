@@ -112,10 +112,12 @@ type ToolDefinitionInput<Schema extends z.ZodType> = {
 };
 
 function successResult(data: unknown): CallToolResult {
+  const safeData = z.json().parse(redactUnknown(data));
   const payload = mcpToolOutputSchema.parse({
     ok: true,
-    data: z.json().parse(redactUnknown(data)),
+    data: safeData,
   });
+
   return {
     content: [{ type: 'text', text: JSON.stringify(payload) }],
     structuredContent: payload,

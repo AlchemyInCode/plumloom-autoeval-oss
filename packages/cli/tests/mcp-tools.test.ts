@@ -3,6 +3,7 @@ import { readFile, readdir } from 'node:fs/promises';
 import { describe, expect, it, vi } from 'vitest';
 
 import { AutoevalError } from '../src/errors/autoeval-error.js';
+import type { ImportCommand } from '../src/actions/imports.js';
 import type { AutoevalMcpContext } from '../src/mcp/context.js';
 import { mcpToolOutputSchema } from '../src/mcp/schemas.js';
 import { createAutoevalMcpServer } from '../src/mcp/server.js';
@@ -657,5 +658,231 @@ describe('Autoeval MCP tools', () => {
         code: 'INVALID_TOOL_ARGUMENTS',
       },
     });
+  });
+
+  it('exposes partial import mixed outcomes and contract in import_run without masking failures', async () => {
+    const executeImport = vi.fn<AutoevalMcpActions['executeImport']>().mockResolvedValue({
+      workspace_id: IDS.workspace,
+      imported: ['eval_success1', 'eval_success2'],
+      skipped: ['eval_already_imported'],
+      failed: [
+        {
+          eval_id: 'eval_failed_upstream',
+          reason: 'Upstream rate limit',
+          error_code: 'UPSTREAM_ERROR',
+        },
+      ],
+      eval_ids_imported: ['eval_success1', 'eval_success2'],
+      batches: [
+        {
+          workspace_id: IDS.workspace,
+          imported: ['eval_success1', 'eval_success2'],
+          skipped: ['eval_already_imported'],
+          failed: [
+            {
+              eval_id: 'eval_failed_upstream',
+              reason: 'Upstream rate limit',
+              error_code: 'UPSTREAM_ERROR',
+            },
+          ],
+        },
+      ],
+    });
+
+    const context = mcpContext();
+    const tools = createAutoevalMcpTools(context, actions({ executeImport }));
+
+    const runResult = await toolByName(tools, 'import_run').invoke({
+      eval_ids: ['eval_success1', 'eval_success2', 'eval_already_imported', 'eval_failed_upstream'],
+    });
+
+    expect(runResult.isError).toBeUndefined();
+    const output = outputOf(runResult);
+    expect(output.ok).toBe(true);
+    if (!output.ok) throw new Error('Expected ok');
+    expect(output.data).toMatchObject({
+      workspace_id: IDS.workspace,
+      imported: ['eval_success1', 'eval_success2'],
+      skipped: ['eval_already_imported'],
+      failed: [
+        {
+          eval_id: 'eval_failed_upstream',
+          reason: 'Upstream rate limit',
+          error_code: 'UPSTREAM_ERROR',
+        },
+      ],
+      eval_ids_imported: ['eval_success1', 'eval_success2'],
+    });
+  });
+
+  it('delegates requests exceeding 25 IDs through executeImport which splits them into valid backend batches', async () => {
+    const batch1Ids = Array.from({ length: 25 }, (_, i) => `eval_batch1_${i}`);
+    const batch2Ids = Array.from({ length: 5 }, (_, i) => `eval_batch2_${i}`);
+    const total30Ids = [...batch1Ids, ...batch2Ids];
+
+    let capturedCommand: ImportCommand | undefined;
+    const fakeApi = createApi({
+      externalImport: vi
+        .fn()
+        .mockResolvedValueOnce({
+          workspace_id: IDS.workspace,
+          imported: batch1Ids,
+          skipped: [],
+          failed: [],
+        })
+        .mockResolvedValueOnce({
+          workspace_id: IDS.workspace,
+          imported: [],
+          skipped: ['eval_batch2_0'],
+          failed: [{ eval_id: 'eval_batch2_1', reason: 'Failed fetching runs' }],
+        }),
+    });
+
+    const executeImport = vi
+      .fn<AutoevalMcpActions['executeImport']>()
+      .mockImplementation(async (_actionCtx, command, options) => {
+        capturedCommand = command;
+        return sharedAutoevalActions.executeImport({ api: fakeApi }, command, options);
+      });
+
+    const context = mcpContext();
+    const tools = createAutoevalMcpTools(context, actions({ executeImport }));
+
+    const runResult = await toolByName(tools, 'import_run').invoke({
+      eval_ids: total30Ids,
+    });
+
+    expect(capturedCommand).toEqual({
+      operation: 'run',
+      allNew: false,
+      evalIds: total30Ids,
+    });
+
+    expect(fakeApi.externalImport).toHaveBeenCalledTimes(2);
+    expect(fakeApi.externalImport).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        method: 'POST',
+        path: '/run',
+        body: { eval_ids: batch1Ids },
+      }),
+    );
+    expect(fakeApi.externalImport).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        method: 'POST',
+        path: '/run',
+        body: { eval_ids: batch2Ids },
+      }),
+    );
+
+    const output = outputOf(runResult);
+    expect(output.ok).toBe(true);
+    if (!output.ok) throw new Error('Expected ok');
+    expect(output.data).toMatchObject({
+      workspace_id: IDS.workspace,
+      imported: batch1Ids,
+      skipped: ['eval_batch2_0'],
+      failed: [{ eval_id: 'eval_batch2_1', reason: 'Failed fetching runs' }],
+    });
+  });
+  it('aggregates imported IDs across batches', async () => {
+    const batch1Ids = Array.from({ length: 25 }, (_, i) => `eval_batch1_${i}`);
+    const batch2Ids = Array.from({ length: 5 }, (_, i) => `eval_batch2_${i}`);
+
+    const fakeApi = createApi({
+      externalImport: vi
+        .fn()
+        .mockResolvedValueOnce({
+          workspace_id: IDS.workspace,
+          imported: batch1Ids,
+          skipped: [],
+          failed: [],
+          eval_ids_imported: batch1Ids,
+        })
+        .mockResolvedValueOnce({
+          workspace_id: IDS.workspace,
+          imported: batch2Ids.slice(0, 2),
+          skipped: [batch2Ids[2]],
+          failed: [
+            {
+              eval_id: batch2Ids[3],
+              reason: 'Failed fetching runs',
+              error_code: 'RUN_FETCH_FAILED',
+            },
+            {
+              eval_id: batch2Ids[4],
+              reason: 'Failed fetching output items',
+              error_code: 'OUTPUT_FETCH_FAILED',
+            },
+          ],
+          eval_ids_imported: batch2Ids.slice(0, 2),
+        }),
+    });
+
+    const result = await sharedAutoevalActions.executeImport(
+      { api: fakeApi },
+      {
+        operation: 'run',
+        evalIds: [...batch1Ids, ...batch2Ids],
+        allNew: false,
+      },
+    );
+
+    expect(result).toMatchObject({
+      workspace_id: IDS.workspace,
+      imported: [...batch1Ids, ...batch2Ids.slice(0, 2)],
+      skipped: [batch2Ids[2]],
+      failed: [
+        {
+          eval_id: batch2Ids[3],
+          reason: 'Failed fetching runs',
+          error_code: 'RUN_FETCH_FAILED',
+        },
+        {
+          eval_id: batch2Ids[4],
+          reason: 'Failed fetching output items',
+          error_code: 'OUTPUT_FETCH_FAILED',
+        },
+      ],
+      eval_ids_imported: [...batch1Ids, ...batch2Ids.slice(0, 2)],
+    });
+
+    expect(fakeApi.externalImport).toHaveBeenCalledTimes(2);
+  });
+
+  it('rejects boundary cases like empty eval_ids or both eval_ids and all_new in MCP', async () => {
+    const executeImport = vi.fn<AutoevalMcpActions['executeImport']>();
+    const context = mcpContext();
+    const tools = createAutoevalMcpTools(context, actions({ executeImport }));
+
+    const emptyResult = await toolByName(tools, 'import_run').invoke({
+      eval_ids: [],
+    });
+    expect(emptyResult.isError).toBe(true);
+    expect(outputOf(emptyResult)).toEqual({
+      ok: false,
+      error: {
+        kind: 'usage',
+        code: 'INVALID_TOOL_ARGUMENTS',
+        message: 'Tool arguments are invalid.',
+      },
+    });
+
+    const bothResult = await toolByName(tools, 'import_run').invoke({
+      eval_ids: ['eval_valid_1'],
+      all_new: true,
+    });
+    expect(bothResult.isError).toBe(true);
+    expect(outputOf(bothResult)).toEqual({
+      ok: false,
+      error: {
+        kind: 'usage',
+        code: 'INVALID_TOOL_ARGUMENTS',
+        message: 'Tool arguments are invalid.',
+      },
+    });
+
+    expect(executeImport).not.toHaveBeenCalled();
   });
 });
