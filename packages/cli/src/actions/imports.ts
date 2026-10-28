@@ -145,6 +145,7 @@ export const importBatchSchema = z
     imported: batchCountSchema,
     skipped: batchCountSchema,
     failed: z.array(batchEntrySchema),
+    eval_ids_imported: z.array(openaiEvalIdSchema).optional(),
     workspace_id: z.uuid().nullable().optional(),
   })
   .loose();
@@ -458,6 +459,11 @@ export async function executeImport(
               : [...previous, ...incoming];
         }
         summary.failed.push(...batch.failed);
+        if (batch.eval_ids_imported)
+          summary.eval_ids_imported = [
+            ...(summary.eval_ids_imported ?? []),
+            ...batch.eval_ids_imported,
+          ];
         if (batch.workspace_id) summary.workspace_id = batch.workspace_id;
         summary.batches.push(batch);
         options.onBatch?.(batch, offset / 25 + 1, Math.ceil(evalIds.length / 25));
