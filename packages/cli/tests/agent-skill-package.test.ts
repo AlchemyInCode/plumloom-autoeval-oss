@@ -200,7 +200,7 @@ function schemaProblems(label: string, schema: z.ZodType, candidate: unknown): s
 }
 
 function splitSkillFile(markdown: string): { frontmatter: unknown; body: string } {
-  const match = /^---\n([\s\S]*?)\n---\n([\s\S]*)$/u.exec(markdown);
+  const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/u.exec(markdown);
   if (match === null) throw new Error('SKILL.md must start with YAML frontmatter.');
   return { frontmatter: parseYaml(match[1] ?? '') as unknown, body: match[2] ?? '' };
 }
@@ -326,6 +326,21 @@ describe('agent skill', () => {
 
   it('has valid frontmatter, a triggerable description, and names every verdict and gate command', () => {
     expect(skillProblems(skillFile, SKILL_NAME)).toEqual([]);
+  });
+
+  it.each(['\n', '\r\n'])('validates frontmatter with %j line endings', (newline) => {
+    const markdown = skillFile.replace(/\r?\n/gu, newline);
+    expect(skillProblems(markdown, SKILL_NAME)).toEqual([]);
+    expect(skillProblems(markdown, 'another-folder')).toContain(
+      'skill name "autoeval" must match its folder "another-folder"',
+    );
+    const leaking = `${markdown}${newline}Run \`autoeval login --key pl_sk_example_value\`.${newline}`;
+    expect(skillProblems(leaking, SKILL_NAME)).toEqual(
+      expect.arrayContaining([
+        'body shows a key on a command line',
+        'skill contains a credential-like value',
+      ]),
+    );
   });
 
   it('links only to reference files that exist inside the skill folder', () => {

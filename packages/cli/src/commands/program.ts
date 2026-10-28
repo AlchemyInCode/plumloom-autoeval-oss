@@ -6,6 +6,7 @@ import type { OutputStream } from '../output/writer.js';
 import type { GateThresholds } from '../actions/gate.js';
 import { AutoevalError } from '../errors/autoeval-error.js';
 import { CLI_VERSION } from '../version.js';
+import { registerImportCommands } from './imports.js';
 import type { CommandExecutor, ExecutionOptions } from './types.js';
 
 export function parseThresholdNumber(flag: string, value: string): number {
@@ -189,6 +190,8 @@ export function createProgram(
     .action(async (_options: object, command: Command) => {
       await executor.execute({ kind: 'whoami' }, executionOptions(command));
     });
+
+  registerImportCommands(program, executor);
 
   const workspace = program.command('workspace').description('workspace operations');
   workspace

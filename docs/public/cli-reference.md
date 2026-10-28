@@ -78,6 +78,34 @@ Creates a workspace.
 
 Human output shows the workspace name and UUID. JSON output contains the created normalized workspace.
 
+## OpenAI Import
+
+`autoeval import` uses the existing Plumloom CLI credential and the server-side OpenAI key
+configured in the Plumloom UI. It never accepts an OpenAI key or writes to OpenAI.
+
+```text
+autoeval import status
+autoeval import connect [--refresh]
+autoeval import review [--search <text>] [--page 1] [--size 50] [--all]
+autoeval import run --eval <openai-eval-id> [--eval <id> ...]
+autoeval import run --all-new
+autoeval import run --input <utf8-file>
+autoeval import list
+autoeval import evals --workspace <uuid> [--search <text>] [--page 1] [--size 50]
+autoeval import show <uuid> [--run <run-id>] [--show-outputs] [--page 1] [--size 50]
+autoeval import insights --workspace <uuid>
+autoeval import remove <uuid> [--yes]
+autoeval import disconnect
+```
+
+All commands support global `--json` and `--debug`. `review` needs a warm discovery cache;
+otherwise it exits `9` with a connect hint. `status` exits `0` when ready, `3` without an OpenAI
+key, and `4` for forbidden or unreachable Evals. `run` exits `1` for any per-evaluation failures.
+Removal prompts only in an interactive terminal; JSON and noninteractive removal require
+`--yes`. Other usage errors exit `2`.
+
+See [OpenAI import](./openai-import.md) for response contracts, limits, all exit codes, and tests.
+
 ## Evaluations
 
 ### `autoeval eval list --workspace <workspace-id>`

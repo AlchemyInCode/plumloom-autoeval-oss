@@ -9,7 +9,7 @@ import { extractUpstreamError, ApiError } from './errors.js';
 export type FetchImplementation = typeof fetch;
 
 export type ApiDiagnostic = {
-  method: 'GET' | 'POST' | 'PUT' | 'PATCH';
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   path: string;
   status?: number;
   requestId?: string;
@@ -30,7 +30,7 @@ export type ApiClientOptions = {
 };
 
 type RequestOptions<T> = {
-  method: 'GET' | 'POST' | 'PUT' | 'PATCH';
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   path: string;
   schema: ZodType<T>;
   query?: Readonly<Record<string, string | number | boolean | undefined>>;

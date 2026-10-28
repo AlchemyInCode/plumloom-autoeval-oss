@@ -1,4 +1,6 @@
 import type { JsonObject } from '../domain/common.js';
+import { z } from 'zod';
+import { externalImportBasePath, type ExternalImportRequest } from './external-import.js';
 import type {
   EvaluationPage,
   EvaluationSummary,
@@ -89,6 +91,7 @@ function isLegacyModelsResponse(value: unknown): value is LegacyModelsResponse {
 }
 
 export interface AutoevalApi {
+  externalImport(request: ExternalImportRequest): Promise<unknown>;
   getCurrentUser(signal?: AbortSignal): Promise<UserIdentity>;
   listWorkspaces(input?: PageInput, signal?: AbortSignal): Promise<WorkspacePage>;
   createWorkspace(
@@ -300,6 +303,14 @@ export class AutoevalApiClient implements AutoevalApi {
 
   constructor(client: ApiClient) {
     this.#client = client;
+  }
+
+  externalImport(request: ExternalImportRequest): Promise<unknown> {
+    return this.#client.request({
+      ...request,
+      path: `${externalImportBasePath}${request.path}`,
+      schema: z.unknown(),
+    });
   }
 
   async getCurrentUser(signal?: AbortSignal): Promise<UserIdentity> {

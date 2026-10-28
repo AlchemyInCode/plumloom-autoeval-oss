@@ -44,6 +44,7 @@ function unexpectedCall(): Error {
 
 export function createApi(overrides: Partial<AutoevalApi> = {}): AutoevalApi {
   return {
+    externalImport: vi.fn(() => Promise.reject(unexpectedCall())),
     getCurrentUser: vi.fn(() => Promise.resolve(IDENTITY)),
     listWorkspaces: vi.fn(() =>
       Promise.resolve<WorkspacePage>({
