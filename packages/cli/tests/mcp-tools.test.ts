@@ -718,7 +718,20 @@ describe('Autoeval MCP tools', () => {
         },
       ],
       eval_ids_imported: ['eval_success1', 'eval_success2'],
-      batches: expect.any(Array),
+      batches: [
+        {
+          workspace_id: IDS.workspace,
+          imported: ['eval_success1', 'eval_success2'],
+          skipped: ['eval_already_imported'],
+          failed: [
+            {
+              eval_id: 'eval_failed_upstream',
+              reason: 'Upstream rate limit',
+              error_code: 'UPSTREAM_ERROR',
+            },
+          ],
+        },
+      ],
     });
   });
 
