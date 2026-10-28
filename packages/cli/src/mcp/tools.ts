@@ -181,6 +181,29 @@ function actionSignal(context: AutoevalMcpContext): { signal?: AbortSignal } {
   return context.signal ? { signal: context.signal } : {};
 }
 
+function withImportStatus(result: unknown): unknown {
+  if (!result || typeof result !== 'object' || Array.isArray(result)) {
+    return result;
+  }
+
+  const data = result as Record<string, unknown>;
+
+  if (!Array.isArray(data.failed)) {
+    return result;
+  }
+
+  const importedCount = Math.max(
+    Array.isArray(data.eval_ids_imported) ? data.eval_ids_imported.length : 0,
+    Array.isArray(data.imported) ? data.imported.length : 0,
+    typeof data.imported === 'number' ? data.imported : 0,
+  );
+
+  const status =
+    data.failed.length === 0 ? 'success' : importedCount > 0 ? 'partial_failure' : 'failure';
+
+  return { ...data, status };
+}
+
 export function createAutoevalMcpTools(
   context: AutoevalMcpContext,
   actions: AutoevalMcpActions = sharedAutoevalActions,
@@ -453,8 +476,8 @@ export function createAutoevalMcpTools(
       access: 'stateChanging',
       inputSchema: importEvaluationsInputSchema,
 
-      execute: (input) =>
-        actions.executeImport(
+      execute: async (input) => {
+        const result = await actions.executeImport(
           context.actions,
           {
             operation: 'run',
@@ -462,7 +485,10 @@ export function createAutoevalMcpTools(
             ...(input.eval_ids !== undefined ? { evalIds: input.eval_ids } : {}),
           },
           actionSignal(context),
-        ),
+        );
+
+        return withImportStatus(result);
+      },
     }),
     defineTool({
       name: 'import_list_workspaces',

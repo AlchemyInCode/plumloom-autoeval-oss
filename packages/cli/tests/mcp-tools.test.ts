@@ -509,7 +509,12 @@ describe('Autoeval MCP tools', () => {
     });
     expect(outputOf(runResult)).toEqual({
       ok: true,
-      data: { imported: ['eval_1'], skipped: [], failed: [] },
+      data: {
+        imported: ['eval_1'],
+        skipped: [],
+        failed: [],
+        status: 'success',
+      },
     });
     expect(executeImport).toHaveBeenCalledWith(
       context.actions,
@@ -702,6 +707,7 @@ describe('Autoeval MCP tools', () => {
     if (!output.ok) throw new Error('Expected ok');
     expect(output.data).toMatchObject({
       workspace_id: IDS.workspace,
+      status: 'partial_failure',
       imported: ['eval_success1', 'eval_success2'],
       skipped: ['eval_already_imported'],
       failed: [
@@ -712,6 +718,7 @@ describe('Autoeval MCP tools', () => {
         },
       ],
       eval_ids_imported: ['eval_success1', 'eval_success2'],
+      batches: expect.any(Array),
     });
   });
 
