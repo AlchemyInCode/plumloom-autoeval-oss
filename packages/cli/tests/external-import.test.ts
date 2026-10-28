@@ -220,6 +220,99 @@ describe('import action boundaries', () => {
     expect(externalImport.mock.calls[1]?.[0].query?.page).toBe(2);
   });
 
+  it('imports 1,000 discovered evaluations in 40 complete batches with mixed outcomes', async () => {
+    const evaluationIds = Array.from({ length: 1_000 }, (_, index) => `eval_batch${index}`);
+    const backendBatches: {
+      workspace_id: string;
+      imported: number;
+      skipped: number;
+      failed: { eval_id: string; reason: string }[];
+      eval_ids_imported: string[];
+    }[] = [];
+    const skippedIds: string[] = [];
+    let batchIndex = 0;
+    const externalImport = vi.fn<AutoevalApi['externalImport']>().mockImplementation((request) => {
+      if (request.method === 'GET') {
+        const page = Number(request.query?.page);
+        const start = (page - 1) * 100;
+        return Promise.resolve({
+          items: evaluationIds.slice(start, start + 100).map((id, index) => ({
+            id,
+            name: `Evaluation ${start + index}`,
+            already_imported: false,
+            run_count: null,
+            last_run_at: null,
+          })),
+          total: evaluationIds.length,
+          page,
+          page_size: 100,
+        });
+      }
+
+      const batchIds = evaluationIds.slice(batchIndex * 25, (batchIndex + 1) * 25);
+      skippedIds.push(...batchIds.slice(0, 1));
+      const batch = {
+        workspace_id: IDS.workspace,
+        imported: 22,
+        skipped: 1,
+        failed: batchIds.slice(1, 3).map((eval_id, index) => ({
+          eval_id,
+          reason: index === 0 ? 'EVAL_NOT_FOUND' : 'RATE_LIMITED',
+        })),
+        eval_ids_imported: batchIds.slice(3),
+      };
+      backendBatches.push(batch);
+      batchIndex += 1;
+      return Promise.resolve(batch);
+    });
+
+    const response = await executeImport(
+      { api: createApi({ externalImport }) },
+      { operation: 'run', allNew: true },
+    );
+
+    const discoveryRequests = externalImport.mock.calls
+      .map(([request]) => request)
+      .filter((request) => request.method === 'GET');
+    const batchRequests = externalImport.mock.calls
+      .map(([request]) => request)
+      .filter((request) => request.method === 'POST');
+    const requestedIds = batchRequests.flatMap((request) => {
+      const body = request.body as { eval_ids: string[] };
+      expect(body.eval_ids).toHaveLength(25);
+      return body.eval_ids;
+    });
+    const importedIds = backendBatches.flatMap((batch) => batch.eval_ids_imported);
+    const failedIds = backendBatches.flatMap((batch) =>
+      batch.failed.map((failure) => failure.eval_id),
+    );
+
+    expect(discoveryRequests).toHaveLength(10);
+    expect(discoveryRequests.map((request) => request.query?.page)).toEqual(
+      Array.from({ length: 10 }, (_, index) => index + 1),
+    );
+    expect(batchRequests).toHaveLength(40);
+    expect(batchRequests.every((request) => request.path === '/run')).toBe(true);
+    expect(requestedIds).toEqual(evaluationIds);
+    expect(new Set(requestedIds).size).toBe(1_000);
+    expect(importedIds).toHaveLength(880);
+    expect(skippedIds).toHaveLength(40);
+    expect(failedIds).toHaveLength(80);
+    expect(
+      backendBatches.flatMap((batch) => batch.failed.map((failure) => failure.reason)),
+    ).toEqual(Array.from({ length: 40 }, () => ['EVAL_NOT_FOUND', 'RATE_LIMITED']).flat());
+    expect([...importedIds, ...skippedIds, ...failedIds].sort()).toEqual([...evaluationIds].sort());
+    expect(new Set([...importedIds, ...skippedIds, ...failedIds]).size).toBe(1_000);
+    expect(response).toEqual({
+      imported: 880,
+      skipped: 40,
+      failed: backendBatches.flatMap((batch) => batch.failed),
+      eval_ids_imported: importedIds,
+      workspace_id: IDS.workspace,
+      batches: backendBatches,
+    });
+  });
+
   it('does not write when all discovered evaluations are imported', async () => {
     const externalImport = vi
       .fn<AutoevalApi['externalImport']>()
