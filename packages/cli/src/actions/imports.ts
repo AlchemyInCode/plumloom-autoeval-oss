@@ -440,37 +440,65 @@ export async function executeImport(
       }
       if (!input.allNew && evalIds.length === 0)
         throw invalidImport('Select at least one OpenAI evaluation.');
-      const summary: ImportBatch & { batches: ImportBatch[] } = {
+      const summary: ImportBatch & {
+        batches: ImportBatch[];
+        eval_ids_imported: string[];
+      } = {
         imported: [],
         skipped: [],
         failed: [],
+        eval_ids_imported: [],
         batches: [],
       };
+
       for (let offset = 0; offset < evalIds.length; offset += 25) {
         const batch = await request('POST', '/run', importBatchSchema, {
           body: { eval_ids: evalIds.slice(offset, offset + 25) },
         });
+
         for (const field of ['imported', 'skipped'] as const) {
           const previous = summary[field];
           const incoming = batch[field];
+
           summary[field] =
             typeof previous === 'number' || typeof incoming === 'number'
               ? importEntryCount(previous) + importEntryCount(incoming)
               : [...previous, ...incoming];
         }
         summary.failed.push(...batch.failed);
-        if (batch.eval_ids_imported)
-          summary.eval_ids_imported = [
-            ...(summary.eval_ids_imported ?? []),
-            ...batch.eval_ids_imported,
-          ];
-        if (batch.workspace_id) summary.workspace_id = batch.workspace_id;
+        // Preserve the IDs actually imported by each backend batch.
+        // Do not infer IDs from a numeric imported count.
+        const importedIds =
+          batch.eval_ids_imported ??
+          (Array.isArray(batch.imported)
+            ? batch.imported.filter((entry): entry is string => typeof entry === 'string')
+            : []);
+
+        summary.eval_ids_imported.push(...importedIds);
+
+        if (batch.workspace_id) {
+          if (summary.workspace_id && summary.workspace_id !== batch.workspace_id) {
+            throw new AutoevalError('Import batches returned different workspace IDs.', {
+              kind: 'upstream',
+              code: 'IMPORT_WORKSPACE_MISMATCH',
+            });
+          }
+
+          summary.workspace_id = batch.workspace_id;
+        }
+
         summary.batches.push(batch);
         options.onBatch?.(batch, offset / 25 + 1, Math.ceil(evalIds.length / 25));
       }
-      return summary.batches.length === 1
-        ? { ...summary.batches[0], batches: summary.batches }
-        : summary;
+
+      return {
+        workspace_id: summary.workspace_id ?? null,
+        imported: summary.imported,
+        skipped: summary.skipped,
+        failed: summary.failed,
+        eval_ids_imported: summary.eval_ids_imported,
+        batches: summary.batches,
+      };
     }
   }
 }

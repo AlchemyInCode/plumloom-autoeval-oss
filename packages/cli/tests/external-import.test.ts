@@ -81,6 +81,20 @@ function runtime(
 }
 
 describe('import command parsing', () => {
+  it('describes status as a key and cache check, not a live access check', () => {
+    const executor: CommandExecutor = {
+      execute: vi.fn<CommandExecutor['execute']>().mockResolvedValue(undefined),
+    };
+    const program = createProgram(executor);
+    const importCommand = program.commands.find((command) => command.name() === 'import');
+    const statusCommand = importCommand?.commands.find((command) => command.name() === 'status');
+
+    expect(statusCommand?.description()).toBe(
+      'check server-side OpenAI key presence and discovery cache state',
+    );
+    expect(statusCommand?.description()).not.toMatch(/access/iu);
+  });
+
   it.each([
     ['status', { operation: 'status' }],
     ['connect --refresh', { operation: 'connect', refresh: true }],
@@ -1130,7 +1144,7 @@ describe('import runtime and output', () => {
     [true, 'forbidden'],
     [true, 'unreachable'],
     [true, null],
-  ])('hides stale warm-cache guidance for key=%s access=%s', (keyPresent, access) => {
+  ])('renders a warm cache independently of key=%s access=%s', (keyPresent, access) => {
     const command = importCommandSchema.parse({ operation: 'status' });
     const response = {
       key_present: keyPresent,
@@ -1139,7 +1153,7 @@ describe('import runtime and output', () => {
     };
 
     const human = renderImport(command, response);
-    expect(human).toContain(keyPresent ? 'Cache:       Warm' : 'Cache:       Cold');
+    expect(human).toContain('Cache:       Warm');
     expect(human).not.toContain('Evals access:');
     expect(human).not.toContain('Cached list:');
 
@@ -1219,6 +1233,7 @@ describe('import runtime and output', () => {
       expect(human).not.toContain('Evals access:');
       expect(human).not.toContain('evals_access');
       expect(human).not.toContain('Cached list:');
+      expect(human).toContain(`Cache:       ${cacheWarm ? 'Warm' : 'Cold'}`);
       expect(human).toContain(keyPresent ? 'Configured (unverified)' : 'API Key:     Missing');
       expect(human).toContain(
         keyPresent
@@ -1293,11 +1308,19 @@ describe('import runtime and output', () => {
       cache_status: 'cold',
     });
     expect(human).toContain('API Key:     Configured (unverified)');
-    expect(human).toContain('Cache:       Warm');
+    expect(human).toContain('Cache:       Cold');
     expect(human).toContain(
       "Action:      Run 'autoeval import connect' to verify live OpenAI Evals access.",
     );
     expect(human).not.toContain('Evals access:');
+  });
+
+  it('does not invent a cache state when the status response omits one', () => {
+    const human = renderImport(importCommandSchema.parse({ operation: 'status' }), {
+      code: 'KEY_PRESENT',
+    });
+
+    expect(human).toContain('Cache:       Unknown');
   });
 
   it('rejects an invalid key before considering stale warm-cache state', async () => {

@@ -14,8 +14,8 @@ Evaluation content may still contain sensitive user data: treat exported records
 
 | Command                                                                       | Behavior                                                                                                                                                                                                                           |
 | ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `import status`                                                               | Cheap server-side key/access/cache check; does not discover evaluations.                                                                                                                                                           |
-| `import connect`                                                              | Validate provider access, discover evaluations, and cache the list.                                                                                                                                                                |
+| `import status`                                                               | Lightweight server-side key-presence and cache-state check; makes zero OpenAI calls and does not discover evaluations (Mode A).                                                                                                    |
+| `import connect`                                                              | Validate provider access, discover evaluations, and cache the list. A successful response confirms OpenAI Evals access.                                                                                                            |
 | `import connect --refresh`                                                    | Force a fresh discovery pull after new OpenAI activity.                                                                                                                                                                            |
 | `import review [--search <text>] [--page 1] [--size 50] [--all]`              | Read discovery only. Shows actual `already_imported` flags. Run counts and dates can remain unknown until backfilled.                                                                                                              |
 | `import run --eval <eval_id> [--eval <eval_id> ...]`                          | Import explicit OpenAI source IDs.                                                                                                                                                                                                 |
@@ -87,8 +87,8 @@ fixture is shipped with this repository.
 
 | Operation       | Method/path                       | Client contract                                                                                                                                                                                                                                                                                                                                                  |
 | --------------- | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Status          | `GET /connect/status`             | `key_present`, optional masked `key_suffix`, nullable `evals_access` (`ready`, `forbidden`, `unreachable`), nullable `cache_status` (`warm`, `cold`). Also accepts coded key-presence responses as described below.                                                                                                                                              |
-| Connect/refresh | `POST /connect`, `POST /refresh`  | Success requires a nonnegative integer count in `total`, `eval_count`, or `total_evals`, including zero. Missing/invalid counts fail validation instead of printing a false connection success.                                                                                                                                                                  |
+| Status          | `GET /connect/status`             | Lightweight Mode A check of key presence and discovery cache state. It makes zero OpenAI calls. Returns `key_present`, optional masked `key_suffix`, nullable `evals_access` (`ready`, `not_ready`, `forbidden`, `unreachable`), and nullable `cache_status` (`warm`, `cold`). Also accepts coded key-presence responses as described below.                     |
+| Connect/refresh | `POST /connect`, `POST /refresh`  | Success confirms OpenAI Evals access and requires a nonnegative integer count in `total`, `eval_count`, or `total_evals`, including zero. Missing/invalid counts fail validation instead of printing a false connection success.                                                                                                                                 |
 | Discovery       | `GET` collection URL (no suffix)  | Query `page`, `page_size`, `search`; envelope `items`, `total`, `page`, `page_size`, optional `already_imported_count`. Each item has `openai_eval_id`, `name`, `created_at`, `already_imported`, nullable `run_count`/`last_run_at`. JSON retains these fields and adds normalized `evals`/`size` aliases.                                                      |
 | Commit          | `POST /run`                       | Body `{ "eval_ids": ["eval_synthetic"] }`; response `imported`, `skipped` (item lists or counts), `failed` (list), optional `workspace_id`, and optional `eval_ids_imported`. Single-batch fields are retained; multiple batches aggregate counts/lists and imported evaluation IDs, and retain each envelope under `batches`.                                   |
 | Workspaces      | `GET /workspaces`                 | Workspace array or `{ "workspaces": [...] }`.                                                                                                                                                                                                                                                                                                                    |
@@ -137,32 +137,23 @@ eval count for these error envelopes; they return actionable errors with exits `
 and `4`, respectively. Refresh uses `POST /refresh` with the same validation and error handling.
 Status still renders supported no-key, forbidden, and unreachable envelopes as status states.
 
+Status is a lightweight Mode A operation: `/connect/status` reads server-side key presence and
+discovery cache state and makes zero OpenAI calls. It does not validate live OpenAI Evals access.
+An `evals_access` value of `not_ready` means access is unverified, not that verification failed.
+A successful `POST /connect` confirms Evals access while populating the discovery cache;
+`POST /refresh` forces a fresh validation and pull.
+
 Status maps the backend's `key_last4` to `key_suffix` and boolean `cache_warm` to
 `cache_status` (`warm` / `cold`). It also accepts `KEY_PRESENT`, `NO_KEY`, `EVALS_FORBIDDEN`, and
 `OPENAI_UNREACHABLE` using the existing error-code envelope reader (`code`, `error_code`, or
-supported nested error/detail fields). If the backend omits `evals_access`, a present key and
-warm discovery cache indicate cached readiness (`ready`, exit `0`); a missing or cold cache
-indicates `not_ready` (displayed as **not ready**, exit `4` when a key is present). A missing
-key exits `3`. Key presence alone never means ready. An explicit forbidden or unreachable
-result takes precedence over cached readiness and exits `4`.
+supported nested error/detail fields). If the backend omits `evals_access`, the CLI normalizes it
+to `not_ready` without treating that value as a live access failure. A missing key exits `3`; a
+present key exits `0`. Existing forbidden and unreachable status values remain preserved.
 
-Readiness inferred from a warm cache reflects previously completed discovery, not a fresh
-OpenAI permissions probe. Status makes no additional request or OpenAI eval pull. Explicit
-access/cache fields remain validated and preserved. Responses with no cache information retain
-`null` / **unknown** cache state; the CLI does not invent a warm or cold state. Run
-`autoeval import connect` to validate access and populate discovery, or `connect --refresh`
-to force a fresh validation and pull.
-
-Human status shows one actionable hint: add a key under **AI Providers & Models** when missing,
-run `autoeval import connect` when access/cache readiness is unknown or the cache is cold, enable
-Evals permissions when forbidden, or retry later when OpenAI is unreachable. A missing key also
-points to `autoeval import status --json`; no UI URL is inferred from the API origin. Unknown codes
-or invalid field values still fail validation without printing the backend response body.
-
-The human **Cached list** line and its review suggestion are shown only when a key is present
-and Evals access is ready. They are omitted for a missing key, not-ready access, forbidden
-access, or an unreachable provider, even when stale discovery data remains warm. JSON retains
-the backend cache state for scripting; hiding the human line does not clear discovery data.
+Human status displays key presence and cache state independently. Responses with no cache
+information display **Unknown** rather than inventing a warm or cold cache. The action hint asks
+the user to configure a missing key or run `autoeval import connect` to verify access. Unknown
+codes or invalid field values still fail validation without printing the backend response body.
 
 ## Local Verification
 
