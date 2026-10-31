@@ -441,6 +441,18 @@ describe('Autoeval MCP tools', () => {
     expect(descriptions).not.toMatch(/\/api\/|pl_sk_|authorization|evalengine/iu);
   });
 
+  it('distinguishes cached import status from live provider access validation', () => {
+    const tools = createAutoevalMcpTools(mcpContext());
+    const statusDescription = toolByName(tools, 'import_status').description;
+    const connectDescription = toolByName(tools, 'import_connect').description;
+
+    expect(statusDescription).toBe(
+      'Checks server-side external provider key presence and discovery cache state without contacting the provider.',
+    );
+    expect(statusDescription).not.toMatch(/access readiness|validates? .*access/iu);
+    expect(connectDescription).toContain('Validates external provider access');
+  });
+
   it('delegates import tools to executeImport with valid inputs and signals', async () => {
     const executeImport = vi.fn<AutoevalMcpActions['executeImport']>().mockResolvedValue({
       key_present: true,

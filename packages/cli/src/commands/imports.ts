@@ -88,7 +88,7 @@ export function registerImportCommands(program: Command, executor: CommandExecut
       );
   group
     .command('status')
-    .description('check server-side OpenAI key and Evals access')
+    .description('check server-side OpenAI key presence and discovery cache state')
     .action(async (_options: object, command: Command) =>
       execute({ operation: 'status' }, command),
     );

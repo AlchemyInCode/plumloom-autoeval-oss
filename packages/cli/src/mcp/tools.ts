@@ -418,7 +418,7 @@ export function createAutoevalMcpTools(
       name: 'import_status',
       title: 'Get external import status',
       description:
-        'Checks server-side external provider key presence, access readiness, and discovery cache status.',
+        'Checks server-side external provider key presence and discovery cache state without contacting the provider.',
       access: 'readOnly',
       inputSchema: emptyInputSchema,
       execute: () =>

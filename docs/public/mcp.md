@@ -65,7 +65,7 @@ Read-only tools may query the API but do not create or update evaluation resourc
 | `validate_configured_evaluation` | Validate configured input without creating versions or a run       |
 | `get_run_status`                 | Read a run's current status                                        |
 | `get_results`                    | Read context-specific results, including trajectory when available |
-| `import_status`                  | Check external provider key presence, access readiness, and cache  |
+| `import_status`                  | Check external provider key presence and discovery cache state     |
 | `import_review`                  | Review cached external evaluations without importing               |
 | `import_list_workspaces`         | List workspaces dedicated to imported external evaluations         |
 | `import_list_evals`              | List evaluations in an import workspace                            |
@@ -90,6 +90,11 @@ State-changing tools execute deterministically when called. The MCP server does 
 
 Tool inputs are validated against their schemas, and unknown fields are rejected. Resource IDs generally use UUIDs. External evaluation source IDs use the `eval_...` format, while `run_id` requires a Plumloom UUID.
 Results use an `{ "ok": true, "data": ... }` envelope. Failures use `{ "ok": false, "error": { "kind", "code", "message" } }`, set the MCP error flag, and redact recognized secret fields and CLI-key patterns.
+
+`import_status` uses the lightweight `/connect/status` Mode A check. It reads server-side key
+presence and cache state and makes zero OpenAI calls, so `evals_access: not_ready` means access is
+unverified rather than failed. A successful `import_connect` call (`POST /connect`) confirms
+OpenAI Evals access and populates the discovery cache.
 
 ## Configured evaluation semantics
 
