@@ -68,7 +68,13 @@ export function renderImport(command: ParsedImportCommand, response: unknown): s
     case 'status': {
       const status = importStatusSchema.parse(response);
       const keyLabel = status.key_present ? 'Configured (unverified)' : 'Missing';
-      const cacheLabel = status.key_present ? 'Warm' : 'Cold';
+      const cacheWarm = status.cache_warm ?? status.cache_status === 'warm';
+      const cacheLabel =
+        status.cache_warm === undefined && status.cache_status === null
+          ? 'Unknown'
+          : cacheWarm
+            ? 'Warm'
+            : 'Cold';
       const actionLabel = status.key_present
         ? "Run 'autoeval import connect' to verify live OpenAI Evals access."
         : "Add your OpenAI key in Plumloom (Settings → AI Providers & Models), then run 'autoeval import connect'.";

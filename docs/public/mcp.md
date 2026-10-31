@@ -65,6 +65,12 @@ Read-only tools may query the API but do not create or update evaluation resourc
 | `validate_configured_evaluation` | Validate configured input without creating versions or a run       |
 | `get_run_status`                 | Read a run's current status                                        |
 | `get_results`                    | Read context-specific results, including trajectory when available |
+| `import_status`                  | Check external provider key presence and discovery cache state     |
+| `import_review`                  | Review cached external evaluations without importing               |
+| `import_list_workspaces`         | List workspaces dedicated to imported external evaluations         |
+| `import_list_evals`              | List evaluations in an import workspace                            |
+| `import_show_eval`               | Read imported evaluation detail, graders, run history, and outputs |
+| `import_insights`                | Read readiness, pass-rate trends, and grader reliability insights  |
 
 State-changing tools execute deterministically when called. The MCP server does not add an interactive confirmation prompt:
 
@@ -77,8 +83,18 @@ State-changing tools execute deterministically when called. The MCP server does 
 | `assign_quality_standard`   | Associate a quality standard with a workspace                                               |
 | `run_configured_evaluation` | Validate, create methodology/configuration versions, submit, and return the run identifiers |
 | `run_evaluation`            | Submit the current saved configuration and return the run identifiers                       |
+| `import_connect`            | Validate external provider access and refresh discovery cache                               |
+| `import_disconnect`         | Clear external discovery cache                                                              |
+| `import_run`                | Import selected or all-new external evaluations in batches                                  |
+| `import_remove_eval`        | Delete an imported evaluation from the workspace (requires explicit confirmation)           |
 
-Every ID argument is a UUID. Tool schemas reject unknown fields. Results use an `{ "ok": true, "data": ... }` envelope. Failures use `{ "ok": false, "error": { "kind", "code", "message" } }`, set the MCP error flag, and redact recognized secret fields and CLI-key patterns.
+Tool inputs are validated against their schemas, and unknown fields are rejected. Resource IDs generally use UUIDs. External evaluation source IDs use the `eval_...` format, while `run_id` requires a Plumloom UUID.
+Results use an `{ "ok": true, "data": ... }` envelope. Failures use `{ "ok": false, "error": { "kind", "code", "message" } }`, set the MCP error flag, and redact recognized secret fields and CLI-key patterns.
+
+`import_status` uses the lightweight `/connect/status` Mode A check. It reads server-side key
+presence and cache state and makes zero OpenAI calls, so `evals_access: not_ready` means access is
+unverified rather than failed. A successful `import_connect` call (`POST /connect`) confirms
+OpenAI Evals access and populates the discovery cache.
 
 ## Configured evaluation semantics
 
