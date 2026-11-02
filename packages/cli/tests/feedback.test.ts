@@ -192,17 +192,17 @@ describe('Judge Feedback action, renderer, CLI, and MCP', () => {
     expect(rendered).toContain('Policy violation');
     expect(rendered).not.toContain('Safety violation');
     // Scores: 4/2 = 2.0, 3/2 = 1.5, 6/2 = 3.0, 8/2 = 4.0, 9/2 = 4.5
-    expect(rendered).toContain('Correctness  2.0/5');
-    expect(rendered).toContain('Grounding  1.5/5');
-    expect(rendered).toContain('Completeness  3.0/5');
-    expect(rendered).toContain('Clarity  4.0/5');
-    expect(rendered).toContain('Custom Policy Adherence  4.5/5');
+    expect(rendered).toContain('CORRECTNESS           2.0/5');
+    expect(rendered).toContain('GROUNDING             1.5/5');
+    expect(rendered).toContain('COMPLETENESS          3.0/5');
+    expect(rendered).toContain('CLARITY               4.0/5');
+    expect(rendered).toContain('CUSTOM POLICY ADHERENCE  4.5/5');
     expect(rendered).toContain('Evidence:');
     expect(rendered).toContain('"Refunds are never allowed after shipping."');
     expect(rendered).toContain('REFERENCE DOCUMENTS');
     expect(rendered).toContain('refund-policy.md  Not satisfied');
     expect(rendered).toContain('The exception for defective items was ignored.');
-    expect(rendered).toContain('Judge responses: 2/2');
+    expect(rendered).toContain('JUDGE RESPONSES\n2/2 completed');
     expect(rendered).toContain('JUDGING');
     expect(rendered).toContain('Judges: 2');
     expect(rendered).toContain('Trials: 2');
@@ -245,11 +245,11 @@ describe('Judge Feedback action, renderer, CLI, and MCP', () => {
     const normal = renderJudgeFeedback(result, { details: false });
     expect(normal).toContain('Context: Conversation');
     expect(normal).toContain('WHY THIS SCORE');
-    expect(normal).toContain('Correctness  2.5/5');
-    expect(normal).toContain('Completeness  4.0/5');
+    expect(normal).toContain('CORRECTNESS           2.5/5');
+    expect(normal).toContain('COMPLETENESS          4.0/5');
     expect(normal).toContain('Evidence available for 1 criteria.');
     expect(normal).toContain('Use --details to show supporting quotes.');
-    expect(normal).toContain('Judge responses: 2/2');
+    expect(normal).toContain('JUDGE RESPONSES\n2/2 completed');
 
     const detailed = renderJudgeFeedback(result, { details: true });
     expect(detailed).toContain('Evidence:');
@@ -325,13 +325,13 @@ describe('Judge Feedback action, renderer, CLI, and MCP', () => {
     const rendered = renderJudgeFeedback(result, { details: true });
     expect(rendered).toContain('Context: Agent Trace');
     expect(rendered).toContain('Section: Session');
-    expect(rendered).toContain('Task completion  5.0/5');
+    expect(rendered).toContain('TASK COMPLETION       5.0/5');
     expect(rendered).toContain('Section: Trajectory');
-    expect(rendered).toContain('Logical progression  4.0/5');
-    expect(rendered).toContain('Repeated calls or loops  2.0/5');
+    expect(rendered).toContain('LOGICAL PROGRESSION   4.0/5');
+    expect(rendered).toContain('REPEATED CALLS OR LOOPS  2.0/5');
     expect(rendered).toContain('Related steps: Step 3, Step 5');
     expect(rendered).toContain('"Searching for the same order again."');
-    expect(rendered).toContain('Judge responses: 3/3');
+    expect(rendered).toContain('JUDGE RESPONSES\n3/3 completed');
   });
 
   it('filters agent trace by section', async () => {
@@ -512,7 +512,7 @@ describe('Judge Feedback action, renderer, CLI, and MCP', () => {
     );
 
     const rendered = renderJudgeFeedback(result, { details: true });
-    expect(rendered).toContain('Correctness  3.0/5');
+    expect(rendered).toContain('CORRECTNESS           3.0/5');
     expect(rendered).not.toContain('WHY THIS SCORE');
     expect(rendered).not.toContain('Evidence:');
   });

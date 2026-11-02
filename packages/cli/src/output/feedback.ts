@@ -82,8 +82,11 @@ function renderItem(lines: string[], entry: FeedbackItem, expanded: boolean): vo
   const envelope = entry.judgeFeedback ?? {};
   if (text(envelope.summary)) lines.push('', 'WHY THIS SCORE', text(envelope.summary));
   const flags = feedbackObject(envelope.flags);
-  if (flags.safety_violation === true) lines.push('Safety violation');
-  if (flags.policy_violation === true) lines.push('Policy violation');
+  if (flags.safety_violation === true) lines.push('', 'Safety violation');
+  if (flags.policy_violation === true) {
+    if (flags.safety_violation !== true) lines.push('');
+    lines.push('Policy violation');
+  }
   const criteria =
     entry.section === 'trajectory'
       ? (entry.dimensions ?? []).map((dimension) => ({
@@ -99,10 +102,12 @@ function renderItem(lines: string[], entry: FeedbackItem, expanded: boolean): vo
   let evidenceCount = 0;
   for (const { key, criterion, divisor } of criteria) {
     const score = entry.section === 'trajectory' ? criterion.score : criterion.level;
-    lines.push(
-      '',
-      `${text(criterion.label) || label(text(key))}${typeof score === 'number' ? `  ${(score / divisor).toFixed(1)}/5` : ''}`,
-    );
+    const criterionTitle = (text(criterion.label) || label(text(key))).toUpperCase();
+    const scoreText = typeof score === 'number' ? `${(score / divisor).toFixed(1)}/5` : '';
+    const headerLine = scoreText
+      ? `${criterionTitle.padEnd(20, ' ')}  ${scoreText}`
+      : criterionTitle;
+    lines.push('', headerLine);
     if (text(criterion.explanation)) lines.push(text(criterion.explanation));
     if (Array.isArray(criterion.evidence) && criterion.evidence.length) evidenceCount += 1;
     if (expanded) {
@@ -127,7 +132,8 @@ function renderItem(lines: string[], entry: FeedbackItem, expanded: boolean): vo
   if (entry.judgeResponses)
     lines.push(
       '',
-      `Judge responses: ${entry.judgeResponses.successful}/${entry.judgeResponses.requested}`,
+      'JUDGE RESPONSES',
+      `${entry.judgeResponses.successful}/${entry.judgeResponses.requested} completed`,
     );
   if (expanded) details(lines, envelope);
 }
