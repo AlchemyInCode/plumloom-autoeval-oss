@@ -20,6 +20,7 @@ import {
 } from '../actions/quality-standards.js';
 import { executeImport } from '../actions/imports.js';
 import { getResults } from '../actions/results.js';
+import { getJudgeFeedback } from '../actions/feedback.js';
 import { getRunStatus, submitEvaluation } from '../actions/runs.js';
 import { createWorkspace, listWorkspaces } from '../actions/workspaces.js';
 import { redactText, redactUnknown } from '../auth/redact.js';
@@ -32,6 +33,7 @@ import {
   createWorkspaceInputSchema,
   emptyInputSchema,
   evaluationInputSchema,
+  feedbackInputSchema,
   importConnectInputSchema,
   importEvaluationDetailInputSchema,
   importEvaluationsInputSchema,
@@ -70,6 +72,7 @@ export type AutoevalMcpActions = {
   submitEvaluation: typeof submitEvaluation;
   getRunStatus: typeof getRunStatus;
   getResults: typeof getResults;
+  getJudgeFeedback: typeof getJudgeFeedback;
   executeImport: typeof executeImport;
 };
 
@@ -90,6 +93,7 @@ export const sharedAutoevalActions: AutoevalMcpActions = {
   submitEvaluation,
   getRunStatus,
   getResults,
+  getJudgeFeedback,
   executeImport,
 };
 
@@ -413,6 +417,15 @@ export function createAutoevalMcpTools(
           resultReadyTimeoutMs: context.configuration.resultReadyTimeoutMs,
           ...actionSignal(context),
         }),
+    }),
+    defineTool({
+      name: 'get_judge_feedback',
+      title: 'Get judge feedback',
+      description:
+        'Returns judge feedback and explanations for runId and evaluationId, including scenario, conversation, and agent trace evaluations.',
+      access: 'readOnly',
+      inputSchema: feedbackInputSchema,
+      execute: (input) => actions.getJudgeFeedback(context.actions, input, context.signal),
     }),
     defineTool({
       name: 'import_status',

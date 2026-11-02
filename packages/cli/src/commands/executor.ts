@@ -33,6 +33,7 @@ import {
   updateQualityStandard,
 } from '../actions/quality-standards.js';
 import { whoAmI } from '../actions/identity.js';
+import { getJudgeFeedback } from '../actions/feedback.js';
 import { getModels } from '../actions/models.js';
 import { getResults } from '../actions/results.js';
 import type { ActionContext } from '../actions/context.js';
@@ -100,6 +101,7 @@ import {
   renderTraceImport,
   renderWorkspaces,
 } from '../output/human.js';
+import { renderJudgeFeedback } from '../output/feedback.js';
 import {
   createProgressReporter,
   formatStatusProgress,
@@ -1334,12 +1336,41 @@ export class RuntimeCommandExecutor implements CommandExecutor {
             renderResults(humanResult, {
               showOutputs: command.showOutputs === true,
               ...(scenarioStatus === undefined ? {} : { scenarioStatus }),
+              evaluationId: command.evaluationId,
+              runId: command.runId,
             }),
             options.json,
           );
         } finally {
           progress.stop();
         }
+        return;
+      }
+      case 'feedback': {
+        const progress = this.#createProgressReporter('Feedback', options);
+        try {
+          progress.update('reading judge feedback');
+          const result = await getJudgeFeedback(
+            context,
+            {
+              evaluationId: command.evaluationId,
+              runId: command.runId,
+              ...(command.scenario !== undefined ? { scenario: command.scenario } : {}),
+              ...(command.model !== undefined ? { model: command.model } : {}),
+              ...(command.section !== undefined ? { section: command.section } : {}),
+            },
+            this.#signal,
+          );
+          progress.stop();
+          this.#writer.writeResult(
+            result,
+            renderJudgeFeedback(result, { details: command.details === true }),
+            options.json,
+          );
+        } finally {
+          progress.stop();
+        }
+        return;
       }
     }
   }

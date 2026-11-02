@@ -113,6 +113,7 @@ describe('Autoeval MCP tools', () => {
       'run_evaluation',
       'get_run_status',
       'get_results',
+      'get_judge_feedback',
       'import_status',
       'import_connect',
       'import_disconnect',

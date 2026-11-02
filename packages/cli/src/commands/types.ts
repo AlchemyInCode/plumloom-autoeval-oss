@@ -95,6 +95,15 @@ export type DeterministicCommand =
   | { kind: 'status'; evaluationId: string; runId: string }
   | { kind: 'results'; evaluationId: string; runId: string; showOutputs?: boolean }
   | {
+      kind: 'feedback';
+      evaluationId: string;
+      runId: string;
+      scenario?: string;
+      model?: string;
+      section?: 'session' | 'trajectory' | 'all';
+      details?: boolean;
+    }
+  | {
       kind: 'gate';
       evaluationId: string;
       thresholdsFile?: string;

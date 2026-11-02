@@ -83,6 +83,8 @@ export const runReferenceInputSchema = z
   })
   .strict();
 
+export { feedbackInputSchema } from '../actions/feedback.js';
+
 export const importConnectInputSchema = z
   .object({
     refresh: z.boolean().default(false),

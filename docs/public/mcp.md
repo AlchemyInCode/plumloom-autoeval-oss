@@ -54,23 +54,24 @@ When an OS credential-store entry is unavailable, configure `AUTOEVAL_API_KEY` u
 
 Read-only tools may query the API but do not create or update evaluation resources:
 
-| Tool                             | Purpose                                                            |
-| -------------------------------- | ------------------------------------------------------------------ |
-| `get_current_user`               | Return the authenticated identity                                  |
-| `list_workspaces`                | List accessible workspaces                                         |
-| `list_evaluations`               | List evaluations in a workspace                                    |
-| `get_evaluation`                 | Read the current configured evaluation version                     |
-| `list_models`                    | List account-enabled evaluation models                             |
-| `get_quality_standard`           | Read a quality standard                                            |
-| `validate_configured_evaluation` | Validate configured input without creating versions or a run       |
-| `get_run_status`                 | Read a run's current status                                        |
-| `get_results`                    | Read context-specific results, including trajectory when available |
-| `import_status`                  | Check external provider key presence and discovery cache state     |
-| `import_review`                  | Review cached external evaluations without importing               |
-| `import_list_workspaces`         | List workspaces dedicated to imported external evaluations         |
-| `import_list_evals`              | List evaluations in an import workspace                            |
-| `import_show_eval`               | Read imported evaluation detail, graders, run history, and outputs |
-| `import_insights`                | Read readiness, pass-rate trends, and grader reliability insights  |
+| Tool                             | Purpose                                                             |
+| -------------------------------- | ------------------------------------------------------------------- |
+| `get_current_user`               | Return the authenticated identity                                   |
+| `list_workspaces`                | List accessible workspaces                                          |
+| `list_evaluations`               | List evaluations in a workspace                                     |
+| `get_evaluation`                 | Read the current configured evaluation version                      |
+| `list_models`                    | List account-enabled evaluation models                              |
+| `get_quality_standard`           | Read a quality standard                                             |
+| `validate_configured_evaluation` | Validate configured input without creating versions or a run        |
+| `get_run_status`                 | Read a run's current status                                         |
+| `get_results`                    | Read context-specific results, including trajectory when available  |
+| `get_judge_feedback`             | Read judge feedback and explanations for a completed evaluation run |
+| `import_status`                  | Check external provider key presence and discovery cache state      |
+| `import_review`                  | Review cached external evaluations without importing                |
+| `import_list_workspaces`         | List workspaces dedicated to imported external evaluations          |
+| `import_list_evals`              | List evaluations in an import workspace                             |
+| `import_show_eval`               | Read imported evaluation detail, graders, run history, and outputs  |
+| `import_insights`                | Read readiness, pass-rate trends, and grader reliability insights   |
 
 State-changing tools execute deterministically when called. The MCP server does not add an interactive confirmation prompt:
 

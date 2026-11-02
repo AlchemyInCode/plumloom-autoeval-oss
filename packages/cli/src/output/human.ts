@@ -598,7 +598,12 @@ export function renderResultsSummary(results: EvaluationResults): string {
  */
 export function renderResults(
   results: EvaluationResults,
-  options: { showOutputs?: boolean; scenarioStatus?: JsonObject } = {},
+  options: {
+    showOutputs?: boolean;
+    scenarioStatus?: JsonObject;
+    evaluationId?: string;
+    runId?: string;
+  } = {},
 ): string {
   const scorecard = renderResultScorecard(results, undefined, {
     showOutputs: options.showOutputs === true,
@@ -608,7 +613,11 @@ export function renderResults(
     results.contextType === 'scenario'
       ? '--show-outputs for full responses · --json for the raw payload'
       : 'Use --json for full reliability detail and the untouched backend payload';
-  return `${scorecard}\n\n${hint}\n`;
+  const feedbackHint =
+    options.evaluationId !== undefined && options.runId !== undefined
+      ? `\n\nInspect judge explanations:\nautoeval feedback ${clean(options.evaluationId)} ${clean(options.runId)}`
+      : '';
+  return `${scorecard}\n\n${hint}${feedbackHint}\n`;
 }
 
 export type GateExecutionSummary = {

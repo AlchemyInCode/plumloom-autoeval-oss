@@ -306,6 +306,23 @@ reliability, then shows rubric and test-case breakdowns and the best response. U
 `--show-outputs` to expand every test-case input and model response. `--json` emits only the full
 validated context-tagged payload after output redaction.
 
+## 7b. Inspect judge feedback
+
+Retrieve judge feedback, explanations, and evidence for completed evaluation runs:
+
+```bash
+autoeval feedback <evaluation-id> <run-id>
+autoeval feedback <evaluation-id> <run-id> --scenario "Refund request" --model <model-key> --details
+autoeval feedback <evaluation-id> <run-id> --section trajectory --details
+autoeval --json feedback <evaluation-id> <run-id>
+```
+
+- `--scenario <name-or-id>`: filter Scenario evaluations to one scenario (by name or ID)
+- `--model <model-key>`: filter Scenario evaluations to a specific model key
+- `--section <session|trajectory|all>`: filter Agent Trace feedback (defaults to `all`)
+- `--details`: expand explanations, evidence quotes, reference document verdicts, and judging metadata
+- `--json`: emit structured, machine-readable feedback for coding agents
+
 ## 8. Gate a release
 
 ```bash
