@@ -104,17 +104,22 @@ function renderItem(lines: string[], entry: FeedbackItem, expanded: boolean): vo
     return typeof score === 'number';
   });
   if (scoredCriteria.length > 0) {
-    lines.push('', `${'CRITERION'.padEnd(20, ' ')}  SCORE`);
+    const maxLabelLen = scoredCriteria.reduce((max, { key, criterion }) => {
+      const l = (text(criterion.label) || label(text(key))).length;
+      return Math.max(max, l);
+    }, 'CRITERION'.length);
+    const colWidth = Math.max(26, maxLabelLen + 2);
+    lines.push('', `${'CRITERION'.padEnd(colWidth, ' ')}  SCORE`);
     for (const { key, criterion, divisor } of scoredCriteria) {
       const score = entry.section === 'trajectory' ? criterion.score : criterion.level;
       const criterionLabel = text(criterion.label) || label(text(key));
       const scoreText = typeof score === 'number' ? `${(score / divisor).toFixed(1)}/5` : '';
-      lines.push(`${criterionLabel.padEnd(20, ' ')}  ${scoreText}`);
+      lines.push(`${criterionLabel.padEnd(colWidth, ' ')}  ${scoreText}`);
     }
   }
 
   let evidenceCount = 0;
-  for (const { key, criterion, divisor } of criteria) {
+  for (const { key, criterion } of criteria) {
     const criterionTitle = (text(criterion.label) || label(text(key))).toUpperCase();
     lines.push('', criterionTitle);
     if (text(criterion.explanation)) lines.push(text(criterion.explanation));
