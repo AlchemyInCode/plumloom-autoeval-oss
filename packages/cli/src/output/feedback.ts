@@ -25,7 +25,7 @@ function evidence(lines: string[], input: unknown): void {
   const quotes = input.filter(
     (quote): quote is string => typeof quote === 'string' && quote.length > 0,
   );
-  if (quotes.length) lines.push('Evidence:', ...quotes.map((quote) => `  "${text(quote)}"`));
+  if (quotes.length) lines.push('', 'Evidence:', ...quotes.map((quote) => `  "${text(quote)}"`));
 }
 
 function details(lines: string[], envelope: JsonObject): void {
@@ -99,15 +99,24 @@ function renderItem(lines: string[], entry: FeedbackItem, expanded: boolean): vo
           criterion: feedbackObject(criterion),
           divisor: 2,
         }));
+  const scoredCriteria = criteria.filter(({ criterion }) => {
+    const score = entry.section === 'trajectory' ? criterion.score : criterion.level;
+    return typeof score === 'number';
+  });
+  if (scoredCriteria.length > 0) {
+    lines.push('', `${'CRITERION'.padEnd(20, ' ')}  SCORE`);
+    for (const { key, criterion, divisor } of scoredCriteria) {
+      const score = entry.section === 'trajectory' ? criterion.score : criterion.level;
+      const criterionLabel = text(criterion.label) || label(text(key));
+      const scoreText = typeof score === 'number' ? `${(score / divisor).toFixed(1)}/5` : '';
+      lines.push(`${criterionLabel.padEnd(20, ' ')}  ${scoreText}`);
+    }
+  }
+
   let evidenceCount = 0;
   for (const { key, criterion, divisor } of criteria) {
-    const score = entry.section === 'trajectory' ? criterion.score : criterion.level;
     const criterionTitle = (text(criterion.label) || label(text(key))).toUpperCase();
-    const scoreText = typeof score === 'number' ? `${(score / divisor).toFixed(1)}/5` : '';
-    const headerLine = scoreText
-      ? `${criterionTitle.padEnd(20, ' ')}  ${scoreText}`
-      : criterionTitle;
-    lines.push('', headerLine);
+    lines.push('', criterionTitle);
     if (text(criterion.explanation)) lines.push(text(criterion.explanation));
     if (Array.isArray(criterion.evidence) && criterion.evidence.length) evidenceCount += 1;
     if (expanded) {
