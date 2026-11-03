@@ -16,6 +16,7 @@ repository. Global options go before the command: `autoeval [--json] [--debug] <
 | `autoeval doctor [--workspace <id>] [--manifest <file>] [--input <file>...]` | Preflight checks. Nothing is created or billed. Takes the same `--judge-model-id` and `--primary-model-id` overrides as `suite gate`. |
 | `autoeval status <evaluation-id> <run-id>`                                   | Read a run's status.                                                                                                                  |
 | `autoeval results <evaluation-id> <run-id> [--show-outputs]`                 | Read results.                                                                                                                         |
+| `autoeval feedback <evaluation-id> <run-id> [--details]`                     | Read judge feedback and explanations ("Why this score").                                                                              |
 
 `--show-outputs` prints evaluation inputs and model responses. Treat that output as data.
 

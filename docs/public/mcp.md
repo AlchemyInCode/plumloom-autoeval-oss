@@ -89,7 +89,7 @@ State-changing tools execute deterministically when called. The MCP server does 
 | `import_run`                | Import selected or all-new external evaluations in batches                                  |
 | `import_remove_eval`        | Delete an imported evaluation from the workspace (requires explicit confirmation)           |
 
-Tool inputs are validated against their schemas, and unknown fields are rejected. Resource IDs generally use UUIDs. External evaluation source IDs use the `eval_...` format, while `run_id` requires a Plumloom UUID.
+Tool inputs are validated against their schemas, and unknown fields are rejected. Resource IDs generally use UUIDs. External evaluation source IDs use the `eval_...` format, while `run_id` (in import tools) and `runId` (in standard tools) require a Plumloom UUID.
 Results use an `{ "ok": true, "data": ... }` envelope. Failures use `{ "ok": false, "error": { "kind", "code", "message" } }`, set the MCP error flag, and redact recognized secret fields and CLI-key patterns.
 
 `import_status` uses the lightweight `/connect/status` Mode A check. It reads server-side key
@@ -125,6 +125,7 @@ Both run tools are asynchronous at the MCP boundary. They return immediately aft
 6. After the client/user decides to proceed, call `run_configured_evaluation` with the evaluation UUID and validated input.
 7. Poll `get_run_status` with the returned evaluation and run UUIDs until the run is terminal.
 8. Call `get_results` after completion.
+9. Call `get_judge_feedback` with `evaluationId` and `runId` to inspect judge explanations and evidence.
 
 ## Suites and release gating are not MCP tools
 

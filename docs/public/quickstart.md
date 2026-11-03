@@ -184,6 +184,7 @@ trials, the interval and consistency evidence. Two variations:
 
 ```bash
 autoeval results <evaluation-id> <run-id> --show-outputs    # every input and model response
+autoeval feedback <evaluation-id> <run-id>                  # judge explanations and evidence
 autoeval --json results <evaluation-id> <run-id>            # the complete payload, for scripts
 ```
 
