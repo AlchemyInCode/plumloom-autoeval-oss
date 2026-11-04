@@ -27,6 +27,7 @@ import {
   modelsResponseSchema,
   runCreateResponseSchema,
   runStatusResponseSchema,
+  trajectoryResponseSchema,
   userIdentityResponseSchema,
   workspacePageResponseSchema,
   workspaceResponseSchema,
@@ -846,7 +847,12 @@ export class AutoevalApiClient implements AutoevalApi {
   }
 
   getTrajectory(evaluationId: string, runId: string, signal?: AbortSignal): Promise<JsonObject> {
-    return this.#getJsonObject(apiEndpoints.trajectory(evaluationId, runId), signal);
+    return this.#client.request({
+      method: 'GET',
+      path: apiEndpoints.trajectory(evaluationId, runId),
+      schema: trajectoryResponseSchema,
+      ...(signal ? { signal } : {}),
+    });
   }
 
   #getJsonObject(path: string, signal?: AbortSignal): Promise<JsonObject> {

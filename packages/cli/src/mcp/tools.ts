@@ -1,4 +1,10 @@
-import type { CallToolResult, McpServer, ToolAnnotations } from '@modelcontextprotocol/server';
+import {
+  ProtocolError,
+  ProtocolErrorCode,
+  type CallToolResult,
+  type McpServer,
+  type ToolAnnotations,
+} from '@modelcontextprotocol/server';
 import { z } from 'zod';
 
 import {
@@ -44,6 +50,7 @@ import {
   listEvaluationsInputSchema,
   listWorkspacesInputSchema,
   mcpToolOutputSchema,
+  mcpToolOutputWireSchema,
   qualityStandardIdInputSchema,
   qualityStandardInputSchema,
   runConfiguredEvaluationInputSchema,
@@ -616,10 +623,24 @@ export function registerAutoevalMcpTools(
         title: tool.title,
         description: tool.description,
         inputSchema: tool.inputSchema,
-        outputSchema: mcpToolOutputSchema,
+        outputSchema: mcpToolOutputWireSchema,
         annotations: toolAnnotations(tool),
       },
       (input) => tool.invoke(input),
     );
   }
+
+  const toolsByName = new Map(tools.map((tool) => [tool.name, tool]));
+  const outputSchema = z.toJSONSchema(mcpToolOutputWireSchema);
+  server.server.setRequestHandler('tools/call', async (request) => {
+    const tool = toolsByName.get(request.params.name);
+    if (!tool) {
+      throw new ProtocolError(
+        ProtocolErrorCode.InvalidParams,
+        `Tool ${request.params.name} not found.`,
+      );
+    }
+    const result = await tool.invoke(request.params.arguments);
+    return server.server.projectCallToolResult(result, outputSchema);
+  });
 }

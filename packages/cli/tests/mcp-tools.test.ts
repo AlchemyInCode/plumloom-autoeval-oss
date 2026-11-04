@@ -1,5 +1,6 @@
 import { readFile, readdir } from 'node:fs/promises';
 
+import { InMemoryTransport } from '@modelcontextprotocol/server';
 import { describe, expect, it, vi } from 'vitest';
 
 import { AutoevalError } from '../src/errors/autoeval-error.js';
@@ -200,6 +201,61 @@ describe('Autoeval MCP tools', () => {
       },
     });
     expect(getRunStatus).not.toHaveBeenCalled();
+  });
+
+  it('returns structured argument errors over the MCP request path', async () => {
+    const getRunStatus = vi.fn<AutoevalMcpActions['getRunStatus']>();
+    const context = mcpContext();
+    const server = createAutoevalMcpServer(context, actions({ getRunStatus }));
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+
+    await server.connect(serverTransport);
+    await clientTransport.start();
+
+    const initializeResponse = new Promise<unknown>((resolve) => {
+      clientTransport.onmessage = resolve;
+    });
+    await clientTransport.send({
+      jsonrpc: '2.0',
+      id: 1,
+      method: 'initialize',
+      params: {
+        protocolVersion: '2025-11-25',
+        capabilities: {},
+        clientInfo: { name: 'validation-test', version: '1.0.0' },
+      },
+    });
+    await initializeResponse;
+
+    const callResponse = new Promise<unknown>((resolve) => {
+      clientTransport.onmessage = resolve;
+    });
+    await clientTransport.send({
+      jsonrpc: '2.0',
+      id: 2,
+      method: 'tools/call',
+      params: {
+        name: 'get_run_status',
+        arguments: { evaluationId: 'not-a-uuid', runId: IDS.run },
+      },
+    });
+
+    await expect(callResponse).resolves.toMatchObject({
+      result: {
+        isError: true,
+        structuredContent: {
+          ok: false,
+          error: {
+            kind: 'usage',
+            code: 'INVALID_TOOL_ARGUMENTS',
+            message: 'Tool arguments are invalid.',
+          },
+        },
+      },
+    });
+    expect(getRunStatus).not.toHaveBeenCalled();
+    await clientTransport.close();
+    await server.close();
   });
 
   it('sanitizes action failures and never surfaces CLI keys', async () => {

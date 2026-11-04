@@ -219,6 +219,30 @@ export const runStatusResponseSchema = z
   })
   .loose();
 
+const trajectoryDimensionSchema = jsonObjectSchema.and(
+  z.object({
+    key: z.enum([
+      'logical_progression',
+      'appropriate_sequence',
+      'repeated_calls_or_loops',
+      'unnecessary_detours',
+      'decision_consistency',
+    ]),
+    label: z.string().trim().min(1),
+    score: z.number().min(1).max(5).nullable(),
+    step_ids: z.array(z.string().min(1)),
+    explanation: z.string().nullable().optional(),
+    evidence: z.array(z.string()).optional(),
+  }),
+);
+
+export const trajectoryResponseSchema = jsonObjectSchema.and(
+  z.looseObject({
+    trajectory_score: z.number().min(1).max(5).nullable().optional(),
+    dimensions: z.array(trajectoryDimensionSchema),
+  }),
+);
+
 export type UserIdentityResponse = z.infer<typeof userIdentityResponseSchema>;
 export type WorkspaceResponse = z.infer<typeof workspaceResponseSchema>;
 export type WorkspacePageResponse = z.infer<typeof workspacePageResponseSchema>;
@@ -235,3 +259,4 @@ export type EvaluationConfigurationResponse = z.infer<typeof evaluationConfigura
 export type ModelsResponse = z.infer<typeof modelsResponseSchema>;
 export type RunCreateResponse = z.infer<typeof runCreateResponseSchema>;
 export type RunStatusResponse = z.infer<typeof runStatusResponseSchema>;
+export type TrajectoryResponse = z.infer<typeof trajectoryResponseSchema>;

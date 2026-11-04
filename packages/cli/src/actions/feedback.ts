@@ -162,20 +162,22 @@ async function scenarioItems(
     const pagination = z
       .object({
         page: z.number().int().positive(),
-        has_next: z.boolean(),
+        has_next: z.boolean().optional(),
         total_pages: z.number().int().nonnegative(),
       })
       .safeParse(payload.pagination);
-    if (
-      !pagination.success ||
-      pagination.data.page !== page ||
-      pagination.data.has_next !== page < pagination.data.total_pages
-    ) {
+    if (!pagination.success || pagination.data.page !== page) {
       return upstream(
         'Scenario feedback pagination is missing or inconsistent; complete retrieval cannot be confirmed.',
       );
     }
-    if (!pagination.data.has_next) return items;
+    const hasNext = pagination.data.has_next ?? page < pagination.data.total_pages;
+    if (pagination.data.has_next !== undefined && hasNext !== page < pagination.data.total_pages) {
+      return upstream(
+        'Scenario feedback pagination is missing or inconsistent; complete retrieval cannot be confirmed.',
+      );
+    }
+    if (!hasNext) return items;
   }
   return upstream(
     'Scenario feedback exceeds the 1000-page retrieval limit. Narrow the evaluation before retrying.',
@@ -255,23 +257,6 @@ export async function getJudgeFeedback(
       try {
         const trajectory = await context.api.getTrajectory(input.evaluationId, input.runId, signal);
         const dimensions = rows(trajectory.dimensions ?? []);
-        const validDimensions = z
-          .array(
-            z
-              .object({
-                key: z.string().min(1),
-                label: z.string().optional(),
-                score: z.number().min(0).max(5).nullable().optional(),
-                explanation: z.string().nullable().optional(),
-                evidence: z.array(z.string()).optional(),
-                step_ids: z.array(z.string()).optional(),
-              })
-              .loose(),
-          )
-          .safeParse(dimensions);
-        if (!validDimensions.success) {
-          return upstream('The result reader returned invalid trajectory dimensions.');
-        }
         const steps = rows(trajectory.steps ?? []).flatMap((step, index) =>
           typeof step.step_id === 'string'
             ? [

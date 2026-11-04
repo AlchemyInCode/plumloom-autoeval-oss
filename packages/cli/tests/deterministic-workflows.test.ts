@@ -218,7 +218,7 @@ describe('deterministic command workflows', () => {
         return Promise.resolve(jsonResponse({ outcome: { achieved: true }, overall: 5 }));
       }
       if (method === 'GET' && path.endsWith('/trajectory')) {
-        return Promise.resolve(jsonResponse({ trace: { resourceSpans: [] } }));
+        return Promise.resolve(jsonResponse({ trace: { resourceSpans: [] }, dimensions: [] }));
       }
       throw new Error(`Unexpected mocked request: ${method} ${path}`);
     });

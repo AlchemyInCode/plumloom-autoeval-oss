@@ -75,17 +75,17 @@ function renderItem(lines: string[], entry: FeedbackItem, expanded: boolean): vo
   if (entry.modelKey)
     lines.push(`Model: ${text(entry.modelName ?? entry.modelKey)} (${text(entry.modelKey)})`);
   if (entry.section !== 'response') lines.push(`Section: ${label(entry.section)}`);
-  if (!available(entry)) {
-    lines.push('Judge feedback is not available for this section.');
-    return;
-  }
+  const hasFeedback = available(entry);
+  if (!hasFeedback) lines.push('Judge feedback is not available for this section.');
   const envelope = entry.judgeFeedback ?? {};
-  if (text(envelope.summary)) lines.push('', 'WHY THIS SCORE', text(envelope.summary));
-  const flags = feedbackObject(envelope.flags);
-  if (flags.safety_violation === true) lines.push('', 'Safety violation');
-  if (flags.policy_violation === true) {
-    if (flags.safety_violation !== true) lines.push('');
-    lines.push('Policy violation');
+  if (hasFeedback) {
+    if (text(envelope.summary)) lines.push('', 'WHY THIS SCORE', text(envelope.summary));
+    const flags = feedbackObject(envelope.flags);
+    if (flags.safety_violation === true) lines.push('', 'Safety violation');
+    if (flags.policy_violation === true) {
+      if (flags.safety_violation !== true) lines.push('');
+      lines.push('Policy violation');
+    }
   }
   const criteria =
     entry.section === 'trajectory'
@@ -119,25 +119,27 @@ function renderItem(lines: string[], entry: FeedbackItem, expanded: boolean): vo
   }
 
   let evidenceCount = 0;
-  for (const { key, criterion } of criteria) {
-    const criterionTitle = (text(criterion.label) || label(text(key))).toUpperCase();
-    lines.push('', criterionTitle);
-    if (text(criterion.explanation)) lines.push(text(criterion.explanation));
-    if (Array.isArray(criterion.evidence) && criterion.evidence.length) evidenceCount += 1;
-    if (expanded) {
-      evidence(lines, criterion.evidence);
-      if (Array.isArray(criterion.step_ids) && criterion.step_ids.length) {
-        const references = (criterion.step_ids as string[])
-          .map((id) => {
-            const step = entry.steps?.find((candidate) => candidate.step_id === id);
-            return step ? `Step ${step.sequence}` : text(id);
-          })
-          .filter(Boolean);
-        if (references.length) lines.push(`Related steps: ${references.join(', ')}`);
+  if (hasFeedback) {
+    for (const { key, criterion } of criteria) {
+      const criterionTitle = (text(criterion.label) || label(text(key))).toUpperCase();
+      lines.push('', criterionTitle);
+      if (text(criterion.explanation)) lines.push(text(criterion.explanation));
+      if (Array.isArray(criterion.evidence) && criterion.evidence.length) evidenceCount += 1;
+      if (expanded) {
+        evidence(lines, criterion.evidence);
+        if (Array.isArray(criterion.step_ids) && criterion.step_ids.length) {
+          const references = (criterion.step_ids as string[])
+            .map((id) => {
+              const step = entry.steps?.find((candidate) => candidate.step_id === id);
+              return step ? `Step ${step.sequence}` : text(id);
+            })
+            .filter(Boolean);
+          if (references.length) lines.push(`Related steps: ${references.join(', ')}`);
+        }
       }
     }
   }
-  if (!expanded && evidenceCount)
+  if (hasFeedback && !expanded && evidenceCount)
     lines.push(
       '',
       `Evidence available for ${evidenceCount} criteria.`,
@@ -149,7 +151,7 @@ function renderItem(lines: string[], entry: FeedbackItem, expanded: boolean): vo
       'JUDGE RESPONSES',
       `${entry.judgeResponses.successful}/${entry.judgeResponses.requested} completed`,
     );
-  if (expanded) details(lines, envelope);
+  if (expanded && hasFeedback) details(lines, envelope);
 }
 
 export function renderJudgeFeedback(
@@ -157,14 +159,21 @@ export function renderJudgeFeedback(
   options: { details?: boolean } = {},
 ): string {
   const context = result.contextType === 'agent_trace' ? 'Agent Trace' : label(result.contextType);
+  const hasScores = result.items.some((entry) =>
+    entry.section === 'trajectory'
+      ? (entry.dimensions ?? []).some((dimension) => typeof dimension.score === 'number')
+      : Object.values(feedbackObject(entry.judgeFeedback?.criteria)).some(
+          (criterion) => typeof feedbackObject(criterion).level === 'number',
+        ),
+  );
   const lines = ['JUDGE FEEDBACK', `Context: ${context}`];
-  if (!result.items.some(available)) {
+  if (!result.items.some(available) && !hasScores) {
     lines.push(
       '',
       'Judge feedback is not available for this run.',
       'Scores remain available through autoeval results.',
     );
-  } else if (result.contextType === 'scenario' && !options.details) {
+  } else if (result.contextType === 'scenario' && !options.details && !hasScores) {
     lines.push(
       '',
       formatTable(

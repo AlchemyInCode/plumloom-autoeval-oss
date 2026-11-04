@@ -303,6 +303,7 @@ describe('Judge Feedback action, renderer, CLI, and MCP', () => {
               label: 'Logical progression',
               score: 4.0,
               explanation: 'Followed logical path.',
+              step_ids: [],
             },
             {
               key: 'repeated_calls_or_loops',
@@ -362,7 +363,9 @@ describe('Judge Feedback action, renderer, CLI, and MCP', () => {
           dimensions: [
             {
               key: 'logical_progression',
+              label: 'Logical progression',
               score: 4.5,
+              step_ids: [],
             },
           ],
         }),
@@ -398,6 +401,35 @@ describe('Judge Feedback action, renderer, CLI, and MCP', () => {
     const rendered = renderJudgeFeedback(result);
     expect(rendered).toContain('Judge feedback is not available for this run.');
     expect(rendered).toContain('Scores remain available through autoeval results.');
+  });
+
+  it('keeps criterion scores when feedback explanations are unavailable', async () => {
+    const api = createApi({
+      getEvaluationVersions: vi.fn(() => Promise.resolve(versionResponse('conversation'))),
+      getConversationResults: vi.fn(() =>
+        Promise.resolve({
+          judge_feedback: {
+            version: 'jf_v1',
+            status: 'unavailable',
+            criteria: {
+              correctness: {
+                level: 8,
+                explanation: 'This explanation must remain unavailable.',
+              },
+            },
+          },
+        }),
+      ),
+    });
+
+    const result = await getJudgeFeedback(
+      { api },
+      { evaluationId: IDS.evaluation, runId: IDS.run },
+    );
+    const rendered = renderJudgeFeedback(result, { details: true });
+
+    expect(rendered).toContain('Correctness                 4.0/5');
+    expect(rendered).not.toContain('This explanation must remain unavailable.');
   });
 
   it('handles multi-page scenario pagination without losing rows', async () => {
@@ -448,6 +480,39 @@ describe('Judge Feedback action, renderer, CLI, and MCP', () => {
     expect(result.items[0]?.scenarioId).toBe('sc-1');
     expect(result.items[1]?.scenarioId).toBe('sc-2');
     expect(api.getModelResponses).toHaveBeenCalledTimes(2);
+  });
+
+  it('uses total_pages when scenario pagination omits has_next', async () => {
+    const api = createApi({
+      getEvaluationVersions: vi.fn(() => Promise.resolve(versionResponse('scenario'))),
+      getModelResponses: vi.fn(
+        (
+          _evalId: string,
+          _runId: string,
+          _signal: AbortSignal | undefined,
+          page: number | undefined,
+        ) => {
+          const currentPage = page ?? 1;
+          return Promise.resolve({
+            outputs: [
+              {
+                scenario_id: `sc-${currentPage}`,
+                model_responses: [{ model_key: 'model-a' }],
+              },
+            ],
+            pagination: { page: currentPage, total_pages: 3 },
+          });
+        },
+      ),
+    });
+
+    const result = await getJudgeFeedback(
+      { api },
+      { evaluationId: IDS.evaluation, runId: IDS.run },
+    );
+
+    expect(api.getModelResponses).toHaveBeenCalledTimes(3);
+    expect(result.items.map((entry) => entry.scenarioId)).toEqual(['sc-1', 'sc-2', 'sc-3']);
   });
 
   it('validates and rejects invalid filter flags for the evaluation context', async () => {

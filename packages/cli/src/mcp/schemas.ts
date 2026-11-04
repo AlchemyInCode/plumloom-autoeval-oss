@@ -163,3 +163,11 @@ export const mcpToolOutputSchema = z.discriminatedUnion('ok', [
   z.object({ ok: z.literal(true), data: z.json() }).strict(),
   z.object({ ok: z.literal(false), error: mcpErrorSchema }).strict(),
 ]);
+
+export const mcpToolOutputWireSchema = z
+  .object({
+    ok: z.boolean(),
+    data: z.json().optional(),
+    error: mcpErrorSchema.optional(),
+  })
+  .strict();
