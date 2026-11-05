@@ -432,6 +432,92 @@ describe('Judge Feedback action, renderer, CLI, and MCP', () => {
     expect(rendered).not.toContain('This explanation must remain unavailable.');
   });
 
+  it('renders compact summary table for scenario feedback even when criterion scores are present, and displays scores with --details', async () => {
+    const api = createApi({
+      getEvaluationVersions: vi.fn(() => Promise.resolve(versionResponse('scenario'))),
+      getModelResponses: vi.fn(() =>
+        Promise.resolve({
+          outputs: [
+            {
+              scenario_id: 'sc-1',
+              scenario_name: 'Refund request',
+              model_responses: [
+                {
+                  model_key: 'google/gemini-2.5-flash',
+                  display_name: 'Gemini 2.5 Flash',
+                  judge_feedback: {
+                    version: 'jf_v1',
+                    status: 'available',
+                    criteria: {
+                      correctness: {
+                        level: 8,
+                        explanation: 'Accurate policy application.',
+                      },
+                      completeness: {
+                        level: 6,
+                        explanation: 'Covered necessary points.',
+                      },
+                    },
+                  },
+                },
+                {
+                  model_key: 'anthropic/claude-sonnet',
+                  display_name: 'Claude Sonnet',
+                  judge_feedback: {
+                    version: 'jf_v1',
+                    status: 'unavailable',
+                    criteria: {
+                      correctness: {
+                        level: 4,
+                      },
+                    },
+                  },
+                },
+              ],
+            },
+          ],
+          pagination: {
+            page: 1,
+            has_next: false,
+            total_pages: 1,
+          },
+        }),
+      ),
+    });
+
+    const result = await getJudgeFeedback(
+      { api },
+      { evaluationId: IDS.evaluation, runId: IDS.run },
+    );
+
+    // Default without --details: renders compact summary table
+    const compact = renderJudgeFeedback(result, { details: false });
+    expect(compact).toContain('JUDGE FEEDBACK');
+    expect(compact).toContain('Context: Scenario');
+    expect(compact).toContain('SCENARIO');
+    expect(compact).toContain('MODEL');
+    expect(compact).toContain('FEEDBACK');
+    expect(compact).toContain('Refund request');
+    expect(compact).toContain('Gemini 2.5 Flash (google/gemini-2.5-flash)');
+    expect(compact).toContain('Claude Sonnet (anthropic/claude-sonnet)');
+    expect(compact).toContain('Available');
+    expect(compact).toContain('Unavailable');
+    expect(compact).toContain('1 of 2 results have judge feedback.');
+    // Should NOT render individual criterion score lines in compact table view
+    expect(compact).not.toContain('CRITERION                   SCORE');
+
+    // With --details: preserves ability to display scores even when feedback is unavailable
+    const detailed = renderJudgeFeedback(result, { details: true });
+    expect(detailed).toContain('Scenario: Refund request');
+    expect(detailed).toContain('Model: Gemini 2.5 Flash (google/gemini-2.5-flash)');
+    expect(detailed).toContain('CRITERION                   SCORE');
+    expect(detailed).toContain('Correctness                 4.0/5');
+    expect(detailed).toContain('Completeness                3.0/5');
+    expect(detailed).toContain('Model: Claude Sonnet (anthropic/claude-sonnet)');
+    expect(detailed).toContain('Judge feedback is not available for this section.');
+    expect(detailed).toContain('Correctness                 2.0/5');
+  });
+
   it('handles multi-page scenario pagination without losing rows', async () => {
     const api = createApi({
       getEvaluationVersions: vi.fn(() => Promise.resolve(versionResponse('scenario'))),

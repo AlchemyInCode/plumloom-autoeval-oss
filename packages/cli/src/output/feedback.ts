@@ -173,7 +173,7 @@ export function renderJudgeFeedback(
       'Judge feedback is not available for this run.',
       'Scores remain available through autoeval results.',
     );
-  } else if (result.contextType === 'scenario' && !options.details && !hasScores) {
+  } else if (result.contextType === 'scenario' && !options.details) {
     lines.push(
       '',
       formatTable(
