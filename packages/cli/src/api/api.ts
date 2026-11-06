@@ -27,6 +27,7 @@ import {
   modelsResponseSchema,
   runCreateResponseSchema,
   runStatusResponseSchema,
+  trajectoryResponseSchema,
   userIdentityResponseSchema,
   workspacePageResponseSchema,
   workspaceResponseSchema,
@@ -244,7 +245,13 @@ export interface AutoevalApi {
     runId: string,
     signal?: AbortSignal,
   ): Promise<JsonObject>;
-  getModelResponses(evaluationId: string, runId: string, signal?: AbortSignal): Promise<JsonObject>;
+  getModelResponses(
+    evaluationId: string,
+    runId: string,
+    signal?: AbortSignal,
+    page?: number,
+    limit?: number,
+  ): Promise<JsonObject>;
   getConversationResults(
     evaluationId: string,
     runId: string,
@@ -811,12 +818,14 @@ export class AutoevalApiClient implements AutoevalApi {
     evaluationId: string,
     runId: string,
     signal?: AbortSignal,
+    page = 1,
+    limit = 50,
   ): Promise<JsonObject> {
     return this.#client.request({
       method: 'GET',
       path: apiEndpoints.modelResponses(evaluationId, runId),
       schema: jsonObjectSchema,
-      query: { page: 1, limit: 50 },
+      query: { page, limit },
       ...(signal ? { signal } : {}),
     });
   }
@@ -838,7 +847,12 @@ export class AutoevalApiClient implements AutoevalApi {
   }
 
   getTrajectory(evaluationId: string, runId: string, signal?: AbortSignal): Promise<JsonObject> {
-    return this.#getJsonObject(apiEndpoints.trajectory(evaluationId, runId), signal);
+    return this.#client.request({
+      method: 'GET',
+      path: apiEndpoints.trajectory(evaluationId, runId),
+      schema: trajectoryResponseSchema,
+      ...(signal ? { signal } : {}),
+    });
   }
 
   #getJsonObject(path: string, signal?: AbortSignal): Promise<JsonObject> {

@@ -170,6 +170,55 @@ describe('API endpoint contracts', () => {
     );
   });
 
+  it.each([
+    [
+      'score below the minimum',
+      { key: 'logical_progression', label: 'Logical progression', score: 0.8, step_ids: [] },
+    ],
+    [
+      'score above the maximum',
+      { key: 'logical_progression', label: 'Logical progression', score: 5.1, step_ids: [] },
+    ],
+    [
+      'unknown dimension key',
+      { key: 'unsupported_dimension', label: 'Unsupported', score: 3, step_ids: [] },
+    ],
+    ['missing label', { key: 'logical_progression', score: 3, step_ids: [] }],
+    ['missing step_ids', { key: 'logical_progression', label: 'Logical progression', score: 3 }],
+  ])('rejects trajectory response with %s', async (_caseName, dimension) => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(jsonResponse({ dimensions: [dimension] }));
+
+    await expect(apiWith(fetchMock).getTrajectory(IDS.evaluation, IDS.run)).rejects.toMatchObject({
+      code: 'INVALID_API_RESPONSE',
+    });
+  });
+
+  it('accepts each documented trajectory dimension key', async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+      jsonResponse({
+        trajectory_score: 4.2,
+        dimensions: [
+          ['logical_progression', 'Logical progression'],
+          ['appropriate_sequence', 'Appropriate sequence'],
+          ['repeated_calls_or_loops', 'Repeated calls or loops'],
+          ['unnecessary_detours', 'Unnecessary detours'],
+          ['decision_consistency', 'Decision consistency'],
+        ].map(([key, label], index) => ({
+          key,
+          label,
+          score: index === 0 ? 1 : index === 4 ? 5 : 4,
+          step_ids: [],
+        })),
+      }),
+    );
+
+    const trajectory = await apiWith(fetchMock).getTrajectory(IDS.evaluation, IDS.run);
+
+    expect(trajectory.dimensions).toHaveLength(5);
+  });
+
   it('creates a workspace using the approved endpoint and body', async () => {
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
       jsonResponse({

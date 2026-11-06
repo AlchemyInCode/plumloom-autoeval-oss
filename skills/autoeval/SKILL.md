@@ -74,6 +74,7 @@ Pick the narrowest command that answers the request.
 | To create and run one evaluation from a file     | `autoeval eval create-from --workspace <workspace-id> --input <eval-file> --run` |
 | To rerun an existing evaluation                  | `autoeval run <evaluation-id>`                                                   |
 | To read a finished run                           | `autoeval --json results <evaluation-id> <run-id>`                               |
+| To inspect judge explanations and evidence       | `autoeval --json feedback <evaluation-id> <run-id>`                              |
 
 `--json` goes before the command. Public example files carry placeholder model IDs, so pass
 `--judge-model-id` and, for scenario evaluations, `--primary-model-id` with UUIDs from
@@ -110,13 +111,14 @@ See [references/verdicts.md](references/verdicts.md) for the decision rules and 
 
 When the Autoeval MCP server is connected, its tools cover single evaluations: reading
 (`get_current_user`, `list_workspaces`, `list_evaluations`, `get_evaluation`, `list_models`,
-`get_quality_standard`, `validate_configured_evaluation`, `get_run_status`, `get_results`) and
+`get_quality_standard`, `validate_configured_evaluation`, `get_run_status`, `get_results`,
+`get_judge_feedback`) and
 changing state (`create_workspace`, `create_evaluation`, `update_evaluation_title`,
 `create_quality_standard`, `assign_quality_standard`, `run_configured_evaluation`,
 `run_evaluation`).
 
 Run tools return identifiers at once. Poll `get_run_status` until the run is terminal, then call
-`get_results`.
+`get_results` or `get_judge_feedback`.
 
 The server has no gate tool and no suite tool, by design. A release verdict comes only from
 `autoeval gate` or `autoeval suite gate` in the terminal. Do not derive `PASS` or `FAIL` from MCP

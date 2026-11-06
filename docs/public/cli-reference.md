@@ -406,6 +406,26 @@ convergence values are shown only when the backend reports them.
 `--show-outputs` may print evaluation inputs and model-generated content. Treat captured terminal
 output as evaluation data and avoid publishing it without review.
 
+### `autoeval feedback <evaluation-id> <run-id> [--scenario <name-or-id>] [--model <model-key>] [--section session|trajectory|all] [--details]`
+
+- Required argument: `<evaluation-id>`
+- Required argument: `<run-id>`
+- Optional: `--scenario <name-or-id>`; filter feedback to a single scenario by name or ID (Scenario only)
+- Optional: `--model <model-key>`; filter feedback to a single model key (Scenario only)
+- Optional: `--section <session|trajectory|all>`; section of feedback to display (Agent Trace only; defaults to `all`)
+- Optional: `--details`; expand supporting quotes, reference documents, and judging metadata
+
+Retrieves judge feedback and explanations ("Why this score") for a completed evaluation run across Scenario, Conversation, and Agent Trace contexts.
+
+Human output behavior:
+
+- Scenario (without `--details`): compact index table listing each scenario and model with feedback availability status (`Available`, `Partial`, or `Unavailable`).
+- Scenario (with `--details`): detailed view with summary explanation, criterion scores and explanations, supporting evidence quotes, reference document checks, and replica/judge counts.
+- Conversation: overall explanation, criterion scores and explanations, and optional supporting quotes.
+- Agent Trace: session feedback and trajectory path dimensions (logical progression, appropriate sequence, repeated calls or loops, unnecessary detours, decision consistency) with step references.
+
+`--json` emits the normalized structured feedback representation containing all available fields, suitable for coding agents.
+
 ### `autoeval gate <evaluation-id> [--min-overall <score>] [--min-scenario <score>] [--min-judge-agreement <ratio>] [--metric <name=score>...] [--thresholds <json-file>]`
 
 - Required argument: `<evaluation-id>`

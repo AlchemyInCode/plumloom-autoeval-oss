@@ -164,6 +164,8 @@ autoeval workspace list
 autoeval models
 autoeval results <evaluation-id> <run-id>
 autoeval --json results <evaluation-id> <run-id>
+autoeval feedback <evaluation-id> <run-id>
+autoeval --json feedback <evaluation-id> <run-id>
 ```
 
 See the [command guide](docs/public/commands.md), [CLI reference](docs/public/cli-reference.md), [developer guide](docs/public/developer-guide.md), and [`.env.example`](.env.example). Smoke workflows: [`examples/smoke/`](examples/smoke/) · sample configs: [`examples/evals/`](examples/evals/).

@@ -21,7 +21,7 @@ node packages/cli/dist/cli.js --help
 
 ## What is in this package
 
-- Deterministic commands: `login`, `whoami`, `models`, `workspace`, `eval`, `status`, `results`,
+- Deterministic commands: `login`, `whoami`, `models`, `workspace`, `eval`, `status`, `results`, `feedback`,
   `gate`, `suite run`, `suite gate`
 - File-driven eval inputs (`src/configured-run/file-inputs.ts`) and suite manifests
   (`src/suite/manifest.ts`)

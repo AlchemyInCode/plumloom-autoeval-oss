@@ -731,6 +731,45 @@ export function createProgram(
     );
 
   program
+    .command('feedback <evaluation-id> <run-id>')
+    .description('retrieve judge feedback and explanations for a completed evaluation run')
+    .option('--scenario <name-or-id>', 'filter feedback to a single scenario')
+    .option('--model <model-key>', 'filter feedback to a single model')
+    .addOption(
+      new Option(
+        '--section <section>',
+        'section of feedback to display (agent trace only)',
+      ).choices(['session', 'trajectory', 'all']),
+    )
+    .option('--details', 'show supporting quotes, reference documents, and judging metadata')
+    .action(
+      async (
+        evaluationId: string,
+        runId: string,
+        options: {
+          scenario?: string;
+          model?: string;
+          section?: 'session' | 'trajectory' | 'all';
+          details?: boolean;
+        },
+        command: Command,
+      ) => {
+        await executor.execute(
+          {
+            kind: 'feedback',
+            evaluationId,
+            runId,
+            ...(options.scenario ? { scenario: options.scenario } : {}),
+            ...(options.model ? { model: options.model } : {}),
+            ...(options.section ? { section: options.section } : {}),
+            ...(options.details ? { details: true } : {}),
+          },
+          executionOptions(command),
+        );
+      },
+    );
+
+  program
     .command('gate <evaluation-id>')
     .description('evaluate a run result and fail when it misses the configured thresholds')
     .option('--min-overall <score>', 'minimum overall score')
@@ -829,6 +868,11 @@ const COMMAND_EXAMPLES: Readonly<Record<string, readonly string[]>> = {
     'autoeval --json gate <evaluation-id> --thresholds .autoeval/gate.json',
   ],
   results: ['autoeval results <evaluation-id> <run-id>', 'autoeval --json results <id> <run-id>'],
+  feedback: [
+    'autoeval feedback <evaluation-id> <run-id>',
+    'autoeval feedback <evaluation-id> <run-id> --scenario <name-or-id> --model <model-key> --details',
+    'autoeval --json feedback <evaluation-id> <run-id>',
+  ],
 };
 
 function addCommandExamples(program: Command): void {

@@ -1,4 +1,10 @@
-import type { CallToolResult, McpServer, ToolAnnotations } from '@modelcontextprotocol/server';
+import {
+  ProtocolError,
+  ProtocolErrorCode,
+  type CallToolResult,
+  type McpServer,
+  type ToolAnnotations,
+} from '@modelcontextprotocol/server';
 import { z } from 'zod';
 
 import {
@@ -20,6 +26,7 @@ import {
 } from '../actions/quality-standards.js';
 import { executeImport } from '../actions/imports.js';
 import { getResults } from '../actions/results.js';
+import { getJudgeFeedback } from '../actions/feedback.js';
 import { getRunStatus, submitEvaluation } from '../actions/runs.js';
 import { createWorkspace, listWorkspaces } from '../actions/workspaces.js';
 import { redactText, redactUnknown } from '../auth/redact.js';
@@ -32,6 +39,7 @@ import {
   createWorkspaceInputSchema,
   emptyInputSchema,
   evaluationInputSchema,
+  feedbackInputSchema,
   importConnectInputSchema,
   importEvaluationDetailInputSchema,
   importEvaluationsInputSchema,
@@ -42,6 +50,7 @@ import {
   listEvaluationsInputSchema,
   listWorkspacesInputSchema,
   mcpToolOutputSchema,
+  mcpToolOutputWireSchema,
   qualityStandardIdInputSchema,
   qualityStandardInputSchema,
   runConfiguredEvaluationInputSchema,
@@ -70,6 +79,7 @@ export type AutoevalMcpActions = {
   submitEvaluation: typeof submitEvaluation;
   getRunStatus: typeof getRunStatus;
   getResults: typeof getResults;
+  getJudgeFeedback: typeof getJudgeFeedback;
   executeImport: typeof executeImport;
 };
 
@@ -90,6 +100,7 @@ export const sharedAutoevalActions: AutoevalMcpActions = {
   submitEvaluation,
   getRunStatus,
   getResults,
+  getJudgeFeedback,
   executeImport,
 };
 
@@ -415,6 +426,15 @@ export function createAutoevalMcpTools(
         }),
     }),
     defineTool({
+      name: 'get_judge_feedback',
+      title: 'Get judge feedback',
+      description:
+        'Returns judge feedback and explanations for runId and evaluationId, including scenario, conversation, and agent trace evaluations.',
+      access: 'readOnly',
+      inputSchema: feedbackInputSchema,
+      execute: (input) => actions.getJudgeFeedback(context.actions, input, context.signal),
+    }),
+    defineTool({
       name: 'import_status',
       title: 'Get external import status',
       description:
@@ -603,10 +623,24 @@ export function registerAutoevalMcpTools(
         title: tool.title,
         description: tool.description,
         inputSchema: tool.inputSchema,
-        outputSchema: mcpToolOutputSchema,
+        outputSchema: mcpToolOutputWireSchema,
         annotations: toolAnnotations(tool),
       },
       (input) => tool.invoke(input),
     );
   }
+
+  const toolsByName = new Map(tools.map((tool) => [tool.name, tool]));
+  const outputSchema = z.toJSONSchema(mcpToolOutputWireSchema);
+  server.server.setRequestHandler('tools/call', async (request) => {
+    const tool = toolsByName.get(request.params.name);
+    if (!tool) {
+      throw new ProtocolError(
+        ProtocolErrorCode.InvalidParams,
+        `Tool ${request.params.name} not found.`,
+      );
+    }
+    const result = await tool.invoke(request.params.arguments);
+    return server.server.projectCallToolResult(result, outputSchema);
+  });
 }
